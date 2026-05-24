@@ -3975,7 +3975,10 @@ window.$docsify = {
           '<div class="paper-media-dialog-kicker">Paper Media</div>',
           '<div class="paper-media-dialog-title">论文图表附件</div>',
           '</div>',
+          '<div class="paper-media-dialog-actions">',
+          '<button class="paper-media-fullscreen" type="button" data-paper-media-fullscreen aria-pressed="false" aria-label="全屏查看">全屏</button>',
           '<button class="paper-media-close" type="button" data-paper-media-close aria-label="关闭">×</button>',
+          '</div>',
           '</div>',
           `<div class="paper-media-tabs">${tabButtons}</div>`,
           '<div class="paper-media-body">',
@@ -4001,11 +4004,20 @@ window.$docsify = {
           }
           const dialog = modal.querySelector('.paper-media-dialog');
           const closeButtons = Array.from(modal.querySelectorAll('[data-paper-media-close]'));
+          const fullscreenButton = modal.querySelector('[data-paper-media-fullscreen]');
           const tabs = Array.from(modal.querySelectorAll('[data-paper-media-tab]'));
           const panes = Array.from(modal.querySelectorAll('[data-paper-media-pane]'));
           let savedScrollY = 0;
           let closeTimer = 0;
           let lastTrigger = null;
+          const setFullscreen = (enabled) => {
+            modal.classList.toggle('is-fullscreen', !!enabled);
+            if (fullscreenButton) {
+              fullscreenButton.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+              fullscreenButton.textContent = enabled ? '退出全屏' : '全屏';
+              fullscreenButton.setAttribute('aria-label', enabled ? '退出全屏查看' : '全屏查看');
+            }
+          };
           const activate = (name) => {
             tabs.forEach((tab) => tab.classList.toggle('is-active', tab.dataset.paperMediaTab === name));
             panes.forEach((pane) => pane.classList.toggle('is-active', pane.dataset.paperMediaPane === name));
@@ -4026,6 +4038,7 @@ window.$docsify = {
             savedScrollY = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
             lastTrigger = trigger || document.activeElement || null;
             if (name) activate(name);
+            setFullscreen(false);
             modal.classList.remove('is-closing');
             modal.classList.add('is-open');
             modal.setAttribute('aria-hidden', 'false');
@@ -4042,6 +4055,7 @@ window.$docsify = {
           };
           const close = () => {
             if (!modal.classList.contains('is-open')) return;
+            setFullscreen(false);
             if (closeTimer) clearTimeout(closeTimer);
             modal.classList.add('is-closing');
             modal.classList.remove('is-open');
@@ -4062,12 +4076,29 @@ window.$docsify = {
           openButtons.forEach((button) => {
             button.addEventListener('click', () => open(button.dataset.paperMediaOpen || 'figures', button));
           });
-          closeButtons.forEach((button) => button.addEventListener('click', close));
+          closeButtons.forEach((button) => button.addEventListener('click', (event) => {
+            if (modal.classList.contains('is-fullscreen') && event.currentTarget.classList.contains('paper-media-backdrop')) {
+              setFullscreen(false);
+              return;
+            }
+            close();
+          }));
+          if (fullscreenButton) {
+            fullscreenButton.addEventListener('click', () => {
+              setFullscreen(!modal.classList.contains('is-fullscreen'));
+            });
+          }
           tabs.forEach((tab) => {
             tab.addEventListener('click', () => activate(tab.dataset.paperMediaTab || 'figures'));
           });
           modal.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') close();
+            if (event.key === 'Escape') {
+              if (modal.classList.contains('is-fullscreen')) {
+                setFullscreen(false);
+                return;
+              }
+              close();
+            }
           });
         });
       };
@@ -4413,7 +4444,7 @@ window.$docsify = {
         syncPageTypeClasses({ isHomePage, isReportPage, isPaperPage });
         closePdfPreview();
         document.querySelectorAll('[data-paper-media-modal]').forEach((modal) => {
-          modal.classList.remove('is-open', 'is-closing');
+          modal.classList.remove('is-open', 'is-closing', 'is-fullscreen');
           modal.setAttribute('aria-hidden', 'true');
         });
 
