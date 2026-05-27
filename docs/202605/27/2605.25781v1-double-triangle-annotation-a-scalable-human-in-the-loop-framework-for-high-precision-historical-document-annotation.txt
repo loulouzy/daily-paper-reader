@@ -1,0 +1,326 @@
+Title: Double Triangle Annotation: A Scalable Human-in-the-Loop Framework for High-Precision Historical Document Annotation
+
+URL Source: https://arxiv.org/pdf/2605.25781v1
+
+Published Time: Tue, 26 May 2026 02:37:25 GMT
+
+Number of Pages: 12
+
+Markdown Content:
+# Double Triangle Annotation: A Scalable Human-in-the-Loop Framework for High-Precision Historical Document Annotation 
+
+Ren Yi 
+
+École Polytechnique Fédérale de Lausanne 
+
+bonjour@renyi.ch 
+
+Abstract 
+
+Evaluating structured-information extraction from historical documents at scale requires high-precision ground-truth annotations, yet traditional manual labeling is expensive and fully automated pipelines built on large lan-guage models are prone to hallucination. We propose Double Triangle Annotation , a two-layer human-in-the-loop framework that lever-ages cross-model consensus to automate the majority of annotation work while ensuring high-precision outputs. In the first layer, two architecturally independent Multimodal Large Language Models annotate each document in parallel; when they agree, the label is auto-accepted, and disagreements are routed to a human jury. A second layer cross-checks two such systems against each other, escalating residual conflicts to a domain expert. The framework rests on a single assumption—error independence between models—requires no distributional priors or task-specific calibra-tion, and becomes more autonomous as model capability improves. On the Guides Rosen-wald , a corpus of French medical directories spanning 1887–1906, the framework achieves a final Word Error Rate of 0.003. Applied at scale, model consensus auto-accepts over 85% of 13,595 fields. We release the result-ing benchmark—the first structured-extraction ground truth for the Rosenwald Guides—to sup-port future work on historical document pro-cessing. 
+
+1 Introduction 
+
+Historical archives—medical directories, census records, notarial registers—hold structured infor-mation that is critical for research in the digital humanities. Extracting this information at scale requires converting degraded page images into machine-readable records, a task that demands high-precision ground-truth annotations for both training and evaluation. Yet producing such anno-tations remains a bottleneck: traditional indepen-dent manual annotation is expensive and difficult to scale. Recent Multimodal Large Language Models (MLLMs) have shown increasingly strong perfor-mance on document understanding tasks, but the reliability of any single model remains insufficient for gold-standard annotation due to hallucination. The fundamental challenge is therefore not whether models can assist annotation, but how to verify their outputs efficiently. We propose the Double Triangle Annota-tion framework, a two-layer human-in-the-loop paradigm that addresses this challenge through 
+
+consensus-based filtering . In the first layer, two architecturally independent models annotate each document in parallel; when they agree, the label is auto-accepted, based on our assumption that independent strong models are unlikely to pro-duce the same error on the same field . Disagree-ments are routed to a human jury, shifting the an-notator’s role from producer to verifier. A second layer cross-checks two such systems against each other, reapplying the same assumption , and es-calating residual conflicts to a domain expert. The design minimizes human effort while inducing a cascaded error reduction that drives the final error rate toward zero. We evaluate the framework on the Guides Rosen-wald , a corpus of French medical directories span-ning 1887–1906. In a controlled evaluation on 380 fields, the first-layer juries correct 18.4% and 26.3% of fields respectively, and the final reviewer corrects a further 4.2%, yielding a final Word Error Rate of 0.003. Applied at scale to 105 sampled pages, model consensus auto-accepts over 85% of the 13,595 fields in the final benchmark. Our contributions are as follows: 1. We introduce the Double Triangle Annota-tion framework (§3), a two-layer paradigm that leverages cross-model consensus to auto-mate the majority of annotation work while 1
+
+> arXiv:2605.25781v1 [cs.CL] 25 May 2026
+
+reserving human effort strictly for ambiguous cases. On our evaluation data, model con-sensus auto-accepts over 73% of fields while achieving a final WER of 0.003; applied at scale, the auto-accept rate rises to over 85%. 2. The framework rests on a single, intuitive assumption—that independent strong models are unlikely to produce the same error on the same field—requiring no task-specific calibra-tion or prior assumption on annotation dis-tribution. This minimal-assumption design 
+
+makes it directly applicable to any structured extraction task where two or more models can be run in parallel. 3. The architecture is future-proof : as model capability improves, the framework will ben-efit from the resulting increase in consensus, further reducing human effort and producing even higher-precision outputs. 4. We apply the framework to construct the first 
+
+structured-extraction benchmark for the Rosenwald Guides (§6), comprising 60 doc-ument columns and 13,595 annotated fields, and release it to support future work on histor-ical document processing. 
+
+2 Related Work 
+
+2.1 Historical Document Annotation 
+
+Existing approaches on constructing annotated benchmarks for historical documents converge on a common two-phase paradigm: apply automated processing first, then route the output to human reviewers for correction. In the simplest variant, projects such as DIVA-HisDB (Simistira et al., 2016), SCUT-COUCH (Yan et al., 2010), and the Japanese historical document dataset of Shen et al. (2020) employ dedicated pipelines for binarisation, line segmentation, character segmentation, or lay-out analysis. Their outputs are then corrected in a single pass by human annotators. More sophisticated approaches invest in multi-round quality control. M5HisDoc (Shi et al., 2023) applies three rounds of strict manual checking after machine-assisted extraction. CASIA-AHCDB (Xu et al., 2019) adds a classifier-based confidence fil-ter that selectively routes low-confidence items to cross-validation—a form of selective review that re-duces effort relative to exhaustive checking, though it relies on a single system’s internal confidence rather than agreement between independent sys-tems. At larger scales, ENP (Clausner et al., 2015) and IMPACT (Papadopoulos et al., 2013) outsource annotation to commercial service providers and en-force structured verification combining automated guideline checks with manual inspection. Crucially, while methods such as CASIA-AHCDB reduce review volume through single-system confidence filtering, none of these ap-proaches leverage agreement between independent systems as a quality signal. 
+
+2.2 Human–LLM Collaborative Annotation 
+
+LLMs can substantially reduce annotation cost. Ding et al. (2023) show that GPT-3 produces usable annotations across a range of tasks at a fraction of human cost, though quality deteriorates on com-plex tasks involving subtle distinctions or domain-specific knowledge. The dominant hybrid strategy is confidence-based selective review : the LLM la-bels all items and a confidence score determines which ones are routed to human annotators. Wang et al. (2021) report 50–96% cost reductions with this approach by having humans re-label only the lowest-confidence items; Kim et al. (2024) build a similar pipeline in MEGAnno+. Wang et al. (2024) extend the pattern by deploying two LLMs— one for labeling and one for generating confidence scores—though the quality signal remains single-system confidence rather than inter-model agree-ment. However, these workflows introduce systematic risks. Schroeder et al. (2025) find that presenting annotators with LLM-generated labels increases their self-reported confidence but does not accel-erate annotation, and introduces anchoring bias 
+
+whereby annotators defer to the model’s suggestion. Gu et al. (2025) reach a complementary conclu-sion: LLMs are effective annotation assistants but unreliable as independent annotators, and humans working alongside them are susceptible to automa-tion bias. Pangakis and Wolken (2025) observe that LLM annotators tend toward high recall but low precision, and that iterative human-in-the-loop prompt refinement only partially mitigates this im-balance. Additionally, LLM annotation quality can degrade on non-English data (Mohta et al., 2023), a concern relevant to our French extraction task. Our framework sidesteps the confidence-based paradigm entirely, using agreement between inde-pendent models rather than a single model’s self-assessed uncertainty as the quality signal. This 2design also mitigates anchoring bias, because the human jury is presented with two conflicting out-puts rather than a single LLM suggestion to accept or reject. 
+
+2.3 Consensus-Based Verification 
+
+Recent work leverages cross-model consensus as a quality signal for LLM outputs. Zhang et al. (2025) propose Consensus Entropy, a metric that quan-tifies agreement among multiple vision-language models and routes low-agreement OCR outputs to a stronger expert model—achieving fully auto-mated quality control but offering no human fall-back when all models share the same blind spot. Davoudi et al. (2025) show that inter-model ma-jority voting can validate LLM answers without ground truth, confirming that cross-model agree-ment is a reliable quality signal, though their frame-work remains purely model-based. Tseng et al. (2025) introduce a multi-agent discussion protocol in which disagreeing LLMs share their reasoning and re-annotate over multiple rounds; this improves agreement but incurs substantial computational cost, and cases that exceed model capability re-ceive no human support. Most closely related to our work, Yuan et al. (2025) present MCHR, a frame-work where three LLMs independently annotate content and majority-vote disagreements are routed to human reviewers—the same consensus-then-escalate logic as our Layer 1, though our design uses strict pairwise agreement between two models rather than three-way majority voting, yielding a more conservative gate with a lower silent error rate at the cost of a higher escalation rate. Our framework extends this line of work in three ways. First, we employ a redundancy de-sign : two independent consensus-plus-human sys-tems rather than one, enabling a second round of cross-system consensus that catches errors a single system would miss. Second, the resulting second layer specifically targets human annotator error —mistakes introduced by fatigue or subjectivity— which single-layer designs propagate to the final output unchecked. Third, when consensus fails, we escalate to a domain expert rather than a stronger model, which is essential for tasks where models exhibit systematic blind spots on domain-specific edge cases. The framework requires no distribu-tional priors or iterative calibration—only a sim-ple agreement gate—making it directly applicable wherever two or more models can be run in paral-lel. 
+
+3 Double Triangle Annotation Framework 
+
+3.1 Motivation and Overview 
+
+Reliable evaluation of structured extraction sys-tems on complex historical documents requires high-precision ground-truth data. Traditional hu-man annotation is expensive and difficult to scale, while fully automated pipelines suffer from hallu-cination. We propose the Double Triangle An-notation framework, which combines the compu-tational capacity of Multimodal Large Language Models (MLLMs) with targeted human oversight. Rather than serving as primary annotators, hu-mans act as conflict resolvers within a statistically motivated filtering system. The design rests on two key insights: 1. Low probability of coincident error. When two architecturally independent models pro-duce the same output for a given field, the probability that both are wrong in the same way is low. Model consensus therefore serves as a high-confidence proxy for correctness. 2. Mitigation of human fallibility. A sec-ond layer compares two independent model– human systems against each other, catching errors introduced by annotator fatigue or sub-jectivity. The objective is to produce a gold-standard dataset with near-perfect accuracy at a fraction of the cost of manual annotation. Figure 1 illustrates the full architecture. 
+
+3.2 Layer 1: The Annotation Triangle 
+
+The first layer maximizes throughput by leveraging cross-model consensus to automate labeling, re-serving human labor strictly for ambiguous cases. 
+
+3.2.1 Architectural Components 
+
+Each annotation unit, termed a System (S), com-prises three agents: • Two machine annotators (M1, M2): inde-pendent models (e.g., MLLMs or OCR en-gines) that extract structured text from docu-ment images in parallel. • One human jury (H): an annotator who acts solely as a conflict resolver. 3System Sa System Sb           
+
+> Layer 2: Quality Consensus
+> Raw Input Data
+> (Images)
+> Match?
+> M L 1a
+> ?
+> =M L 2a
+> M1aM2a
+> Human Jury Ha
+> Label La
+> Match?
+> M L 1b
+> ?
+> =M L 2b
+> M1bM2b
+> Human Jury Hb
+> Label Lb
+> Yes Yes
+> No No
+> Golden Consensus?
+> La
+> ?
+> =Lb
+> Final Reviewer ( R)
+> GOLD STANDARD
+> Match
+> Mismatch
+
+Figure 1: Overview of the Double Triangle Annotation framework. Layer 1 (gray boxes) pairs two independent models per system; consensus auto-accepts labels while conflicts are routed to a human jury. Layer 2 (blue box) cross-checks the two systems’ outputs and escalates residual mismatches to a final reviewer. 
+
+3.2.2 Consensus-Based Workflow 
+
+For every input image I, the process follows a verification-by-agreement logic: 1. Parallel inference. M1 and M2 indepen-dently produce provisional labels M L 1 and 
+
+M L 2.2. Automated filtering. 
+
+• Consensus (M L 1 = M L 2): the label is automatically accepted as the system output L, based on the low probability of coincident error (§3.2.3). • Divergence (M L 1̸ = M L 2): the case is flagged and routed to the human jury. 3. Human adjudication. The jury reviews the original image I alongside both model predic-tions and determines the final label L, shifting the human role from producer to verifier .
+
+3.2.3 The Independence Requirement 
+
+The consensus mechanism rests on a simple proba-bilistic argument: if two models fail independently, the chance that both produce the same wrong out-put for the same field is negligible. Let ϵ1 and ϵ2 denote the per-field error rates of 
+
+M1 and M2. Under an independence assumption, the probability that both models err on a given field is ϵ1 · ϵ2. A consensus error—a silent failure that passes the agreement gate—is even less likely, be-cause it requires the two models to produce not merely wrong outputs, but the same wrong output. When two independently erring models produce 
+
+different incorrect strings, the gate catches the dis-agreement. The silent error rate is therefore strictly bounded: 
+
+P (consensus error ) ≤ ϵ1 · ϵ2 (1) We define the per-system silent error rate ϵS =
+
+P (consensus error ); from Equation 1, ϵS ≤ ϵ1 · ϵ2.Because the human jury corrects all detected dis-agreements, ϵS is the dominant source of residual error within each Layer 1 system—and it is the quantity that Layer 2 further reduces through cross-system comparison (Equation 2). The bound in Equation 1 is conservative: the true rate is lower by a factor that depends on how many distinct wrong outputs a field admits. With empirically observed error rates of ϵ1 ≈ 0.087 and 
+
+ϵ2 ≈ 0.044 (Section 5), we obtain ϵS ≤ 0.004 —fewer than 1 in 250 consensus-accepted fields is 4expected to contain an error, and the actual rate is likely lower still. For this independence assumption to hold, M1
+
+and M2 must be architecturally independent so that their failure modes do not correlate. We iden-tify two strategies: • Cross-family : pairing models from different providers (e.g., Llama vs. Claude) to ensure distinct training data distributions. • Cross-modal : pairing a vision-based model (OCR) with a semantic model (MLLM), so that their error distributions are structurally disjoint. 
+
+3.2.4 Verification Sampling 
+
+To monitor the silent error rate —errors that pass consensus undetected—we implement a stochas-tic quality check: a random subset of consensus-accepted cases is routed to the human jury to verify the ongoing validity of the independence assump-tion. 
+
+3.3 Layer 2: The Validation Triangle 
+
+To mitigate the subjectivity and fatigue risks in-herent in a single human jury, the second layer operates as a meta-verification step. 
+
+3.3.1 Meta-Architectural Components 
+
+This layer treats each Layer 1 system ( S) as a single annotator unit. The structure comprises: • Two independent systems (Sa, Sb): distinct Layer 1 instances with different underlying model pairs, maintaining orthogonal indepen-dence at the system level. • One final reviewer (R): a domain expert (e.g., a historian) acting as the ultimate arbiter. 
+
+3.3.2 The Validation Workflow 
+
+The process filters residual model and human errors through cross-system comparison: 1. Dual generation. Systems Sa and Sb inde-pendently process the same data to produce refined labels La and Lb.2. Meta-comparison. 
+
+• Golden consensus (La = Lb): the la-bel is automatically designated as gold standard G, since two disjoint model pairs and potentially distinct human ju-ries reached the same conclusion.  
+
+> Figure 2: Annotated entries from the Rosenwald Guide (1887, p. 24). Each entry contains structured fields (name, year, notes, address, hours), but missing values and overlapping layouts introduce extraction noise.
+
+• Conflict (La̸ = Lb): mismatches indi-cate complex edge cases or residual an-notator error. 3. Expert resolution. Conflicting entries are routed to the final reviewer R, who determines the gold-standard label. 
+
+3.3.3 Error Probability Reduction 
+
+By cross-checking decisions from independent sys-tems with different human juries, the framework induces a cascaded failure model. The probability of an error persisting in the final gold standard is bounded by the product of the two per-system error rates defined in Equation 1: 
+
+P (error in G) ≤ ϵSa × ϵSb ≤ (ϵ1a · ϵ2a)( ϵ1b · ϵ2b)
+
+(2) Since each ϵS is already the product of two small error rates, their product approaches zero rapidly. Expensive expert intervention is thereby allocated only to the small fraction of the dataset where the two systems disagree. 
+
+4 Dataset: The Rosenwald Guides 
+
+The Guides Rosenwald are French medical direc-tories listing physicians and pharmacists across France and its colonies, published annually from 1887 to 1949 (47 volumes, each approximately one thousand pages). As illustrated in Figure 2, each page lists doctor entries in a semi-structured format: a typical entry contains a name ( nom ), diploma year (année ), professional notes or specialization, ad-dress ( adresse ), and consultation hours ( horaires ). Extraction is complicated by missing fields, over-lapping entries, interspersed advertisements, and degrading print quality. In this work, we process the sections titled 
+
+Docteurs en médecine et en chirurgie and Of-ficiers de santé for Paris and the départements, 5covering 20 volumes (1887–1906) with a total of 4,116 pages. This subset provides sufficient scale and diversity—in typography, layout variation, and print degradation—to evaluate the Double Triangle annotation framework under realistic conditions. 
+
+5 Experiments 
+
+We evaluate the Double Triangle framework along two axes: quality —whether the two-layer design ef-fectively corrects model and human errors—and ef-ficiency —whether consensus filtering successfully automates the majority of annotation work. 
+
+5.1 Experimental Setup Dataset. We conduct a controlled evaluation on page 32 of the 1887 Rosenwald Guide, which lists doctors of medicine and surgery in Paris. The page contains 76 entries (40 in the left column, 36 in the right), yielding approximately 380 structured fields (name, address, consultation hours, etc.). Two annotators independently produced manual tran-scriptions of this page without any model assis-tance; their reconciled output serves as the gold standard G.
+
+Model configuration. Following the indepen-dence requirement (§3.2.3), we instantiate two sys-tems with cross-provider model pairs: • System Sa: M1a = claude-sonnet-4-5 
+
+(Anthropic, 2025), M2a = qwen3-vl-235b 
+
+(Qwen Team, 2025). • System Sb: M1b = llama4-maverick (Meta AI, 2025), M2b = grok-4-0709 (xAI, 2025). We use MLLMs rather than traditional OCR en-gines, as pilot experiments showed OCR outputs were too noisy for reliable consensus comparison. 
+
+Human annotators. Jury Ha is a research as-sistant fluent in French; jury Hb is the project re-searcher with B1-level French proficiency. 1 The final reviewer R is the same person as Hb. This represents a weaker configuration than the ideal three-independent-annotator design; the reported error rates therefore constitute an upper bound on the errors expected under full independence, since a dedicated reviewer would be strictly more effective than Hb serving dual roles. 
+
+> 1B1 (“intermediate”) on the Common European Frame-work of Reference for Languages (CEFR).
+
+5.2 Evaluation Metrics 
+
+We evaluate all system outputs against the gold standard G. For any hypothesis text X (a model prediction, jury-corrected version, or reviewer-corrected version), we report four metrics. 
+
+Word Error Rate (WER). WER measures word-level edit distance: 
+
+WER( X, G ) = Sw + Dw + Iw
+
+Nw
+
+, (3) where Sw, Dw, Iw are word-level substitutions, deletions, and insertions, and Nw is the word count of G. We report WER before and after human correction at each layer. 
+
+Character Error Rate (CER). CER captures finer-grained errors: 
+
+CER( X, G ) = Sc + Dc + Ic
+
+Nc
+
+, (4) where Sc, Dc, Ic and Nc are defined analogously at the character level. 
+
+Fields to correct. We quantify human workload at the field level. Let Nfields be the number of atomic fields in the dataset. For a given operator (jury or reviewer), we define: 
+
+Ncorrect =
+
+> Nfields
+
+X
+
+> j=1
+
+I[Xj̸ = Yj ] , (5) where Xj is the pre-review value for field j, Yj is the value after intervention, and I(·) is the indicator function. 
+
+Human effort ratio. We normalize the correc-tion count: 
+
+EffortRatio = Ncorrect 
+
+Nfields 
+
+× 100% . (6) This metric captures the fraction of the dataset re-quiring manual edits at each layer. 
+
+5.3 Results and Analysis 
+
+Results are reported in Table 1. 
+
+5.3.1 Accuracy First layer. After jury correction, WER de-creases for both systems: from 0.087/0.044 to 0.030 for Sa, and from 0.069/0.141 to 0.008 for Sb.CER decreases for Hb but anomalously increases for Ha; inspection reveals that Ha accidentally left all fields blank for one entry, contributing errors that the models had partially captured. This in-cident underscores the value of the second-layer review for catching single-annotator lapses. 6Human Input WER CER Fields to correct Effort ratio                             
+
+> Before After Before After
+> Ha
+> Claude 0.087 0.030 0.053 0.018 70 18.4% Qwen 0.044 0.014
+> Hb
+> Llama 0.069 0.008 0.027 0.003 100 26.3% Grok 0.141 0.050
+> RHa0.030 0.003 0.018 0.001 16 4.2%
+> Hb0.008 0.003
+
+Table 1: Results of the Double Triangle framework on page 32 of the 1887 Rosenwald Guide ( 380 fields). Layer 1 rows show jury corrections ( Ha, Hb); the Layer 2 row shows the final reviewer ( R). “Before” and “After” refer to error rates before and after human correction at the respective layer. 
+
+Second layer. The final reviewer R further re-duces both WER (to 0.003) and CER (to 0.001). However, two errors persist in the final output, which we analyze below. 
+
+Layer-wise comparison. Table 1 can be read as an implicit ablation across increasingly strong con-figurations. A single model achieves WER between 0.044 and 0.141; a single annotation triangle (one model pair plus jury) reduces this to 0.008–0.030; the full double triangle achieves 0.003. Each layer yields a substantial improvement: Layer 1 consen-sus filtering eliminates the majority of model er-rors, and Layer 2 cross-system verification catches residual human and model mistakes that any single system would miss. This progressive reduction em-pirically validates the two-layer design and demon-strates that both layers contribute meaningfully to the final accuracy. 
+
+5.3.2 Error Analysis 
+
+Detailed inspection reveals two residual errors, both traceable to genuine visual ambiguity in the source images. Under such extreme ambiguity, the source itself induces correlated errors: when the printed character is objectively difficult to resolve, any reader—human or machine—is likely to ar-rive at the same incorrect interpretation, effectively breaching the independence assumption. These cases represent an irreducible failure mode of any consensus-based mechanism, since the quality sig-nal collapses precisely when all annotators share the same degraded input. 1. Character substitution. The surname Dou-villé appears with an accent aigu that is printed as a faint dot, visually indistinguishable from     
+
+> (a) Douvillé :accent resem-bles noise.
+> (b) Taibout : hyphen misread as t.
+
+Figure 3: The two residual errors both stem from gen-uine visual ambiguity that induces correlated errors across readers 
+
+noise (Figure 3a). In Sb, Llama and Grok both recognize Douville (missing accent), so 
+
+Hb has no disagreement signal and accepts the incorrect form. In Sa, Claude omits the entry entirely while Qwen also drops the ac-cent; Ha accidentally left all fields blank for this entry (the annotator lapse noted in §5.3.1). The resulting discrepancy between La and Lb
+
+is escalated to R, who accepts the Douville 
+
+variant from Hb without noticing the missing accent. 2. Character insertion. The surname Taibout 
+
+contains a line-break hyphen after Tai-, which models interpret as a faded character (Fig-ure 3b). In Sa, Claude and Qwen both pro-duce Taitbout , so the consensus gate auto-accepts the incorrect form without involving 
+
+Ha. In Sb, Llama produces Taitbout while Grok produces Taihout —a different misread-ing that triggers the disagreement gate. How-ever, Hb resolves the conflict in favor of Tait-bout . Since La = Lb, the error passes Layer 2 undetected. 
+
+5.3.3 Efficiency 
+
+The consensus mechanism substantially reduces human workload. In Layer 1, Ha reviews 70 of 380 fields (18.4%) and Hb reviews 100 fields (26.3%), meaning 74–82% of fields are auto-accepted via model consensus. In Layer 2, R reviews only 16 fields (4.2%). The total human effort across both layers remains well below full manual annotation, and is distributed across three individuals ( Ha, Hb,
+
+R), further reducing per-person workload and the risk of fatigue-induced errors. 
+
+6 Benchmark Construction 
+
+To demonstrate the scalability of the Double Tri-angle framework, we apply it to construct a bench-mark from the Rosenwald Guides corpus described in §4. 7Raw (210 cols) Filtered (60 cols) Model pair Fields % Fields %        
+
+> Claude / Qwen 37,314 / 46,830 79.7 11,294 / 12,895 87.6 Llama / Grok 34,962 / 46,550 75.1 11,048 / 12,905 85.6
+> Table 2: Field-level agreement rates by model pair, be-fore and after quality filtering. “Fields” shows matched / total.
+
+6.1 Sampling and Preprocessing 
+
+We apply stratified sampling over the 4,116 tar-get pages, allocating pages per year proportional to each volume’s share of the corpus. This yields 105 sampled pages. To improve model accuracy, we manually remove advertisements from each page and split the two-column layout into separate images, producing 210 column images. The same cross-provider model pairs from §5.1 are used for annotation. 
+
+6.2 Agreement and Filtering 
+
+Table 2 reports field-level agreement rates before and after quality filtering. On the raw 210-column dataset, both model pairs achieve over 75% field-level consensus, indicating that the majority of fields can be auto-accepted without human review. A key advantage of the Double Triangle design is that Layer 1 consensus is computed before any hu-man correction, providing a cost-free signal of data quality. This enables selective filtering: we retain only columns with fewer than 70 distinct fields, a field-level matching rate above 0.7, and a character-level matching rate above 0.6, discarding outlier columns where models performed poorly or the layout was unusually complex. Because filtering occurs upstream of human effort, it further reduces annotation cost without compromising accuracy on the retained data. The tradeoff is a potential selection bias toward easier columns, though the filtered set preserves the typographic and temporal diversity of the original stratified sample. After filtering, 60 columns remain. Agreement rates rise to 87.6% and 85.6% for the two model pairs. 
+
+6.3 Final Benchmark 
+
+The resulting benchmark comprises 60 columns containing 13,595 structured fields. In Layer 1, the consensus gate auto-accepts the majority of fields: jury Ha reviews 1,601 divergent fields (12.4%) and jury Hb reviews 1,857 (14.4%), while the remain-ing fields pass through without human involvement. In Layer 2, only 991 fields (7.2%) require correc-tion by the final reviewer—the remaining 92.8% are resolved by cross-system consensus alone. Two annotators performed the corrections using a cus-tom platform (Appendix A) that highlights dis-agreement fields and marks differing characters, further reducing review time. To monitor the silent error rate of consensus-accepted fields (§3.2.3), we applied the verification sampling procedure: one randomly selected consensus-accepted field per col-umn was routed to the human jury for independent verification. Across the 60 sampled fields, no errors were detected. This benchmark is, to our knowledge, the first structured-extraction ground truth for the Rosen-wald Guides, and is made publicly available to support future work on historical document pro-cessing. 
+
+7 Conclusion 
+
+We presented the Double Triangle Annota-tion framework, a two-layer human-in-the-loop paradigm that uses cross-model consensus to auto-mate the majority of annotation work while reserv-ing human effort for genuinely ambiguous cases. The framework rests on a single assumption— partial error independence between models—and requires no task-specific calibration or distribu-tional priors. On the Rosenwald Guides, the framework achieves a final WER of 0.003 and CER of 0.001, with model consensus auto-accepting over 85% of the 13,595 fields in the at-scale benchmark. The two residual errors both stem from genuine vi-sual ambiguity in the source images, where the de-graded input induces correlated errors that breach the independence assumption. We release the re-sulting benchmark—the first structured-extraction ground truth for the Rosenwald Guides—to support future work on historical document processing. Future directions include cross-modal model pairing (MLLM with OCR) to further reduce cor-related failures, lightweight validation rules (e.g., address normalization) to catch systematic errors at the consensus stage, and progressive replace-ment of human juries with LLM-as-judge as model capability improves. 
+
+Limitations 
+
+Single-page controlled evaluation. The accu-racy analysis in §5 is based on a single page (76 en-8tries, 380 fields). While the benchmark construc-tion (§6) demonstrates scalability, the detailed er-ror analysis and WER/CER measurements rely on a limited sample. Results may not generalize to pages with different layouts, denser entries, or greater print degradation. 
+
+Source ambiguity as an irreducible failure mode. 
+
+In our error analysis (§5.3), the two residual er-rors reveal a distinct limitation: when the source image is genuinely ambiguous (e.g., faint diacrit-ics, line-break artifacts), all readers—human and machine—converge on the same incorrect inter-pretation. Such cases represent situations where extreme source ambiguity induces correlated er-rors that breach the independence assumption—an irreducible failure mode that no consensus-based mechanism can detect, since the degraded input constrains all readers toward the same incorrect interpretation. 
+
+Annotator overlap. In our experimental setup, the final reviewer R is the same person as jury 
+
+Hb, weakening the independence between Layers 1 and 2. Although we argue that this configuration provides an upper bound on error rates (§5.1), a fully independent three-annotator setup would pro-vide stronger guarantees. 
+
+Benchmark filtering bias. The post-filtering step in benchmark construction (§6) removes columns with low model agreement, which may bias the benchmark toward easier cases. While filtering is a deliberate design choice that reduces human effort, the resulting benchmark may under-represent the most challenging document layouts. 
+
+MLLM-only model pairs. All model pairs in our experiments use MLLMs. We do not evalu-ate the cross-modal configuration (MLLM paired with traditional OCR) discussed in §3.2.3, which could provide structurally more independent error distributions at the cost of noisier baseline outputs. 
+
+No external framework comparison. We do not compare the Double Triangle framework against alternative annotation methodologies (e.g., another LLM-consensus based annotation framework, or standard human annotation). Our evaluation relies on an inward comparison—single model vs. sin-gle triangle vs. double triangle—which validates the incremental value of each layer but does not directly benchmark against existing approaches. A controlled comparison would require applying mul-tiple annotation frameworks to the same dataset under comparable cost constraints, which we leave to future work. 
+
+Acknowledgments 
+
+J’aimerais remercier le professeur Jérôme Baudry de l’École Polytechnique Fédérale de Lausanne, qui m’a présenté le projet et m’a offert des con-seils ainsi qu’un budget pour l’annotation tout au long du projet. C’est toujours un plaisir d’échanger avec vous. Merci à Mikhaël Moreau de l’Institut des humanités en médecine, qui a discuté en per-sonne avec moi chaque semaine pour le projet « Quantifier l’invisible : Les femmes médecins dans les Guides Rosenwald ». Grâce à votre profes-sionnalisme, je me suis senti respecté et encouragé pendant la collaboration. Merci à Amélie Puche de l’Institut des humanités en médecine, qui m’a guidé avant la rédaction du rapport. Je n’ai pas beaucoup d’expérience dans ce domaine, et votre aide est très importante pour moi. Merci également à Ella Bischoff de l’Université de Lausanne, qui a réalisé les annotations avec moi de manière très rigoureuse. Ce travail s’inscrit dans le cadre du pro-jet FNS MEDIF, dirigé par la Prof. Aude Fauvel (IHM-UNIL/CHUV) et le Prof. Rémy Amouroux (IP-UNIL), projet FNS n° 215100 ( https://data. snf.ch/grants/grant/215100 ). 
+
+References          
+
+> Anthropic. 2025. Claude sonnet 4.5 system card. Tech-nical report, Anthropic. Christian Clausner, Stefan Pletschacher, and Apostolos Antonacopoulos. 2015. The ENP image and ground truth dataset of historical newspapers. In 2015 13th International Conference on Document Analysis and Recognition (ICDAR) , pages 931–935. Seyed Pouyan Mousavi Davoudi, Amin Gholami Davodi, Alireza Amiri-Margavi, Alireza Shafiee Fard, and Mahdi Jafari. 2025. Collective reasoning among LLMs: A framework for answer validation without ground truth. CoRR , abs/2502.20758. Bosheng Ding, Chengwei Qin, Linlin Liu, Yew Ken Chia, Boyang Li, Shafiq Joty, and Lidong Bing. 2023. Is GPT-3 a good data annotator? In Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) ,pages 11173–11195. Association for Computational Linguistics. Feng Gu, Zongxia Li, Carlos Rafael Colon, Benjamin Evans, Ishani Mondal, and Jordan Lee Boyd-Graber. 2025. Large language models are effective human
+
+9annotation assistants, but not good independent an-notators. CoRR , abs/2503.06778. Hannah Kim, Kushan Mitra, Rafael Li Chen, Sajjadur Rahman, and Dan Zhang. 2024. MEGAnno+: A human-LLM collaborative annotation system. In 
+
+Proceedings of the 18th Conference of the European Chapter of the Association for Computational Lin-guistics: System Demonstrations , pages 168–176. Association for Computational Linguistics. Meta AI. 2025. The Llama 4 herd: The beginning of a new era of natively multimodal AI innovation. Jay Mohta, Kenan Ak, Yan Xu, and Mingwei Shen. 2023. Are large language models good annotators? In Proceedings on “I Can’t Believe It’s Not Better: Failure Modes in the Age of Foundation Models” at NeurIPS 2023 Workshops , volume 239 of Proceed-ings of Machine Learning Research , pages 38–48. PMLR. Nicholas Pangakis and Samuel Wolken. 2025. Keeping humans in the loop: Human-centered automated an-notation with generative AI. In Proceedings of the Nineteenth International AAAI Conference on Web and Social Media , pages 1471–1492. AAAI Press. Christos Papadopoulos, Stefan Pletschacher, Christian Clausner, and Apostolos Antonacopoulos. 2013. The IMPACT dataset of historical document images. In 
+
+Proceedings of the 2nd International Workshop on Historical Document Imaging and Processing , HIP ’13, pages 123–130. Association for Computing Ma-chinery. Qwen Team. 2025. Qwen3-VL technical report. CoRR ,abs/2511.21631. Hope Schroeder, Deb Roy, and Jad Kabbara. 2025. Just put a human in the loop? Investigating LLM-assisted annotation for subjective tasks. In Findings of the As-sociation for Computational Linguistics: ACL 2025 ,pages 25771–25795. Association for Computational Linguistics. Zejiang Shen, Kaixuan Zhang, and Melissa Dell. 2020. A large dataset of historical Japanese documents with complex layouts. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recog-nition Workshops (CVPRW) .Yongxin Shi, Chongyu Liu, Dezhi Peng, Cheng Jian, Jiarong Huang, and Lianwen Jin. 2023. M5HisDoc: A large-scale multi-style Chinese historical document analysis benchmark. In Advances in Neural Informa-tion Processing Systems , volume 36, pages 78483– 78495. Curran Associates, Inc. Foteini Simistira, Mathias Seuret, Nicole Eichenberger, Angelika Garz, Marcus Liwicki, and Rolf Ingold. 2016. DIVA-HisDB: A precisely annotated large dataset of challenging medieval manuscripts. In 2016 15th International Conference on Frontiers in Hand-writing Recognition (ICFHR) , pages 471–476. Yu-Min Tseng, Wei-Lin Chen, Chung-Chi Chen, and Hsin-Hsi Chen. 2025. Evaluating large language models as expert annotators. CoRR , abs/2508.07827. Shuohang Wang, Yang Liu, Yichong Xu, Chenguang Zhu, and Michael Zeng. 2021. Want to reduce la-beling cost? GPT-3 can help. In Findings of the Association for Computational Linguistics: EMNLP 2021 , pages 4195–4205. Association for Computa-tional Linguistics. Xinru Wang, Hannah Kim, Sajjadur Rahman, Kushan Mitra, and Zhengjie Miao. 2024. Human-LLM col-laborative annotation through effective verification of LLM labels. In Proceedings of the CHI Confer-ence on Human Factors in Computing Systems , pages 303:1–303:21. ACM. xAI. 2025. Grok 4 model card. Technical report, xAI. Yue Xu, Fei Yin, Da-Han Wang, Xu-Yao Zhang, Zhaox-iang Zhang, and Cheng-Lin Liu. 2019. CASIA-AHCDB: A large-scale Chinese ancient handwritten characters database. In 2019 International Confer-ence on Document Analysis and Recognition (IC-DAR) , pages 793–798. Hanyu Yan, Lianwen Jin, Christian Viard-Gaudin, and Harold Mouchere. 2010. SCUT-COUCH Textline_NU: An unconstrained online handwritten Chinese text lines dataset. In 2010 12th International Conference on Frontiers in Handwriting Recognition ,pages 581–586. Mingyue Yuan, Jieshan Chen, Zhenchang Xing, Gelareh Mohammadi, and Aaron Quigley. 2025. A case study of scalable content annotation using multi-LLM con-sensus and human review. CoRR , abs/2503.17620. Yulong Zhang, Tianyi Liang, Xinyue Huang, Erfei Cui, Xu Guo, Pei Chu, Chenhui Li, Ru Zhang, Wenhai Wang, and Gongshen Liu. 2025. Consensus entropy: Harnessing multi-VLM agreement for self-verifying and self-improving OCR. CoRR , abs/2504.11101. 
+
+A Annotation Platform 
+
+Figure 4 shows the annotation interface used by human juries and the final reviewer. For each row flagged as a disagreement, the platform displays the original document image alongside both model outputs (“Reference” and “Hypothesis”) and a cor-rection field. Differing characters are highlighted to direct the annotator’s attention to the specific point of conflict. 
+
+B Extraction Prompt 
+
+All four models (Claude, Qwen, Llama, Grok) re-ceive the same prompt, reproduced below in its original French. The prompt instructs the model to extract structured physician entries from a docu-ment image and return the results as tab-separated values. 10 Figure 4: Screenshot of the annotation platform. The left panel shows the source document; the right panel presents model outputs side by side with a correction field. Character-level differences are highlighted to guide the reviewer. 
+
+Vous analysez directement une image d 'annuaire médical français du 19e et du 20e siècle. L'entrée est une IMAGE d 'UNE page complète d'annuaire médical historique. IMPORTANT: - L 'image peut contenir des publicités, des textes d 'éditeur, ou du texte non-médical en haut ou en bas. - Ignorez-les complètement. Extrayez SEULEMENT les entrées de médecins. - Lisez attentivement tous les textes visibles dans l 'image, même s 'ils sont partiellement effacés ou difficiles à lire. - Si l 'image ne contient AUCUNE entrée de médecin (seulement des publicités ou du texte non-médical), retournez une ligne vide dans le TSV. Chaque entrée de médecin contient généralement :- nom de famille (parfois avec préfixe ou parenthèses), - année (diplôme ou année de référence), - notes optionnelles (ex: "Ex-Int. des Hôp.", "AGR.", "M. A. M.", "CH. H.", "M. H."), - adresse (rue, boulevard, avenue, etc.), - horaires d 'ouverture (abrégés: Lun., Mar., Mer., Jeu., Ven., Sam., Dim., "midi à 2", "2 à 4", etc.). ### TÂCHE Analysez l 'image et produisez un fichier TSV (Tab-Separated Values), où chaque ligne correspond à UNE entrée de médecin, avec ces colonnes séparées par des tabulations : nom année notes adresse horaires ### DESCRIPTION DES COLONNES - nom: Nom de famille du médecin (lisez l'orthographe exacte de l 'image) - année: Année de diplôme ou de référence (lisez exactement, ex: "1881" ou "1870") - notes: Titres/affiliations hospitalières (ex: "Ex-Int. des Hôp.", "AGR.", "M. A. M.", "CH. H.") - adresse: Adresse de rue complète (conservez accents/abréviations visibles) - horaires: Informations horaires (ex: "Lun. Mer. Ven. 3 à 5") ### RÈGLES DE LECTURE D 'IMAGE - Lisez l 'orthographe EXACTE visible dans l'image, accents, symboles (, AGR., etc.). - Si un champ n 'est pas visible ou illisible, laissez-le vide. - N 'inventez pas d 'informations non visibles dans l 'image. - Ne manquez AUCUN médecin : parcourez systématiquement toute l 'image pour extraire toutes les entrées présentes. - ORDRE DE LECTURE CRITIQUE : L 'image contient généralement DEUX COLONNES d 'entrées de médecins. Respectez l 'ordre de lecture suivant : 1. Lisez la colonne de GAUCHE de haut en bas COMPLÈTEMENT 2. Puis lisez la colonne de DROITE de haut en bas COMPLÈTEMENT 3. NE MÉLANGEZ PAS les colonnes - terminez entièrement la gauche avant la droite 4. Cet ordre est ESSENTIEL pour l 'évaluation ultérieure - Ne produisez que les entrées de médecins (ignorez publicités, textes d 'éditeur). - Incluez toujours les titres de civilité (Mme, Mlle, etc.) dans le champ nom s 'ils sont visibles. - Si aucune entrée de médecin n 'est trouvée dans l 'image, retournez seulement l'en-tête TSV. - Séparez les colonnes par des TABULATIONS ( ), pas des virgules. - Aucun échappement nécessaire pour les virgules dans le texte. - NE PAS entourer la sortie avec des balises markdown ou des blocs de code. - Retournez UNIQUEMENT le contenu TSV brut, sans formatage markdown. ### CONSEILS POUR LA LECTURE D 'IMAGE - Examinez attentivement les zones de texte dense qui contiennent les listes de médecins. - Les entrées de médecins sont généralement organisées en DEUX COLONNES distinctes sur la page. - IMPORTANT : Suivez l 'ordre de lecture colonne par colonne (gauche complète, puis droite complète). - Faites attention aux abréviations typiques de l 'époque (boul. pour boulevard, etc.). - Les horaires peuvent être sur la même ligne ou sur la ligne suivante. - Certains textes peuvent être en caractères plus petits ou partiellement effacés. - Identifiez visuellement la séparation entre les deux colonnes pour éviter de mélanger l'ordre. 
+
+11 ### EXEMPLE DE FORMAT ATTENDU: nom année notes adresse horaires Vallois 1848 St-André-des-Arts 50 2 à 4 Ravaux (Mme) 1883 Assomption 75 Berline Hering (Mme) 1881 Halles 13 Darcus Richardson 1861 Poisson 3 3 à 4, Exc. Dim Benoit (Mlle) Malleville 2 Lun. Mer. Ven. Sam. 2 à 4 Rigal 1866 AGR. M. H. Murillo 6 Lun. Mer. Ven. 1 à 3 Redard 1879 Méd. en chef des ch. de fer, Ex-Chef de Clin. Constantinople 2 Lun. Mer. Ven. 5 à 6 Peltier (Henri) 1877 Marseille 2 4 à 6 ### IMAGE À TRAITER Analysez l 'image ci-jointe et extrayez les données médicales selon les instructions ci-dessus. 
+
+12

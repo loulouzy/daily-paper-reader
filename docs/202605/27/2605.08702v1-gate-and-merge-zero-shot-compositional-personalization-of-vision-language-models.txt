@@ -1,0 +1,291 @@
+Title: Gate-and-Merge: Zero-shot Compositional Personalization of Vision Language Models
+
+URL Source: https://arxiv.org/pdf/2605.08702v1
+
+Published Time: Tue, 12 May 2026 00:36:50 GMT
+
+Number of Pages: 9
+
+Markdown Content:
+# Gate-and-Merge: Zero-shot Compositional Personalization of Vision Language Models 
+
+# Guodong Ding, Angela Yao National University of Singapore 
+
+{dinggd,ayao }@comp.nus.edu.sg 
+
+# Abstract 
+
+This paper tackles compositional personalization of vi-sion–language models (VLMs). In this problem, multi-ple user-defined concepts must be recognized or described jointly at test time. We introduce Gate-and-Merge, a zero-shot framework that enables compositional personalization without the need for co-occurrence training. During per-sonalization, each concept is learned independently as a lightweight LoRA adapter, paired with a concept token. The base model remains unchanged and concepts are kept dis-entangled. At inference, we enable composition by merging concept-specific LoRA updates directly in weight space. To suppress irrelevant activations and prevent interference, a gating mechanism is employed to estimate textual and vi-sual cues and only select modules contributes to the predic-tion. We further stabilize composition by combining only the most meaningful and mutually consistent updates, help-ing preserve each concept’s identity. Our quantitative and qualitative analyses show consistent gains in boosting per-formances on multiple personalization tasks on both the sin-gle and the compositional setting. 
+
+# 1. Introduction 
+
+Vision Language Models (VLMs) [6, 7, 15] have demon-strated remarkable generalization capabilities across open-world tasks such as recognition, reasoning, and image–text generation. However, they lack the ability to understand personalized concepts, e.g ., user-specific faces, pets, art-work styles, or private objects that are absent from large-scale pre-training data. Enabling VLM personalization, 
+
+i.e ., teaching a model to recognize or describe novel, user-defined concepts, is essential for advanced applications in assistive AI, creative content generation, human–robot in-teraction, and personalized digital assistants. Existing efforts toward VLM personalization can be broadly categorized into parameter-based and retrieval-based approaches. Parameter-based methods such as [1, 
+
+〈H〉 〈P〉 〈R〉
+
+“She is 〈H〉!” “He is 〈P〉!” “He is 〈R〉!” “Who are they?” Figure 1. Personalized VLMs can learn each concept in isolation, but without a mechanism for compositionality, they may struggle to interpret scenes containing multiple user-defined concepts. 
+
+9] embed user-specific concepts directly into the model through adaptation techniques such as concept embeddings or learnable prompts. Specifically, [1] appends detected concept embedding into the vision feature, while [9] adopts prompt learning to obtain meaningful concept prompts. These methods typically explored under a single-concept 
+
+setting, where each concept is trained independently. In this regime, the model internalizes each concept in isolation, which limits its ability to recognize or generate composi-tional instances involving multiple unseen concept combi-nations, as illsutrated in Fig. 1. Recent extensions have at-tempted multi-concept personalization by joint training of learnable prompt of multiple concepts [2]. Though such training may not require co-occurrence of concepts, it still entangles concept prompts during learning, making it diffi-cult to isolate and recombine individual concepts in novel configurations. The retrieval-based approach [4] is an alternative that avoids parameter updates for novel concepts. Instead, it performs instruction tuning on a large corpus containing pseudo-concepts, enabling the model to handle concept-
+
+> arXiv:2605.08702v1 [cs.CV] 9 May 2026
+
+conditioned queries 1. During inference, visual exemplars and relevant information are retrieved from an external database to ground the prediction. While effective, this strategy does not internalize concepts within the model; in-stead, the knowledge remains external and often depends on storing raw personal data, which raises privacy concerns. Additionally, the fine-tuning strategy in such approach does not explicitly address the composition problem, so it would still face limitations in concept composition. Parameter-based concept embedding [1] and learnable prompts [9] have been effective for internalizing user-specific concepts, they face practical limitations in expres-siveness, composability, and scalability when handling mul-tiple concepts or requiring modular reuse, as noted by [16]. To overcome these challenges, we propose a module-based approach explicitly designed for scalable and compositional personalization. In this paper, we propose Gate-and-Merge, a framework for zero-shot compositional personalization of VLMs. Un-like existing methods that rely on concept co-training or ex-ternal retrieval databases, our approach learns each concept independently using a lightweight LoRA adapter paired with a unique concept token. This modular design allows the model to internalize distinct concept representations that remain disentangled across training instances. It forms the foundation for flexible composition of multiple concepts at inference time without requiring joint optimization. At inference time, we introduce a LoRA merging mech-anism that combines the parameter updates of relevant per-sonalized concepts. The merging, done directly in the weight space, allows the model to compose unseen concept combinations and reason about them zero-shot. To support the interaction, the gating module identifies which concepts are contextually relevant and selectively activates only the corresponding LoRA adapters. Naively summing all LoRA updates introduces interference and has the risk of degrad-ing performance. To mitigate this, we sparsify each LoRA update to keep only the dominant signals, and then merge them in a sign-aware manner so that only aligned updates are combined, avoiding destructive interference. The contributions of this paper is summarized as follows: 
+
+1) We introduce Gate-and-Merge, a modular framework for zero-shot compositional personalization of VLMs without requiring co-occurrence training or external databases. 2) 
+
+We propose to represent each user-defined concept by a lightweight LoRA module and a corresponding concept to-ken, supporting scalable and privacy-preserving personal-ization. 3) We introduce a training-free mechanism that selectively activates and merges relevant LoRA modules based on input-dependent textual and visual cues. This en-     
+
+> 1We refer to queries containing user-defined concept tokens ( e.g ., ⟨c⟩)as concept-conditioned queries, with concept name cenclosed by ⟨·⟩ . One exemplar token can be ⟨my cat ⟩.
+
+ables the model to compose multiple independently learned concepts at inference time. 4) We demonstrate through extensive experiments that our method achieves superior performance compared to parameter-based personalization methods. 
+
+# 2. Related work 
+
+Personalization of MLLMs. Personalization aims to adapt a model’s knowledge or behavior to user-specific concepts, objects, identities, or preferences. While early personaliza-tion efforts [13, 17, 18, 21], were primarily explored in im-age generation systems, such as diffusion models. These methods mostly focused on teaching a generative model to render a user’s face, pet, or artwork style. Although these approaches successfully capture visual appearance, they are inherently limited: they personalize only the visual output space, without integrating the concept into reasoning, lan-guage, or multimodal understanding. The rise of multi-modal large language models (MLLMs) [6, 7, 15] has re-shaped personalization. Beyond generating customized im-ages, personalization now aims to internalize user-defined concepts so that a model can remember, recognize, and ref-erence them across tasks such as dialogue, VQA, caption-ing and reasoning. To pursue this goal, recent methods ex-tend personalization into VLMs. MyVLM [1] attaches ex-ternal classification heads for concept recognition and in-jects learned concept embeddings into the language model to influence responses. Yo’LLaVA [9] modifies LLAVA more directly by expanding the tokenizer and learning soft prompts per concept, enabling the model to reference these concepts in text. While effective, these approaches still struggle with scalable, compositional, and multi-concept personalization. 
+
+Parameter-efficient adaptation. Large pretrained mod-els can be efficiently fine-tuned by introducing lightweight, low-rank adapters rather than updating all parameters. Low-Rank Adaptation (LoRA) [5] became one of the most pop-ular methods, inserting trainable rank-decomposition ma-trices into frozen transformer weights to enable compact, reusable fine-tuning. Subsequent studies [13, 22, 24] extend this idea to adapters, prompt-tuning, and other lightweight mechanisms across vision and language models. While LoRA was initially designed for single-task adaptation, re-cent work has explored composing multiple LoRA mod-ules, each encoding a distinct skill or concept. [14] pro-poses an asymmetric PEFT design that shares a common A matrix while learning multiple expert B matrices, using an MoE router to reduce task interference and automat-ically discover intrinsic data components, outperforming standard and multi-LoRA methods with fewer parameters. [10] learns LORAs through orthogonal adaptation, enables instant multi-concept diffusion model merging by training each LoRA in orthogonal subspaces, preventing crosswalk and better preserving identities. Recently, [11] studied skill composition for language models, showing that merging multiple LoRAs trained on disjoint tasks can outperform joint training when data for combined tasks is scarce. Sim-ilarly, [12] proposed Multi-LoRA composition for image generation using frequency-domain guidance to blend mul-tiple concept-specific LoRAs without retraining. [23] in-troduced CS-ReFT, which learns orthogonal subspaces for distinct skills and composes them through subspace rout-ing—conceptually parallel to compositional LoRA at the representation level. Our work extends this line of research by examining LoRA composition in visual concept recogni-tion and multi-concept reasoning. Each LoRA represents a personalized concept or specialization, and the model must dynamically activate and fuse the relevant modules to han-dle complex, multi-concept queries. 
+
+# 3. Method 
+
+3.1. VLM Personalization 
+
+Let M be a pretrained vision-language model. A user-specific concept c is represented by a textual identifier tc,a small support set of image set Xc, and a text set Lc. The goal of personalization is to obtain a compact concept pre-sentation Πc such that M ⊕ Πc can correctly recognize, de-scribe, or answer questions about c in future image-text in-puts. In existing VLM personalization tasks, ⊕ may denote either prompt injection, that prepends learnable prompts to the text encoder input without modifying Θ, or performing parameter update with instruction tuning to teach the model about these concepts. We consider the task of zero-shot compositional per-sonalization of VLMs. Given the pretrained M and a set of user-defined concepts C = {c1, c 2, ..., c K }, the goal is to learn compact representation for each concept indepen-dently, without observing any co-occurrence of concepts during learning. At inference, the model must correctly recognize, describe or answer questions about novel com-positions of these concepts, e.g ., inputs containing multi-ple concepts from a subset S ⊆ C , even though no sample in training depicted them together. To this end, we pro-pose a Gate-and-Merge framework that can achieve zero-shot compositional personalization. Our method consists of two main parts. The first part focuses on single con-cept learning (Sec. 3.2), where user-defined concepts are individually internalized as modular representations. The second part addresses multi-concept composition (Sec. 3.3), enabling the model to selectively activate and fuse the rele-vant concept modules during inference. The full pipeline is depicted in Fig. 2. 
+
+3.2. Single Concept Learning 
+
+Unlike previous work that represents concept information using learnable prompts [9], we propose a more explicitly modular approach. Specifically, our approach models each concept c as an independent module comprising two com-ponents: a learnable concept token ( ⟨c⟩), and a set of low-rank adaptation parameters. 
+
+Concept Token. We begin by introducing a new token ⟨c⟩
+
+into the tokenizer vocabulary to serve as the textual identi-fier for concept c. This token is associated with a trainable embedding vector, 
+
+ec = Embedding (⟨c⟩) ∈ Rd, (1) where d is the hidden dimensionality of language model. To enable concept-level decoding, we also extend the model’s output head Wout ∈ RV ×d by appending a new row wc
+
+corresponding to ⟨c⟩, yielding: 
+
+Wout ← Wout w⊤
+
+> c
+
+ ∈ R(V +1) ×d, wc ∈ Rd. (2) Both ec, wc are randomly initialized and optimized end-to-end during training. 
+
+LoRA Parameters. Beyond token embeddings, we em-ploy concept-specific parameter adaptation δc by LoRA. Let W ∈ Rdout ×din denote a weight matrix in the lan-guage model, we define the concept adaptation as a low-rank residual: 
+
+W ′ = W + δc, δc = AcBc, A c ∈ Rdout ×r , B c ∈ Rr×din ,
+
+(3) where r ≪ min( din , d out ) is the rank of the LoRA update. In summary, the personalized module for concept c is fully specified by: 
+
+Πc = {ec, wc, δc}, (4) Each concept module is trained independently using a small support set D described above. The goal is to teach the model to correctly associate ⟨c⟩ with the visual appear-ance of the concept. To achieve this, we optimize a stan-dard masked language modeling objective over text, image inputs: 
+
+L = −
+
+> T
+
+X
+
+> t=1
+
+log P (ℓi,t | xi, ℓ i,<t ; ec, wc, δc), (5) where ℓ is the target output of length T .During training, adaptation is exclusively to the language branch via concept tokens and LoRA parameters and the vi-sion branch is fixed. Keeping the visual encoder frozen can help maintain a stable and shared feature space across con-cepts, ensuring that visual features remain mutually com-patible and comparable, which is essential for reliably com-posing multiple independently learned concept modules at inference time. 〈R〉〈P〉〈H〉       
+
+> (a) Single concept learning (b) Multi-concept composition
+> eeewwwABABAB
+> δδδ
+> (LoRA) (token) Vision Encoder Project layer Language Model “Please give a caption of the image.” (gate and merge)
+> δmerge
+> “From left to right are
+> 〈R〉,〈H〉, and
+> 〈P〉.” Figure 2. The proposed Gate-and-Merge framework. (a) During personalization, each concept is independently learned as a LoRA module associated with a unique concept token, enabling scalable and disentangled representation learning. (b) At inference, the gating function identifies concept relevance from text and image cues, while the merging mechanism fuses the aligned LoRA updates to achieve zero-shot compositional reasoning.
+
+3.3. Multi-concept Composition 
+
+After learning individual concepts as modular components, the model is required to generalize compositionally at in-ference, i.e ., handling inputs that involve multiple concepts at once for zero-shot personalization, despite having no exposure to such combinations during training. However, naively summing the LoRA updates for all concepts often causes semantic interference, where different adaptations may conflict and degrade the performance. To overcome this issue, we introduce a selective Gate-and-Merge mech-anism that identifies the relevant concepts for a given in-put and composes only their corresponding LoRA weights, while explicitly mitigate potential interference during the fusion process. 
+
+Gate. Formally, given an input image x and textual query 
+
+q, the gate mechanism considers two complementary cues: textual and visual relevance. Textual relevance is triggered by the explicit mention of the concept token ⟨ci⟩ in the query: 
+
+tc(q) = 1[⟨ci⟩ ∈ q], (6) while visual relevance is measured via cosine similarity in the feature space. Let Ev (x) = [ v1, ..., vP ] be ℓ2 normal-ized patch features from the frozen vision encoder, and let 
+
+ϕc be ℓ2 normalized prototype for concept c. Per-patch co-sine scores can be defined as: 
+
+sj,c = ⟨vj , ϕ c⟩, j = 1 , ..., P. (7) and aggregated via top-K pooling: 
+
+sc(x) = stopk  
+
+> v
+
+(x, c ) = 1
+
+K
+
+X
+
+> j∈topk {sj,c (x)}
+
+sj,c (x) (8) A concept is selected if it is either text-mentioned or vi-sually supported: 
+
+gc(x, q ) = 1[tc(q) = 1 ∨ sc(x) ≥ τ ], (9) where τ is the pre-defined similarity threshold. The above then yields the set of active concepts: 
+
+S = {c ∈ C : gc(x, q ) = 1 }. (10) 
+
+Merge. Given the gated set S, we compose only the LoRA updates of the selected concepts. A na¨ ıve solution is to sum all updates, i.e ., ˆδ = P 
+
+> c∈S
+
+δc. However, direct addition may cause interference, because independently trained adapters may update overlapping weight coordi-nates in different or even opposing directions, creating con-flicts that distort the intended signals. Instead, we perform a structured merging strategy that combines DARE [20] and ties [19]. For each selected LoRA δc, we first reduce its redundancy in the LoRA parameters by stochastic dropping with unbiased rescaling: 
+
+mc ∼ Bernoulli( p),
+
+eδc = ( 1 − mc) ⊙ δc,
+
+bδc = eδc/(1 − p),
+
+(11) so that E[ˆδc] = δc2. In Eq. (11), mc ∈ { 0, 1}shape (δc) is an element-wise Bernoulli mask sampled with the drop rate 
+
+p ∈ [0 , 1) . This yields sparse adapters that retain the ex-pected update while suppressing low-contribution parame-ters, reducing potential cross-concept conflicts. 
+
+> 2A rough proof can be found in [20]
+
+Following [19], we fuse the sparsified LoRA adapters into a single adapter by enforcing sign consistency at each parameter coordinate and averaging only non-conflicting updates. We index an entry in the weight matrix by (u, v ),where u ∈ { 1, . . . , d out }, v ∈ { 1, . . . , d in }, γu,v captures the dominant update direction at that coordinate: 
+
+γu,v = sign 
+
+ X 
+
+> c∈S
+
+bδ u,v c
+
+
+
+. (12) Afterwards, we discard the contributions whose updates at (u, v ) disagree with γu,v , and average only the sign-consistent entries to produce the fused value at that coor-dinate: 
+
+Au,v = {c ∈ S | sign( bδu,v c ) = γu,v }, (13) 
+
+δu,v  
+
+> merge
+
+= 1
+
+|A u,v |
+
+X
+
+> c∈S
+
+ˆδu,v c . (14) For multi-concept inference, we apply the fused param-eter to the base model, yielding the composed model: 
+
+Mcomp = M ⊕ δmerge (15) Our fusion operates entirely at inference with no extra train-ing, so composition arises from internal parameter modular-ity rather than co-occurrence supervision. 
+
+# 4. Experiments 
+
+4.1. Dataset 
+
+We construct our evaluation benchmark using images sourced from the recent multi-concept dataset [2]. The per-sonalization pool consists of 118 distinct concepts, cover-ing a diverse range of categories ranging from real-world individuals ( e.g ., celebrities and public figures), everyday objects, fictional or anime characters, etc . For each con-cept, we use 10 positive images that depict that concept. To enhance discriminability and mitigate overfitting, we in-corporate hard negative samples. For every concept, we retrieve approximately 100 visually similar images from CC12M [3] based on CLIP feature similarity 3. These vi-sually close but semantically incorrect examples serve as challenging negatives during training. For evaluation, each concept is tested using its positive images along with 10 hard negatives collected using the same retrieval procedure. To assess zero-shot compositional generalization, we further evaluate on multi-concept images from [2], where the model is not informed beforehand about which con-cepts appear in each image. This split includes 36 two-concept, 10 three-concept, and 2 four-concept combina-tions, enabling systematic analysis of multi-concept reason-ing. Each combination has 5 images for testing. 
+
+> 3https://github.com/rom1504/clip-retrieval
+
+Training Data. We include four types of training data for each concept as follows: 
+
+- Positive Recognition : Image query answer triples (x, q, ℓ )
+
+where x contains the target concept and q queries its pres-ence ( e.g ., “Can you see ⟨c⟩ in this photo?”) Answers affirm the concept ( e.g ., “Yes, I can confirm that ⟨c⟩ is indeed in the photo.”) 
+
+- Hard Negative Recognition : Triplets (x−, q, ℓ −) with vi-sually similar but concept-absent images x−, which we mine from the CC12M [3]. Prompts mirror positive case, while the answers negate the hypothesis ( e.g ., “I’ve ana-lyzed the image, and ⟨c⟩ is not present in the photo.”) 
+
+- Conversation : We follow Yo’LLaVA [9] and create con-versation data for each concept. 
+
+- Image Captioning : We prompt LLaVA [7] to generate one caption for each concept image and use them for training. 
+
+4.2. Implementation Details 
+
+For training, we follow prior personalization work [9] and adopt the LLaVA [7] as the base vision-language model. We train the model with the AdamW [8] optimizer, employing a learning rate of 1e−3 for concept token and 1e−4 for LoRA parameters for 15 epochs. For each concept LoRA, we set the rank to be 4 and the scale to be 8. For sparsity ratio, we use p = 0 .8. For visual gating threshold τ in Eq. (9), we set to 0.3. 
+
+Baselines. We implement the following methods as our baselines to provide a comprehensive comparison against existing approaches. 
+
+- MyVLM [1]: We use the same LLaVA backbone for a fair comparison and train each concept independently. How-ever, since MyVLM [1] operates with a single concept head at inference, extending it to handle multi-concept inputs is non-trivial and not directly supported by its architecture. 
+
+- Yo’LLaVA [9]: We follow the original training protocol and learn each concept-specific prompt independently. Dur-ing inference, the learned prompts are dynamically com-posed based on the same concept selection process. To en-able multi-concept reasoning, we extend both the tokenizer and the classifier head to accommodate multiple personal-ized concept tokens. 
+
+- RAP-MLLM [4]: We construct the external database fol-lowing the procedure described in [4], providing for each concept an image and a and employ the RAP-LLaVA model to obtain the corresponding results. As retrieval-based methods achieve personalization by referencing external concept images and textual information rather than embed-ding these concepts into the model itself. As a result, it shifts the burden of adaptation to the reasoning capabilities of the underlying VLM. Internalized? Single - Single Single - Multiple Multiple-Multiple Acc Prec. Recall F1 bRecall Acc Prec. Recall F1 bRecall Acc Prec. Recall F1 bRecall GPT4o + Prompt [4] ✘ 88.2 64.5 99.0 74.5 92.2 93.3 88.7 97.1 91.5 93.4 90.4 57.1 72.8 66.6 86.5 RAP-MLLM [4] ✘ 85.3 59.7 98.1 71.6 90.5 90.6 84.8 94.4 87.5 91.8 87.4 52.3 68.8 57.4 80.4 MyVLM [1] ✔ 63.7 22.5 37.2 27.7 62.4 48.5 30.1 60.8 48.2 44.1 - - - - -Yo’LLaVA [9] ✔ 65.1 21.7 36.4 25.6 58.2 46.6 32.4 75.5 50.6 43.8 29.3 18.4 87.7 29.7 52.2 Ours ✔ 73.6 31.0 86.4 44.1 73.9 54.3 36.8 63.8 57.2 54.4 69.9 32.9 44.1 32.4 59.8 
+
+Table 1. Visual recognition performance under varying levels of compositional complexity: Single–Single, Single–Multiple, and Multi-ple–Multiple. Our approach achieves improvements over existing parameter-based approaches. Internalized indicates if each approach actually integrates the concept, i.e ., concept representations are model dependent. 
+
+4.3. Visual Recognition 
+
+We first evaluate our method on the task of visual recog-nition, where the goal is to correctly identify one or mul-tiple concepts are present in an image. We consider three evaluation settings based on the relationship between the query and the visual content. Single-Single (SS) denotes the standard case, where the query corresponds to a sin-gle concept. Single-Multiple (SM), represents a more chal-lenging setting, where the query targets a single concept but the image contains multiple co-occurring concepts. Finally, 
+
+Multiple-multiple (MM) evaluates the model’s ability to jointly recognize multiple queried concepts that appear si-multaneously in the image. For all three settings, we report accuracy, precision, re-call, F1 score, and balanced recall (the mean of positive and negative recall), which together provide a comprehensive assessment of the model’s correctness, discrimination abil-ity, and reliability under varying levels of visual complexity. Tab. 1 reports visual recognition performance across three evaluation regimes, and compares methods that rely purely on prompt (no internal concept learning) against models that explicitly internalized user concepts. As we can see, GPT4o when prompted similarly with RAP-MLLM [4] achieves the highest overall performance on across all set-ting, surpassing the RAP-MLLM [4]. This indicates that these methods are exceptionally good at detecting the pres-ence of a queried concept when it truly appears. However, both model display a “Yes-bias”, predicting concept pres-ence even when absent. As a result, their precision drops sharply. For example, RAP-MLLM [4] has a relatively low precision of 59.7% compared to the high recall of 98.1%. As for parameter-based models, we found that the preci-sion scores are relatively low (20-30% across settings), and the overall F1 performance remains weak even in the sim-plest SS task. Among these, our method achieves a more balanced performance profile, providing reliable recogni-tion. Across all meetings, our model attains a higher preci-sion and F1 than existing internalized approaches, demon-strating that our internalization is stronger and more stable. Notably, our balanced recall remains consistent (73.9% / 54.4% / 59.8% across SS, MS, MM), showing that our ap-Text Visual Single Multiple Single Multiple RAP-MLLM 53.3 42.6 72.5 58.8 Yo’LLaVA 71.5 57.3 64.7 52.4 Ours 76.4 62.1 69.4 57.9 
+
+Table 2. Performance on text-based QA and visual QA across single- and multiple-concept settings. Our method achieves the most balanced and robust results in both text-only and multimodal reasoning. 
+
+proach is considerately more capable of rejecting false pos-itives compared to MyVLM [1] and Yo’LLaVA [9]. The gains are most visible in the most challenging MM setting, where our methods yields nearly 70% accuracy, compared to that of Yo’LLaVA (29.3%). 
+
+4.4. Text / Visual QA 
+
+We first evaluate the model’s ability to perform concept-centric reasoning purely from text, without any visual ev-idence. This setting tests whether the model can reliably recall and interpret personalized concepts when prompted in isolation. As shown in Table 2, our method achieves 66.4% accuracy in the single-concept setting and 52.1% in the multi-concept setting, outperforming both RAP-MLLM (50.3% / 34.6%) and Yo’LLaVA (61.5% / 47.3%). For fair comparison, we also remove retrieved reference image in RAP-MLLM [4], and it performs notably worse in this setup as the retrieved concept information may not help in answering detailed or fine-grained questions like “What is the hair color of 〈c〉?”. We then extend the evaluation to the multimodal setting, where the model must ground concept-related questions in the visual content of the input image. This task is more challenging, as it requires aligning personalized concepts between text and vision. As shown in Table 2, our method attains 69.4% accuracy in the single-concept VQA setting and delivers a competitive 57.9% in the multi-concept sce-nario, demonstrating strong robustness as the visual reason-ing complexity increases. Overall, our method provides the Concept Test image Generated personalized caption 
+
+> 〈Z〉〈T〉〈J〉〈A〉〈G〉〈M〉
+
+RAP-MLLM [4]: 〈Z〉 is a pink pig with a red striped shirt. ( ∗copy-paste) 
+
+Yo’LLaVA [9]: In the image, we see the animated character 〈Z〉, a pink-skinned pig with a joyful expression. 
+
+Ours : In the image, we see the beloved character 〈Z〉. She is standing in a field of tall grass. In her right hand, she holds a red apple. 
+
+RAP-MLLM [4]: 〈J〉 is being held by 〈T〉.
+
+Yo’LLaVA [9]: In the image, we see two animated characters 〈T〉 and 〈J〉.
+
+Ours : In this image, we see 〈T〉, a gray cat with a blue hat, is in hot pursuit of 〈J〉, a brown mouse with a red scarf. 
+
+RAP-MLLM [4]: 〈A〉, 〈M〉, and a hippo stand together on a beach. 
+
+Yo’LLaVA [9]: In the image, we see 〈M〉 is standing left on a sandy beach. In the center is a lion and on the right is a hippopotamus. 
+
+Ours : In the image, we see 〈M〉 is on the left. In the center is 〈A〉. On the right is 〈G〉. They are standing in a savanna-like environment with greenery and a clear sky in the background. 
+
+> Figure 3. Qualitative comparison of personalized captioning capabilities across different models. From top to bottom, each row shows examples containing a single concept, two concepts, and three concepts, respectively. It shows our approach can be effectively extend to compositional scenarios. Red indicates the failure in generating the personalized concept.
+
+most balanced performance across both text and visual QA. 
+
+4.5. Captioning 
+
+Lastly, we evaluate the model on the task of captioning, which measures its ability to generate coherent and con-textually accurate descriptions of images involving one or more learned concepts. We follow [1] and report recall indi-cating whether the concept identifier appears at least once in the generated caption. Table 3 reports personalized caption-ing recall in both the single-concept and multi-concept im-age settings. Across all methods, performance in the single-concept scenario is modest, and recall drops sharply once multiple concepts appear simultaneously. This pattern re-flects the inherent difficulty of generating captions that ac-curately describe user-specific concepts. RAP-MLLM [4] obtains the highest single-concept recall at 60.0%, outper-forming internalized baselines such as Yo’LLaVA [9] and our approach. However, closer inspection reveals that RAP-MLLM’s apparent advantage is largely driven by direct copying of the stored concept information. Specifically, we find that 77.4% of captions containing the concept to-ken are identical to the textual description stored in the concept database. This indicates that the model often re-lies on retrieval-based repetition rather than genuinely in-tegrating the visual content. This limitation becomes even more apparent in the multiple-concept setting, where RAP-MLLM’s recall drops dramatically to 20.3%. The reliance on verbatim retrieval prevents the model from resolving which personalized concept is actually present in the image, leading to mismatches and overly generic outputs. In contrast, internalized methods such as Yo’LLaVA [9] and our approach do not suffer from this copy-paste ar-tifact. In the single concept setting, Yo’LLaVA achieves only 47.5% and collapse to 7.6% with multiple, highlight-ing the unstable concept retention and interference among token prompts when combined together. Our method im-proves recall in both settings (55.2% and 12.8%), demon-strating more robust concept grounding, but it too struggles when multiple personalized concepts must be composed in a single caption. The steep degradation in the multi-concept condition underscores that compositional personalized cap-tioning remains a fundamentally challenging problem. Internalized? Single Multiple Average RAP-MLLM [4] ✘ 60.0 20.3 40.2 Yo’LLaVA [9] ✔ 47.5 7.6 27.6 Ours ✔ 55.2 12.8 34.0 
+
+> Table 3. Personalized captioning recall in single concept and mul-tiple concept images.
+
+p 0.3 0.5 0.7 0.8 0.9 Acc 31.5 54.1 67.7 69.9 65.5 F1 26.6 27.5 30.1 32.4 29.8   
+
+> Table 4. Ablation on the sparsity ratio pon visual recognition task under the MM setting.
+
+We further present qualitative example to illustrate the personalized captioing behavior of different models in Fig. 3. As we observed above, in the single-concept setting (first row), RAP-MLLM [4] produces caption that directly repeat the concept information stored in the con-cept database. This behavior indicates a tendency to rely on memorized text rather than integrating visual evidence. In contrast, our method generates more concise and visu-ally aligned descriptions that better reflect the content of the image. In the multiple concept setting, our approach demonstrate stronger compositional generalization. While Yo’LLaVA [9] occasionally fails to mention all relevant concepts, our method maintains more accurate coverage of the present concepts and produces captions that preserve both identity and context. These examples highlight the im-proved robustness of our fusion strategy in handling com-positional personalization. 
+
+4.6. Ablation Study 
+
+Sparsity ratio p. Tab. 4 reports how varying the sparsity ratio in the fusion process influences the visual recogni-tion performance on the MM setting. We observe a clear trend that increasing the sparsity ratio from 0.3 to 0.7 leads to substantial gains in both accuracy (31.5% vs. 67.7%) and F1 score (26.1 vs 30.1). Performance peaks around 0.7–0.8 sparsity, where the model achieves the best accu-racy (67.7–69.9) and the highest F1 (30.1–32.4). This in-dicates that moderate sparsity helps suppress interference among LoRA updates, allowing the fused model to better isolate concept-specific signals and handle compositional scenes. Beyond this point, however, increasing sparsity to 0.9 causes a noticeable drop in both metrics. It is likely that much of the meaningful adaptation signal has been re-moved. 
+
+Visual gating threshold τ . Tab. 5 summarizes the impact of the visual gating threshold τ on multi-concept perfor-mance. For visual recognition (MM), both accuracy and F1 
+
+τ Visual Rec. Captioning Acc F1 Recall 0.1 68.1 30.9 10.6 0.3 69.9 32.4 12.8 0.5 69.9 32.4 8.2    
+
+> Table 5. Ablation study on the similarity threshold τon visual recognition (MM) and captioning (Multiple).
+
+improve when increasing τ from 0.1 to 0.3, indicating that a modest threshold helps suppress irrelevant LoRA activa-tions. Performance remains stable at τ = 0 .5, largely be-cause the gating mechanism also incorporates textual cues, which reliably activate the correct concept module even when the visual gate becomes more selective. As a re-sult, recognition does not degrade despite the stricter visual threshold. In contrast, captioning is more sensitive to the choice of τ . Concept recall peaks at τ = 0 .3, whereas both lower (0.1) and higher (0.5) thresholds lead to substantial drops. A low threshold can activate too many irrelevant Lo-RAs, introducing interference, while a high threshold may suppress valid concepts that lack of strong visual similar-ity. Unlike recognition, which benefits from textual gating, captioning depends more heavily on visual cues, making it more sensitive to τ .
+
+4.7. Limitations 
+
+Although our method improves compositional personaliza-tion, several limitations remain. One is that our approach assumes that each personalized concept can be cleanly cap-tured by its own token and LoRA module; highly entan-gled or visually ambiguous concepts may require more ex-pressive adaptation mechanisms. Another limitation is that while the sparsification strategy enhances modularity and reduces interference, it also poses the risk of losing fine-grained details or highly variable appearances of concepts. 
+
+# 5. Conclusion 
+
+We presented Gate-and-Merge, a framework for zero-shot compositional personalization of VLMs that learns each user-defined concept independently and composes them at inference without co-occurrence supervision. Our method represents each concept using a lightweight token and a LoRA module attached to the language branch, while the vi-sion encoder remains entirely frozen for efficiency and sta-bility. At test time, a multi-modal gating mechanism identi-fies the concepts relevant to the input, after which their cor-responding LoRA updates are selectively fused in weight space to form a single compositional adapter. On multiple personalization tasks, our approach demonstrates substan-tial improvements in both single-concept and multi-concept accuracy. References 
+
+[1] Yuval Alaluf, Elad Richardson, Sergey Tulyakov, Kfir Aber-man, and Daniel Cohen-Or. Myvlm: Personalizing vlms for user-specific queries. In European Conference on Computer Vision , pages 73–91. Springer, 2024. 1, 2, 5, 6, 7 [2] Ruichuan An, Sihan Yang, Ming Lu, Renrui Zhang, Kai Zeng, Yulin Luo, Jiajun Cao, Hao Liang, Ying Chen, Qi She, et al. Mc-llava: Multi-concept personalized vision-language model. arXiv preprint arXiv:2411.11706 , 2024. 1, 5 [3] Soravit Changpinyo, Piyush Sharma, Nan Ding, and Radu Soricut. Conceptual 12m: Pushing web-scale image-text pre-training to recognize long-tail visual concepts. In Proceed-ings of the IEEE/CVF conference on computer vision and pattern recognition , pages 3558–3568, 2021. 5 [4] Haoran Hao, Jiaming Han, Changsheng Li, Yu-Feng Li, and Xiangyu Yue. Rap: Retrieval-augmented personalization for multimodal large language models. In Proceedings of the Computer Vision and Pattern Recognition Conference , pages 14538–14548, 2025. 1, 5, 6, 7, 8 [5] Edward J Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, Weizhu Chen, et al. Lora: Low-rank adaptation of large language models. ICLR ,1(2):3, 2022. 2 [6] Junnan Li, Dongxu Li, Silvio Savarese, and Steven Hoi. Blip-2: Bootstrapping language-image pre-training with frozen image encoders and large language models. In In-ternational conference on machine learning , pages 19730– 19742. PMLR, 2023. 1, 2 [7] Haotian Liu, Chunyuan Li, Qingyang Wu, and Yong Jae Lee. Visual instruction tuning. Advances in neural information processing systems , 36:34892–34916, 2023. 1, 2, 5 [8] Ilya Loshchilov and Frank Hutter. Decoupled weight decay regularization. arXiv preprint arXiv:1711.05101 , 2017. 5 [9] Thao Nguyen, Haotian Liu, Yuheng Li, Mu Cai, Utkarsh Ojha, and Yong Jae Lee. Yo’llava: Your personalized lan-guage and vision assistant. Advances in Neural Information Processing Systems , 37:40913–40951, 2024. 1, 2, 3, 5, 6, 7, 8[10] Ryan Po, Guandao Yang, Kfir Aberman, and Gordon Wet-zstein. Orthogonal adaptation for modular customization of diffusion models. In Proceedings of the IEEE/CVF con-ference on computer vision and pattern recognition , pages 7964–7973, 2024. 2 [11] Akshara Prabhakar, Yuanzhi Li, Karthik Narasimhan, Sham Kakade, Eran Malach, and Samy Jelassi. Lora soups: Merg-ing loras for practical skill composition tasks. In Proceed-ings of the 31st International Conference on Computational Linguistics: Industry Track , pages 644–655, 2025. 3 [12] Aniket Roy, Maitreya Suin, Ketul Shah, and Rama Chellappa. Multlfg: Training-free multi-lora composi-tion using frequency-domain guidance. arXiv preprint arXiv:2505.20525 , 2025. 3 [13] Nataniel Ruiz, Yuanzhen Li, Varun Jampani, Yael Pritch, Michael Rubinstein, and Kfir Aberman. Dreambooth: Fine tuning text-to-image diffusion models for subject-driven generation. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition , pages 22500– 22510, 2023. 2 [14] Chunlin Tian, Zhan Shi, Zhijiang Guo, Li Li, and Cheng-Zhong Xu. Hydralora: An asymmetric lora architecture for efficient fine-tuning. Advances in Neural Information Pro-cessing Systems , 37:9565–9584, 2024. 2 [15] Wenhai Wang, Zhe Chen, Xiaokang Chen, Jiannan Wu, Xizhou Zhu, Gang Zeng, Ping Luo, Tong Lu, Jie Zhou, Yu Qiao, et al. Visionllm: Large language model is also an open-ended decoder for vision-centric tasks. Advances in Neural Information Processing Systems , 36:61501–61513, 2023. 1, 2[16] Yihan Wang, Jatin Chauhan, Wei Wang, and Cho-Jui Hsieh. Universality and limitations of prompt tuning. Advances in Neural Information Processing Systems , 36:75623–75643, 2023. 2 [17] Yuxiang Wei, Yiheng Zheng, Yabo Zhang, Ming Liu, Zhi-long Ji, Lei Zhang, and Wangmeng Zuo. Personalized image generation with deep generative models: A decade survey. 
+
+arXiv preprint arXiv:2502.13081 , 2025. 2 [18] Yiyan Xu, Wenjie Wang, Yang Zhang, Biao Tang, Peng Yan, Fuli Feng, and Xiangnan He. Personalized image generation with large multimodal models. In Proceedings of the ACM on Web Conference 2025 , pages 264–274, 2025. 2 [19] Prateek Yadav, Derek Tam, Leshem Choshen, Colin A Raf-fel, and Mohit Bansal. Ties-merging: Resolving interference when merging models. Advances in Neural Information Pro-cessing Systems , 36:7093–7115, 2023. 4, 5 [20] Le Yu, Bowen Yu, Haiyang Yu, Fei Huang, and Yongbin Li. Language models are super mario: Absorbing abilities from homologous models as a free lunch. In Forty-first Interna-tional Conference on Machine Learning , 2024. 4 [21] Yu Zeng, Vishal M Patel, Haochen Wang, Xun Huang, Ting-Chun Wang, Ming-Yu Liu, and Yogesh Balaji. Jedi: Joint-image diffusion models for finetuning-free personalized text-to-image generation. In Proceedings of the IEEE/CVF Con-ference on Computer Vision and Pattern Recognition , pages 6786–6795, 2024. 2 [22] Renrui Zhang, Wei Zhang, Rongyao Fang, Peng Gao, Kun-chang Li, Jifeng Dai, Yu Qiao, and Hongsheng Li. Tip-adapter: Training-free adaption of clip for few-shot classi-fication. In European conference on computer vision , pages 493–510. Springer, 2022. 2 [23] Andy Zhou. Compositional subspace representation fine-tuning for adaptive large language models. arXiv preprint arXiv:2503.10617 , 2025. 3 [24] Kaiyang Zhou, Jingkang Yang, Chen Change Loy, and Ziwei Liu. Conditional prompt learning for vision-language mod-els. In Proceedings of the IEEE/CVF conference on com-puter vision and pattern recognition , pages 16816–16825, 2022. 2

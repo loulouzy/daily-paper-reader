@@ -1,0 +1,648 @@
+Title: Stage-adaptive Token Selection for Efficient Omni-modal LLMs
+
+URL Source: https://arxiv.org/pdf/2605.20035v1
+
+Published Time: Wed, 20 May 2026 01:43:20 GMT
+
+Number of Pages: 16
+
+Markdown Content:
+# Stage-adaptive Token Selection for Efficient Omni-modal LLMs 
+
+Zijie Xin 1 Jie Yang 2,✉ Ruixiang Zhao 1 Tianyi Wang 2
+
+Fengyun Rao 2 Jing LYU 2 Xirong Li 1,✉ 
+
+> 1
+
+Renmin University of China 2 WeChat Vision, Tencent Inc. 
+
+https://github.com/xxayt/SEATS 200 250 300 350 400 450  
+
+> 42
+> 43
+> 44
+> 45
+> 46
+> 47
+> 48
+> 49
+> Accuracy
+> Better Performance
+> Higher TRR
+> 925 950
+> Pre-LLM token selection + LLM prefill time (ms)
+> Qwen2.5-Omni 7B
+> FastV-om
+> VisionZip-om
+> DyCoke
+> OmniZip
+> SEATS (ours)
+
+Figure 1: Efficiency–performance trade-off of training-free token selection methods for omni-modal LLMs. Our SEATS achieves higher performance with lower token selection and prefill latency. 
+
+## Abstract 
+
+Omni-modal large language models (om-LLMs) achieve unified audio-visual un-derstanding by encoding video and audio into temporally aligned token sequences interleaved at the window level. However, processing these dense non-textual tokens throughout the LLM incurs substantial computational overhead. Although training-free token selection can reduce this cost, existing methods either focus on visual-only inputs or prune om-LLM tokens only before the LLM with fixed per-modality ratios, failing to capture how cross-modal token importance evolves across layers. To address this limitation, we first analyze the layer-wise token dependency of om-LLMs. We find that visual and audio dependencies follow a block-wise pattern and gradually weaken with depth, indicating that many late-layer non-textual tokens become redundant after cross-modal fusion. Motivated by this observation, we propose SEATS , a training-free, stage-adaptive token selection method for efficient om-LLM inference. Before the LLM, SEATS removes spa-tiotemporal redundancy via attention-weighted diversity selection. Inside the LLM, it progressively prunes tokens across blocks and dynamically allocates the retention budget from temporal windows to modalities using query relevance scores. In late layers, it removes all remaining non-textual tokens once cross-modal fusion is complete. Experiments on Qwen2.5-Omni and Qwen3-Omni demonstrate that 
+
+SEATS effectively improves inference efficiency. Retaining only 10% of visual and audio tokens, it achieves a 9.3× FLOPs reduction and a 4.8× prefill speedup while preserving 96.3% of the original performance. 
+
+> ✍
+
+Work was done when Zijie Xin and Ruixiang Zhao interned at Tencent. (xinzijie@ruc.edu.cn) 
+
+> ✉
+
+Corresponding author: Xirong Li (xirong@ruc.edu.cn), Jie Yang (cvjieyang@tencent.com) Preprint. 
+
+> arXiv:2605.20035v1 [cs.CV] 19 May 2026
+
+## 1 Introduction 
+
+Omni-modal large language models (om-LLMs) [ 28 , 34 , 33 , 36 , 17 , 22 , 24 , 23 , 31 ] have shown great potential for unified audio-visual understanding [ 12 , 43 , 27 ]. They encode video frames and audio streams into temporally aligned token sequences and concatenate them with text tokens for joint LLM reasoning. However, dense frame sampling and high-resolution audio encoding cause visual and audio tokens to grow rapidly with video duration, often reaching tens of thousands. Since self-attention scales quadratically with sequence length, processing all multimodal tokens throughout the LLM incurs substantial computation and memory overhead. Therefore, selecting compact yet semantically sufficient visual and audio tokens is crucial for efficient om-LLM inference. Token selection has been widely studied for image-LLMs [ 14 , 16 ] and video-LLMs [ 42 , 29 , 2 , 37 , 10 ], see Tab. 1. Depending on where selection is performed, existing methods can be broadly categorized into pre-LLM methods and inner-LLM methods. Pre-LLM methods [ 35 , 1, 4, 6] reduce input length using encoder-side signals before LLM computation, but are often query-agnostic and may discard task-critical tokens. Inner-LLM methods [3, 30, 32] exploit text-to-vision attention for query-aware pruning, but shallow-layer attention is noisy, while late pruning limits computational savings. For video-LLMs, spatiotemporal redundancy further motivates frame-aware selection [ 21 , 8] and hybrid pre-/inner-LLM strategies [ 19 , 25 , 7]. Despite these advances, existing methods mainly target a single visual modality and do not address the temporally interleaved audio-visual structure of om-LLMs. Recent studies have begun to explore token selection for om-LLMs. OmniZip [ 26 ] uses audio encoder attention to guide video token pruning, EchoingPixels [ 11 ] pools audio and video tokens for cross-modal joint filtering, and OmniSIFT [ 5] performs spatiotemporal video pruning followed by visual-semantic-guided audio token selection. However, these methods still perform selection only before the LLM with fixed retention ratios, overlooking how visual and audio token importance evolves across LLM layers. Our empirical analysis reveals a clear block-wise dependence pattern: shallow blocks strongly rely on non-textual tokens for cross-modal fusion, middle blocks gradually reduce this dependence, and late blocks require little visual or audio information once fusion is largely completed. This motivates a stage-adaptive, depth-aware, and modality-flexible token selection strategy for om-LLMs. Designing such a strategy is non-trivial due to three key challenges. First, token redundancy differs across stages: pre-LLM tokens mainly contain spatiotemporal repetition, whereas inner-LLM tokens become query-aligned and should be selected by relevance. Second, reliance on non-textual tokens decreases with depth, making a uniform pruning ratio either too aggressive for shallow layers or too conservative for deeper layers. Third, audio-visual importance varies across temporal windows, where either modality may provide the key evidence. Thus, fixed per-modality budgets cannot capture dynamic cross-modal importance. To address these challenges, we propose SEATS , a training-free Stag E- A daptive Token Selection method for efficient om-LLM inference. Before the LLM, SEATS applies attention-weighted diversity selection within each temporal window to remove spatiotemporal redundancy and shorten the input sequence. Inside the LLM, it adopts a block-wise token-retention-ratio ( TRR ) decay schedule, progressively increasing pruning strength as the dependence on non-textual tokens decreases. It further distributes the retention budget through a top-down two-level allocation strategy, first across temporal windows and then across modalities, guided by query relevance scores. In late layers, where cross-modal fusion is largely completed, SEATS removes all remaining non-textual tokens so that subsequent layers process only text tokens. Together, these stages enable token selection that adapts to both layer-wise dependency and cross-modal dynamics without retraining. Extensive experiments on five audio-visual benchmarks and two representative om-LLMs, Qwen2.5-Omni-7B and Qwen3-Omni-30B, verify the viability of SEATS . It is comparable to the full-token performance while using only 33% computational cost on Qwen2.5-Omni-7B, see Fig. 1. At a TRR 
+
+of 0.1, it achieves a 9.3× FLOPs reduction and a 4.8× prefill speedup while preserving 96.3% of the original performance. To sum up, our main contributions are as follows: 
+
+• Insight . We reveal a block-wise dependence pattern in om-LLMs, where reliance on visual and audio tokens gradually decreases with layer depth. 
+
+• Method . We propose SEATS , a training-free method that combines diversity-based token selection in the pre-LLM stage, query-guided token selection in the middle layers of the LLM with top-down visual-audio token budget allocation, and full non-textual removal at the late LLM layers. 2• Results . Experiments on Qwen2.5-Omni and Qwen3-Omni show that SEATS achieves a strong efficiency-performance trade-off for om-LLM inference. 
+
+## 2 Related Work 
+
+As this paper is targeted at training-free token selection, we discuss recent progress in this line of research. See Tab. 1 for an overview. Table 1: Summary of current training-free token selection methods for MLLMs , including image-LLMs ( Õ), video-LLMs ( ), and om-LLMs ( +n).                                                                                                         
+
+> Method Targeted MLLM Selection Stage Selection Criterion Adaptive TRR Late Removal
+> Pre-LLM Inner-LLM Relevance Diversity
+> VisionZip [35] CVPR’25 Õ✓✗Õ✗✗✗
+> DivPrune [1] CVPR’25 Õ✓✗✗Õ✗✗
+> CDPruner [40] NIPS’25 Õ✓✗✗Õ✗✗
+> SCOPE [4] NIPS’25 Õ✓✗ÕÕ✗✗
+> FastV [3] ECCV’24 Õ✗✓Õ✗✗✗
+> PDrop [32] CVPR’25 Õ✗✓Õ✗✓✗
+> HiDrop [30] ICLR’26 Õ✗✓Õ✗✓✓
+> FastVID [21] NIPS’25 ✓✗✗✗
+> DyCoke [25] CVPR’25 ✓✓✗✗
+> HoliTom [19] NIPS’25 ✓✓✗✗
+> FlashVID [8] ICLR’26 ✓✓✗✗
+> UniST [7] CVPR’26 ✓✓✗✗
+> OmniZip [26] CVPR’26 +n✓✗n✗✗
+> SEATS (ours )+n✓✓+n+n✓✓
+
+For image-LLMs . Depending on whether token selection is performed before or inside the LLM, existing methods can be divided into two groups: pre-LLM [ 35 , 20 , 39 , 4, 40 , 6 ] and inner-LLM [ 3,32 , 41 , 30 ]. For pre-LLM token selection, VisionZip [ 35 ], LLaVA-PruMerge [ 20 ], and VisPruner [ 39 ]measure token saliency via [CLS] attention. DivPrune [ 1] formulates token selection as a max-min diversity problem. SCOPE [ 4] and CDPruner [ 40 ] consider both saliency and diversity, whilst MMTok [ 6] performs multimodal coverage-based selection. Since visual and textual tokens are not semantically aligned in the pre-LLM stage, these methods are typically user-query agnostic. By contrast, inner-LLM methods prune visual tokens at specific LLM layers based on text-to-vision attention, making them inherently query-aware. FastV [ 3] performs one-shot pruning at a shallow layer. PyramidDrop [ 32 ] and SparseVLM [ 41 ] perform token selection across multiple layers with a fixed TRR . HiDrop [ 30 ] operates at middle-to-deep layers with a concave schedule such that deeper layers are assigned larger TRR s. Different from HiDrop, SEATS employs a stage-adaptive TRR decay schedule, where TRR progressively decreases as LLM layers go deep. 
+
+For video-LLMs . Pre-LLM methods have been extended to the video domain by exploiting inter-frame token redundancy, see for instance FastVID [ 21 ], FlashVID [ 8], and VidCom2 [ 18 ]. Meanwhile, we observe a growing interest in jointly using pre-LLM and inter-LLM approaches [ 25 , 19 , 13 ]. DyCoke first merges temporally redundant tokens in the pre-LLM stage, and then dynamically reduces the KV cache within the LLM [ 25 ]. HoliTom performs both pre-LLM and inner-LLM token merging [ 19 ]. PruneVID [ 13 ] and UniST [ 7 ] first perform spatial-temporal merging in the pre-LLM stage, and then conduct query-aware token selection inside the LLM. As these methods are designed for uni-modality (visual) token selection, directly applying them to om-LLMs, say by handling the visual and audio tokens in parallel, is suboptimal. 
+
+For om-LLMs . Among the few existing works for om-LLMs [ 26 , 11 , 5], OmniZip is the only one that addresses training-free token selection [ 26 ]. Since this method operates exclusively in the pre-LLM stage, how to effectively select visual and audio tokens inside the LLM is not considered. 
+
+## 3 Token Selection for Om-LLM: Preliminaries and Observations 
+
+3.1 Preliminaries 
+
+Let V be a specific video accompanied with an audio track A. Given a user-provided prompt query 
+
+Q, an om-LLM answers with respect to the video by first encoding the video content as a sequence of Nv visual tokens, the audio track as a sequence of Na audio tokens and the query as a sequence of 3Nq textual tokens. Each token is a d-dimensional vector, denoted by z. When necessary, we use zv ,
+
+za and zq to denote visual, audio and textual tokens, respectively. These token sequences are then concatenated and fed into an L-layer LLM, which generates a response to the query by producing a new sequence of textual tokens in an autoregressive manner. For temporal alignment between the visual and audio modalities, the visual and audio token se-quences are first partitioned using a fixed-size sliding window, resulting in T non-overlapping windows. For each window t, the visual and audio tokens that fall within it are grouped as 
+
+[z(t)
+
+> v, 1
+
+, . . . , z (t) 
+
+> v,n v
+
+, z (t)
+
+> a, 1
+
+, . . . , z (t) 
+
+> a,n a
+
+], where nv and na indicate the number of visual and audio tokens in that window, respectively. These T groups are then concatenated in chronological order, followed by the textual tokens, to form the input sequence of length Nv + Na + Nq to the LLM. Since 
+
+No = Nv + Na ≫ Nq , token selection for efficient LLM prefill effectively reduces to selecting the visual and audio tokens only, with the textual tokens kept entirely intact. For each layer l in the LLM, let rl be the token retention ratio ( TRR ) applied to its input, which reduces the input length from No + Nq to No · rl + Nq . The value of rl governs the trade-off between model performance and efficiency. Intuitively, rl needs to be proportional to the importance of layer 
+
+l. Given the overall TRR R as a token-budget indicator, i.e . PL 
+
+> l=1
+
+rl ≤ L · R, more important layers should be assigned larger rl values. Meanwhile, given Rv and Ra as the overall TRR for visual and audio tokens, respectively, we have No · R = Nv · Rv + Na · Ra.
+
+3.2 Observations 
+
+To empirically identify layer importance, we examine the effect of removing all visual and/or audio tokens at a specific LLM layer of an om-LLM. This approach allows us to measure the extent to which each layer relies on these non-textual tokens. As shown in Fig. 2, a consistent trend emerges across two contemporary om-LLMs (Qwen2.5-Omni-7B [ 33 ] and Qwen3-Omni-30B [ 34 ]). When l falls within the first 50% of layers, which we term the shallow block, removal causes a clear performance collapse, indicating that the visual and audio information has not yet been absorbed by the textual tokens. As l goes beyond 50%, i.e . into the 
+
+middle block, model performance recovers rapidly, suggesting that intensive cross-modal fusion is underway and the textual tokens are progressively acquiring the needed audio-visual semantics. Once l exceeds roughly 80% of the total depth, entering the late block, removal causes almost no performance drop, indicating that the non-textual tokens are no longer needed. The above results reveal a clear block-wise pattern of layer importance. Layers in the shallow block critically depend on the visual and audio tokens and thus demand a relatively high TRR . By contrast, layers in the middle block is more resistant to token removal as cross-modal fusion proceeds, so they can be allocated smaller TRR values. As for the late-block layers, the non-textual tokens can be safely removed without affecting model performance. 50% 80%          
+
+> 14812 16 20 24 28
+> Layer
+> 30.0 32.5 35.0 37.5 40.0 42.5 45.0 46.7
+> Performance
+> Shallow Middle Late
+> Full Token Visual token removal Audio token removal Visual/audio token removal
+
+(a) Qwen2.5-Omni-7B 50% 80%                
+
+> 14812 16 20 24 28 32 36 40 44 48
+> Layer
+> 34.0 37.0 40.0 43.0 46.0 49.0 52.0 54.3
+> Performance
+> Shallow Middle Late
+> Full Token Visual token removal Audio token removal Visual/audio token removal
+
+(b) Qwen3-Omni-30B 
+
+Figure 2: The impact of full visual / audio token removal on the performance of an om-LLM .Test set: WorldSense. Depending on the impact, we roughly divide the LLM layers into three blocks: 
+
+shallow layers, where removal causes a collapse in model performance, middle layers, where removal leads to moderate performance loss, and late layers, where removal has no impact on performance. 4Temporal grouping  
+
+> Middle
+> Layers
+> LLM Layer
+> LLM Layer
+> winDivPrune
+> LLM Layer
+> LLM Layer
+> Inner-LLM token selection
+> Query-guided token selection
+> window
+> Top-down token budget allocation
+> LM head
+> first output
+> token
+> All tokens retained
+> Non-textual tokens
+> fully removed
+> Late
+> Layers
+> Shallow
+> Layers
+> visual tokens
+> window
+> text tokens  audio tokens
+> Pre-LLM token selection
+
+Figure 3: Proposed StagE-Adaptive Token Selection ( SEATS ) method for om-LLMs .
+
+## 4 Proposed Method 
+
+As illustrated in Fig. 3, SEATS is a three-stage method. The first stage performs pre-LLM token selection (Sec. 4.1), the second stage performs inter-LLM token selection (Sec. 4.2), whilst the last stage simply removes all non-text tokens at the late LLM layers. 
+
+4.1 Stage I: Pre-LLM Token Selection by Window-based DivPrune 
+
+Much redundancy exists in both visual and audio tokens in the pre-LLM stage. For instance, visual tokens within a given window typically show high inter-token affinity, especially in low-motion regions. In order to select a compact yet diverse subset, we extend DivPrune [ 1], originally proposed for image token selection, to the omni-modal context. DivPrune selects tokens by greedily solving a max-min diversity problem, where the objective is to maximize the minimum inter-token distance within the selected subset. To that end, an token-wise distance matrix is computed. We adapt DivPrune for omni-modal token selection as follows. First, for efficiency, instead of computing the distance matrix for all input tokens, we restrict the computation to a per-window and per-modality basis. Second, to encourage the selection of salient tokens, the matrix is row-wise reweighed by each token’s attention scores. We term the adapted DivPrune winDivPrune .Recall that in our design, the TRR progressively goes down as the tokens propagate forward. Therefore, the pre-LLM TRR , denoted by rs, shall be larger than R. To this end, letting rs,v and rs,a be the visual and audio pre-LLM TRR s, respectively, we set rs,v = λR v and rs,a = λR a, where λ > 1 is a pre-specified scale factor. Consequently, after the winDivPrune operation, the number of non-textual tokens to be forwarded to the LLM is reduced from No to rs,v Nv + rs,a Na.
+
+4.2 Stage II: Inner-LLM Token Selection with Top-down Token Budget Allocation 4.2.1 Block-wise TRR Decay Schedule 
+
+Based on the pattern of block-wise layer importance (Sec. 3.2), we roughly divide the L layers of the LLM into three blocks, i.e . shallow , middle , and late , with two hyperparameters Ls and Ll indicating the shallow-middle and middle-late boundary layers, respectively. Consequently, we propose a block-wise decay schedule for per LLM-layer TRR allocation, as detailed in Tab. 2 and Fig. 4. Since layers in the shallow block are critical for cross-modal fusion, no token selection is performed in these layers. The visual and audio TRR s are kept identical to their pre-LLM counterparts, rs,v and 
+
+rs,a . For notational simplicity, we omit the modality subscript and simply write rs in the following. The middle block is responsible for token selection with progressively decayed TRR s. As the layer importance diminishes with depth, deeper layers can afford more aggressive token pruning. For fine-grained TRR allocation, we define alongside Ls two extra TRR -transition layers, Lm1 and 5Lm2 . Accordingly, the middle block is divided into three sub-blocks with layer ranges (Ls, L m1 ),
+
+[Lm1 , L m2 ), and [Lm2 , L l). The TRR decreases across sub-blocks with an exponentially increasing step. In particular, let rmi be the TRR of sub-block i (=1, 2, 3). Our decay schedule is defined as 
+
+rmi = rmi−1 − δe i−1, with rm0 = rs and δ a scale factor. This schedule enables earlier sub-blocks to undergo relatively mild token pruning while later sub-blocks discard tokens more aggressively, see Fig. 4. With λ specified, δ can be computed analytically as (L − Llλ + λ)R/C , where C is a constant, see Appendix A. Consider, for instance, the boundary layer setting for Qwen2.5-Omni-7B in Tab. 2, i.e . Ls, L m1 , L m2 , L l=16, 19, 21, 24. Given R=0.3 and λ=1.4, we obtain C=-42.759 and accordingly δ=0.029. Table 2: Proposed block-wise decay schedule for per-LLM-layer TRR .                                                      
+
+> Block Layer range Qwen2.5-Omni-7B TRR per LLM-layer
+> Shallow [1 , L s][1 ,16] rs=λ·R
+> Middle
+> (Ls, L m1)[17 ,19) rm1=rs−δ
+> [Lm1, L m2)[19 ,21) rm2=rm1−δ·e
+> [Lm2, L l)[21 ,24) rm3=rm2−δ·e2
+> Late [Ll,L] [24 ,28] 0117 19 21 24 28
+> Layer
+> 0
+> 10
+> 20
+> 30 30
+> 40
+> 42
+> Token-retention-ratio (%)
+> R
+> rsrm1
+> rm2
+> rm3
+> rl= 0
+
+Figure 4: TRR for each LLM layer of Qwen2.5-Omni-7B , given by Tab. 2 with 
+
+R=30%, λ=1.4, and δ=0.029. 
+
+4.2.2 Top-down Token Budget Allocation 
+
+For each middle layer, substituting Rv and Ra for R in Tab. 2 yields its visual and audio TRR s, denoted as rv and ra, respectively. The layer then accepts rv Nv visual tokens and raNa audio tokens as input. Recall that the input tokens are grouped into windows along the temporal dimension. Intuitively, windows containing more relevant information w.r.t. to the user query should be allocated a higher token budget. Similarly, within every window, the modality (visual or audio) that is more relevant w.r.t. the user query should also receive a larger larger budget relative to the other modality. In that regard, we propose a top-down strategy for query-guided token budget allocation. 
+
+Inter-window token budget allocation . For each window t (= 1, . . . , T ), we measure its relevance to the user query, denoted as St, based on the cross-attention scores between the query and the visual and audio tokens within the window. Specifically, the query is represented by the last textual token, which has attended to all preceding tokens under causal attention. The visual-based window-query relevance score St,v is computed as the mean of the query-to-visual-tokens attention scores, and then normalized using a temperature-controlled softmax. In a similar manner, we obtain the audio-based relevance score St,a . The overall window-query relevance St is then defined as the average of St,v 
+
+and St,a . The token budget Bt allocated to window t is computed as (rv Nv + raNa)St.
+
+Intra-window token budget re-allocation . For token budget re-allocation within each window, we jointly consider each modality’s layer-wise budget and its relevance to the query, computing the window-wise visual and audio token budgets, Bt,v and Bt,a , as follows: 
+
+
+
+Bt = ( rv · Nv + ra · Na)St
+
+Bt,v = St,v · rv · Nv
+
+St,v · rv · Nv + St,a · ra · Na
+
+Bt
+
+Bt,a = Bt − Bt,v .
+
+(1) Note that if Eq. (1) does not fully allocate the budget, the remaining tokens will be re-allocated proportionally to St to ensure PTt=1 Bt,v = rv Nv .
+
+4.2.3 Query-guided Visual and Audio Token Selection 
+
+In order to select Bt,v visual tokens from window t, we sort the visual tokens in descending order by the previously computed query-to-visual-tokens attention scores, and consequently retain the top 
+
+Bt,v tokens. Audio tokens are selected in a similar vein. 6Table 3: Results on Qwen2.5-Omni-7B . Per method, the visual token retention ratio Rv and the audio counterpart Ra are adjusted to satisfy the given overall ratio R. Bold and underline denote the best and second-best per column. Methods sorted in ascending order by their mean performance. 
+
+Method R (Rv -Ra) TFLOPs ↓ WorldSense Daily-Omni OmniVideo Bench Video-MME LVOmni Video Mean 
+
+Full tokens 100 (100-100) 111.0 46.7 64.0 34.1 65.3 33.3 48.7 100.0% 
+
+FastV-om 35 (30-65) 38.3 43.3 58.7 34.4 65.6 34.3 47.2 96.9% 
+
+FastV [3] ECCV’24 35 (24-100) 38.3 43.7 59.6 34.7 65.2 34.8 47.6 97.7% 
+
+Random 35 (30-65) 37.4 44.6 59.7 34.1 65.0 34.9 47.7 97.9% 
+
+DyCoke [25] CVPR’25 35 (24-100) 37.7 44.4 59.9 34.6 66.0 34.7 47.9 98.4% 
+
+VisionZip [35] CVPR’25 35 (24-100) 37.4 44.5 60.6 33.6 66.2 35.3 48.0 98.6% 
+
+FastVID [21] NIPS’25 35 (24-100) 37.1 44.6 59.8 34.6 65.4 35.8 48.1 98.7% 
+
+DivPrune [1] CVPR’25 35 (24-100) 37.4 44.8 60.7 33.9 66.1 35.7 48.2 99.0% 
+
+OmniZip [26] CVPR’26 35 (30-65) 38.2 45.2 60.4 34.5 66.3 34.7 48.2 99.0% 
+
+VisionZip-om 35 (30-65) 37.4 45.2 60.2 34.6 66.3 35.4 48.3 99.2% 
+
+DivPrune-om 35 (30-65) 37.4 45.4 59.7 34.7 66.3 35.4 48.3 99.2% 
+
+SEATS 35 (30-65) 36.7 46.2 62.1 35.0 66.8 36.2 49.3 101.1% 
+
+FastV-om 25 (20-55) 28.3 41.6 56.1 33.0 63.4 32.7 45.4 93.2% 
+
+FastV 25 (12-100) 28.3 42.4 56.5 33.4 62.8 33.8 45.8 94.0% 
+
+OmniZip 25 (25-25) 23.9 42.7 55.5 32.2 66.0 34.0 46.1 94.6% 
+
+Random 25 (20-55) 27.6 43.0 57.3 33.5 64.2 34.6 46.5 95.5% 
+
+VisionZip 25 (12-100) 27.6 42.4 59.7 34.4 64.1 34.5 47.0 96.5% 
+
+FastVID 25 (12-100) 27.0 43.4 58.5 33.8 64.3 34.8 47.0 96.5% 
+
+VisionZip-om 25 (20-55) 27.6 44.4 58.3 33.7 65.4 34.7 47.3 97.1% 
+
+DivPrune 25 (12-100) 27.6 43.2 59.7 34.3 65.3 35.9 47.7 97.9% 
+
+DivPrune-om 25 (20-55) 27.6 44.5 59.2 34.5 66.2 35.4 48.0 98.5% 
+
+SEATS 25 (20-55) 26.5 45.3 60.9 34.7 66.5 35.7 48.6 99.8% 
+
+FastV-om 15 (10-45) 24.3 38.4 51.8 31.2 58.8 31.2 42.3 86.8% 
+
+Random 15 (10-45) 18.0 40.4 55.7 32.7 63.4 32.8 45.0 92.4% 
+
+VisionZip-om 15 (10-45) 17.6 43.0 57.1 33.6 63.1 33.8 46.1 94.7% 
+
+DivPrune-om 15 (10-45) 17.6 42.4 57.6 33.0 64.4 34.4 46.4 95.3% 
+
+SEATS 15 (10-45) 17.3 44.1 58.7 33.7 66.0 34.6 47.4 97.4% 
+
+Random 10 (6-35) 12.8 39.2 52.0 31.6 60.4 32.9 43.2 88.7% 
+
+VisionZip-om 10 (6-35) 12.8 41.8 52.8 33.4 60.7 34.4 44.6 91.6% 
+
+DivPrune-om 10 (6-35) 12.8 41.3 55.1 33.5 63.4 34.8 45.6 93.6% 
+
+SEATS 10 (6-35) 12.2 43.5 57.8 33.6 64.6 35.1 46.9 96.3% 
+
+## 5 Experiments 
+
+5.1 Experimental Setup Test sets . We evaluate SEATS on the following five test sets, commonly used to evaluate an MLLM’s audio-visual understanding abilities: WorldSense [ 12 ], Daily-Omni [43 ], OmniVideoBench [15 ], 
+
+Video-MME [9], and LVOmniBench [27]. 
+
+Choice of om-LLM . We experiment with two open-source om-LLMs, i.e . Qwen2.5-Omni-7B (28-layer LLM) [ 33 ] and Qwen3-Omni-30B (A3B-Instruct, 48-layer MoE-based LLM) [ 34 ]. Note that Qwen3-Omni-30B has an audio token rate of 13 tokens per second, lower than Qwen2.5-Omni-7B’s 25 tokens per second. Consequently, for the same overall TRR (R), the visual TRR (Rv ) and audio 
+
+TRR (Ra) differ between the two om-LLMs. 
+
+Baselines . To ensure a fair and reproducible comparison, a baseline method must be training-free, applicable either before or during the prefill stage, and open-source. To that end, we compile a list of six recent methods, adapting them as needed for om-LLM. Depending on their targeted modalities, 
+
+i.e . image, video or omni-modal, the baselines are categorized into the following three groups: 
+
+• Image : FastV [ 3], VisionZip [ 35 ] and DivPrune[ 1 ]. Applying each method in parallel to visual and audio tokens yields an omni-modal variant that we refer to as FastV-om, VisionZip-om, and DivPrune-om, respectively. 
+
+• Video : DyCoke [ 25 ], FastVID [ 21 ]. Following [ 26 , 5], for DyCoke we use its prefill-stage TTM module only. 
+
+• Omni-modal : OmniZip [26] and Random that randomly selecting tokens at a given ratio. 7Table 4: Efficiency analysis on Qwen2.5-Omni-7B . GPU usage, the time spans for token selection and prefill, and time-to-first-token (TTFT) are all measured on WorldSense using an A800 GPU.                                                                                                            
+
+> Method RTFLOPs ↓GPU Peak ↓
+> Mem. (GB)
+> Token selection (sec.) ↓Prefill (sec.) ↓TTFT (sec.) ↓Mean ↑
+> Score
+> Pre-LLM Inner-LLM
+> Full tokens 100 111.0 (1 .0×)22.83 ––0.937 (1 .0×)1.471 (1 .0×)48.7 100.0%
+> FastV-om 35 38.3 (2 .9×)19.48 –0.010 0.363 (2 .6×)0.901 (1 .6×)47.2 96.9%
+> OmniZip 35 38.2 (2 .9×)19.69 0.095 –0.360 (2 .6×)1.088 (1 .4×)48.2 99.0%
+> VisionZip-om 35 37.4 (3 .0×)19.63 0.125 –0.349 (2 .7×)1.066 (1 .4×)48.3 99.2%
+> DivPrune-om 35 37.4 (3 .0×)19.63 0.025 –0.349 (2 .7×)0.952 (1 .5×)48.3 99.2%
+> SEATS 35 36.7 (3 .0×)18.68 0.034 0.092 0.436 (2 .1×)1.023 (1 .4×)49.3 101.1%
+> SEATS 25 26.5 (4 .2×)18.29 0.028 0.082 0.342 (2 .7×)0.923 (1 .6×)48.6 99.8%
+> SEATS 10 12.0 (9.3 ×)17.65 0.019 0.062 0.196 (4.8 ×)0.767 (1.9 ×)46.9 96.3%
+
+Implementation . Video frames are uniformly sampled at 2 FPS. Following [ 26 ], each time win-dow contains 288 video tokens, along with 50 audio tokens for Qwen2.5-Omni-7B and 26 for Qwen3-Omni-30B. For Qwen2.5-Omni-7B, the maximum number of input frames is set to 128 for WorldSense and Daily-Omni, 256 for OmniVideoBench, and 768 for Video-MME and LVOmniBench. As for Qwen3-Omni-30B, due to its larger memory consumption, the maximum number of input frames is set to 128 for the first two benchmarks and 196 for the remaining three. Unless otherwise specified, our hyperparameter setting is as follows: λ=1 .4, τ =0 .1. For a fair comparison, we evaluate each method with the same R, chosen from {35% , 25% , 15% , 10% }. The TRR -transition layers 
+
+(Ls, L m1 , L m2 , L l) are set to (16 , 19 , 21 , 24) for Qwen2.5-Omni-7B and (27 , 32 , 36 , 40) for Qwen3-Omni-30B. All experiments are conducted on NVIDIA A800 80GB GPUs using LMMs-Eval [ 38 ]. See Sec. B for more details about the data and implementation. 
+
+5.2 SEATS versus SOTA Results on Qwen2.5-Omni-7B . As shown in Tab. 3, SEATS achieves the best average performance across all retention ratios. At 35% retention, SEATS even surpasses the full-token baseline (49.3 vs. 48.7), with larger gains on long-video benchmarks in Tab. 6, suggesting that query-aware token selection is more effective than preserving all tokens when longer videos introduce increasing visual redundancy. Even at the most aggressive 10% retention, SEATS retains 96.3% of the full-token performance with only 11% of the FLOPs. It is worth noting that Daily-Omni relies more heavily on audio evidence, so video-only methods that keep all audio tokens generally score higher on this benchmark. Nevertheless, SEATS compresses both modalities jointly and still achieves the top score. FastV and FastV-om rank lowest across all retention ratios, indicating that shallow-layer relevance scores are not yet precise enough for reliable one-shot pruning. VisionZip-om and DivPrune-om, two pre-LLM local-token selection methods that compress each modality independently, perform on par with OmniZip across all retention ratios, suggesting that pre-LLM local saliency selection already captures a comparable amount of information to joint audio-visual compression strategies. Efficiency analysis is provided in Tab. 4. The reported prefill time includes inner-LLM token selection overhead, whereas TTFT further accounts for encoder forward and pre-LLM compression. Owing to careful code optimization with vectorized tensor operations, the token selection overhead of SEATS 
+
+is marginal and decreases as the retention ratio drops ( i.e . 34 →19 ms for pre-LLM, 92 →62 ms for inner-LLM). At 35% retention, SEATS achieves 2.1× prefill speedup and 1.4× TTFT reduction with GPU peak memory lowered to 18.68 GB, whilst simultaneously attaining the best accuracy (49.3 vs . 48.7 of full tokens). At 10% retention, the prefill speedup further increases to 4.8× with TTFT reduced by 1.9×. Compared with other methods at the same retention ratio, SEATS delivers comparable efficiency while significantly outperforming them in accuracy. 
+
+Results on Qwen3-Omni-30B . We further evaluate SEATS on Qwen3-Omni-30B to examine its scalability to larger multimodal models. As reported in Tab. 8, SEATS retains a clear performance advantage across all retention ratios. At 35% retention, it reaches 55.4, nearly matching the full-token result 55.5. At the even more aggressive 10% retention, SEATS preserves 95.5% performance with only 8.3% FLOPs. The relative ranking of baselines remains consistent with the trends observed on Qwen2.5-Omni, confirming that the proposed design generalizes across OmniLLMs of different scales and architectures. 8Table 5: Ablation studies . Om-LLM: Qwen2.5-Omni-7B. Overall TRR (R): 35%.                                                                                                 
+
+> #Setup WorldSense Daily-Omni OmniVideoBench Video-MME LVOmniVideo Mean
+> 0Full-setup 46.2 62.1 35.0 66.8 36.2 49.3
+> Stage I: Pre-LLM Token Selection:
+> 1winDivPrune →Random 45.3 60.9 34.4 67.2 34.1 48.4 2w/o Attention weighted 45.9 61.2 34.8 66.2 34.9 48.6 3winDivPrune →VisionZip-om 46.0 61.7 34.8 66.5 35.3 48.9 4winDivPrune →OmniZip 45.8 61.9 34.6 67.2 33.9 48.7
+> Stage II: Inner-LLM Token Selection:
+> 5w/o Stage II 45.5 61.4 34.8 66.5 35.5 48.7 6Exp →Equal 45.9 61.9 34.7 66.6 35.7 49.0 7Decouple 45.7 61.5 33.8 66.0 35.6 48.5 8Global Token Selection 45.8 61.3 34.5 66.4 35.1 48.6 9w/o Inter-window 45.6 61.9 34.2 66.4 36.2 48.9 10 w/o Intra-window 46.1 61.7 34.0 66.3 35.9 48.8
+
+5.3 Ablation Studies 
+
+Ablation studies are conducted on Qwen2.5-Omni with R of 0.35. See Tab. 5 and Fig. 5. 
+
+Pre-LLM Token Selection . The pre-LLM winDivPrune module jointly leverages saliency and diversity to select representative tokens at the encoder output. Replacing winDivPrune with saliency-only selection following VisionZip-om (Setup-3) results in a drop in mean score from 49.3 to 48.9. Removing saliency calibration and retaining diversity alone (Setup-2) reduces it to 48.6, confirming that the two criteria are complementary to each other. Replacing winDivPrune with OmniZip’s encoder selection (Setup-4) yields a similar drop to 48.7. Random selection (Setup-1) causes the largest degradation, verifying the advantage of structured selection over naive sampling. Furthermore, Fig. 5 shows that performance improves as the encoder ratio scale λ increases, indicating that reserving more tokens for relevance-based inner-LLM compression is more effective than aggressive redundancy-based pruning. 
+
+Inner-LLM Token Selection . Removing Stage II entirely (Setup-5) lowers the mean score to 48.7, confirming that multi-layer progressive token selection outperforms single-layer aggressive pruning. Replacing the exponential decay schedule with a uniform (equal-step) schedule (Setup-6) yields 49.0, verifying that allocating more budget to shallower sub-blocks is beneficial. Decoupling the two modalities so that video and audio budgets are allocated independently without the top-down joint mechanism (Setup-7) reduces the score to 48.5, demonstrating the advantage of cross-modal budget interaction. Replacing per-window token selection with a global ranking across all windows (Setup-8) results in 48.6, showing that window-local selection better preserves temporal structure. Removing inter-window allocation alone (Setup-9) drops the score to 48.9, and removing intra-window re-allocation alone (Setup-10) yields 48.8, confirming that both levels of the top-down allocation contribute to the final performance. 1.25 1.3 1.35 1.4 1.45  
+
+> 49.0
+> 49.1
+> 49.2
+> 49.3
+> Mean
+> 49.0 49.1
+> 49.1
+> 49.3
+> 49.1
+
+Figure 5: Evaluating λ.
+
+Late-block Non-textual Token Removal. Removing late-block removal causes only a marginal accuracy drop (49.3 →49.2), yet increases prefill time from 436 ms to 668 ms (+53%), confirming that modality tokens in deep layers contribute minimally to the final prediction whilst occupying substantial computation. 
+
+## 6 Conclusions 
+
+In this work, we introduce SEATS , a training-free, stage-adaptive token selection method for efficient om-LLM inference. Extensive experiments on two om-LLMs (Qwen2.5-Omni-7B and Qwen3-Omni-30B) and five audio-visual benchmarks (WorldSense, DailyOmni, OmniVideoBench, VideoMME and LVOomniVideo) show that SEATS achieves a state-of-the-art efficiency-performance trade-off. SEATS 
+
+serves as a plug-and-play module applicable to existing om-LLMs, enabling significant reductions in FLOPs, prefill latency, and memory consumption while preserving task performance. 
+
+Acknowledgments This research was supported by NSFC (No.62576348), BJNSF (No.L254039), Tencent WeChat Rhino-Bird Focused Research Program, and the Outstanding Innovative Talents Cultivation Funded Programs 2025 of Renmin University of China. 9References 
+
+[1] Saeed Ranjbar Alvar, Gursimran Singh, Mohammad Akbari, and Yong Zhang. DivPrune: Diversity-based visual token pruning for large multimodal models. In CVPR , pages 9392–9401, 2025. [2] Shuai Bai, Yuxuan Cai, Ruizhe Chen, Keqin Chen, Xionghui Chen, Zesen Cheng, Lianghao Deng, Wei Ding, Chang Gao, Chunjiang Ge, et al. Qwen3-VL technical report. arXiv preprint arXiv:2511.21631 , 2025. [3] Liang Chen, Haozhe Zhao, Tianyu Liu, Shuai Bai, Junyang Lin, Chang Zhou, and Baobao Chang. An image is worth 1/2 tokens after layer 2: Plug-and-play inference acceleration for large vision-language models. In ECCV , 2024. [4] Jinhong Deng, Wen Li, Joey Tianyi Zhou, and Yang He. Scope: Saliency-coverage oriented token pruning for efficient multimodel LLMs. In NeurIPS , 2025. [5] Yue Ding, Yiyan Ji, Jungang Li, Xuyang Liu, Xinlong Chen, Junfei Wu, Bozhou Li, Bohan Zeng, Yang Shi, Yushuo Guan, et al. OmniSIFT: Modality-asymmetric token compression for efficient omni-modal large language models. arXiv preprint arXiv:2602.04804 , 2026. [6] Sixun Dong, Juhua Hu, Mian Zhang, Ming Yin, Yanjie Fu, and Qi Qian. MMTok: Multimodal coverage maximization for efficient inference of VLMs. In ICLR , 2026. [7] Junhao Du, Jialong Xue, Anqi Li, Jincheng Dai, and Guo Lu. Unified spatiotemporal token compression for video-llms at ultra-low retention. In CVPR , 2026. [8] Ziyang Fan, Keyu Chen, Ruilong Xing, Yulin Li, Li Jiang, and Zhuotao Tian. FlashVID: Efficient video large language models via training-free tree-based spatiotemporal token merging. In ICLR , 2026. [9] Chaoyou Fu, Yuhan Dai, Yongdong Luo, Lei Li, Shuhuai Ren, Renrui Zhang, Zihan Wang, Chenyu Zhou, Yunhang Shen, Mengdan Zhang, et al. Video-MME: The first-ever comprehensive evaluation benchmark of multi-modal LLMs in video analysis. In CVPR , 2025. [10] Yuying Ge, Yixiao Ge, Chen Li, Teng Wang, Junfu Pu, Yizhuo Li, Lu Qiu, Jin Ma, Lisheng Duan, Xinyu Zuo, et al. Arc-hunyuan-video-7b: Structured video comprehension of real-world shorts. arXiv preprint arXiv:2507.20939 , 2025. [11] Chao Gong, Depeng Wang, Zhipeng Wei, Ya Guo, Huijia Zhu, and Jingjing Chen. Echoing-pixels: Cross-modal adaptive token reduction for efficient audio-visual LLMs. arXiv preprint arXiv:2512.10324 , 2025. [12] Jack Hong, Shilin Yan, Jiayin Cai, Xiaolong Jiang, Yao Hu, and Weidi Xie. WorldSense: Evaluating real-world omnimodal understanding for multimodal LLMs. In ICLR , 2026. [13] Xiaohu Huang, Hao Zhou, and Kai Han. PruneVid: Visual token pruning for efficient video large language models. In ACL , 2025. [14] Bo Li, Yuanhan Zhang, Dong Guo, Renrui Zhang, Feng Li, Hao Zhang, Kaichen Zhang, Peiyuan Zhang, Yanwei Li, Ziwei Liu, et al. Llava-onevision: Easy visual task transfer. arXiv preprint arXiv:2408.03326 , 2024. [15] Caorui Li, Yu Chen, Yiyan Ji, Jin Xu, Zhenyu Cui, Shihao Li, Yuanxing Zhang, Jiafu Tang, Zhenghao Song, Dingling Zhang, et al. Omnivideobench: Towards audio-visual understanding evaluation for omni MLLMs. In ICLR , 2026. [16] Feng Li, Renrui Zhang, Hao Zhang, Yuanhan Zhang, Bo Li, Wei Li, Zejun Ma, and Chunyuan Li. LLaVA-NeXT-Interleave: Tackling multi-image, video, and 3d in large multimodal models. 
+
+arXiv preprint arXiv:2407.07895 , 2024. [17] Yadong Li, Jun Liu, Tao Zhang, Song Chen, Tianpeng Li, Zehuan Li, Lijun Liu, Lingfeng Ming, Guosheng Dong, Da Pan, et al. Baichuan-omni-1.5 technical report. arXiv preprint arXiv:2501.15368 , 2025. 10 [18] Xuyang Liu, Yiyu Wang, Junpeng Ma, and Linfeng Zhang. Video compression commander: Plug-and-play inference acceleration for video large language models. In EMNLP , pages 1910–1924, 2025. [19] Kele Shao, TAO Keda, Can Qin, Haoxuan You, Yang Sui, and Huan Wang. HoliTom: Holistic token merging for fast video large language models. In NeurIPS , 2025. [20] Yuzhang Shao, Boyuan Zhu, Junhao Qi, Fuzhen Wu, and Yan Yan. LLaVA-PruMerge: Adaptive token reduction for efficient large multimodal models. In NeurIPS , 2024. [21] Leqi Shen, Guoqiang Gong, Tao He, Yifeng Zhang, Sicheng Zhao, Guiguang Ding, et al. FastVID: Dynamic density pruning for fast video large language models. In NeurIPS , 2025. [22] Guangzhi Sun, Wenyi Yu, Changli Tang, Xianzhao Chen, Tian Tan, Wei Li, Lu Lu, Zejun MA, Yuxuan Wang, and Chao Zhang. video-SALMONN: Speech-enhanced audio-visual large language models. In ICML , 2024. [23] Guangzhi Sun, Yudong Yang, Jimin Zhuang, Changli Tang, Yixuan Li, Wei Li, Zejun Ma, and Chao Zhang. video-SALMONN-o1: Reasoning-enhanced audio-visual large language model. In ICML , 2025. [24] Changli Tang, Yixuan Li, Yudong Yang, Jimin Zhuang, Guangzhi Sun, Wei Li, Zejun Ma, and Chao Zhang. video-SALMONN 2: Caption-enhanced audio-visual large language models. 
+
+arXiv preprint arXiv:2506.15220 , 2025. [25] Keda Tao, Can Qin, Haoxuan You, Yang Sui, and Huan Wang. DyCoke: Dynamic compression of tokens for fast video large language models. In CVPR , 2025. [26] Keda Tao, Kele Shao, Bohan Yu, Weiqiang Wang, Huan Wang, et al. OmniZip: Audio-guided dynamic token compression for fast omnimodal large language models. In CVPR , 2026. [27] Keda Tao, Yuhua Zheng, Jia Xu, Wenjie Du, Kele Shao, Hesong Wang, Xueyi Chen, Xin Jin, Junhan Zhu, Bohan Yu, et al. LVOmniBench: Pioneering long audio-video understanding evaluation for omnimodal LLMs. arXiv preprint arXiv:2603.19217 , 2026. [28] Qwen Team. Qwen3.5-Omni technical report. arXiv preprint arXiv:2604.15804 , 2026. [29] Weiyun Wang, Zhangwei Gao, Lixin Gu, Hengjun Pu, Long Cui, Xingguang Wei, Zhaoyang Liu, Linglin Jing, Shenglong Ye, Jie Shao, et al. Internvl3.5: Advancing open-source multimodal models in versatility, reasoning, and efficiency. arXiv preprint arXiv:2508.18265 , 2025. [30] Hao Wu, Yingqi Fan, Jinyang Dai, Junlong Tong, Yunpu Ma, and Xiaoyu Shen. HiDrop: Hierarchical vision token reduction in MLLMs via late injection, concave pyramid pruning, and early exit. In ICLR , 2026. [31] Zhifei Xie and Changqiao Wu. Mini-omni2: Towards open-source gpt-4o with vision, speech and duplex capabilities. arXiv preprint arXiv:2410.11190 , 2024. [32] Long Xing, Qidong Huang, Xiaoyi Dong, Jiajie Lu, Pan Zhang, Yuhang Zang, Yuhang Cao, Conghui He, Jiaqi Wang, Feng Wu, et al. PyramidDrop: Accelerating your large vision-language models via pyramid visual redundancy reduction. In CVPR , 2025. [33] Jin Xu, Zhifang Guo, Jinzheng He, Hangrui Hu, Ting He, Shuai Bai, Keqin Chen, Jialin Wang, Yang Fan, Kai Dang, Bin Zhang, Xiong Wang, Yunfei Chu, and Junyang Lin. Qwen2.5-Omni technical report. arXiv preprint arXiv:2503.20215 , 2025. [34] Jin Xu, Zhifang Guo, Hangrui Hu, Yunfei Chu, Xiong Wang, Jinzheng He, Yuxuan Wang, Xian Shi, Ting He, Xinfa Zhu, et al. Qwen3-Omni technical report. arXiv preprint arXiv:2509.17765 ,2025. [35] Senqiao Yang, Yukang Chen, Zhuotao Tian, Chengyao Wang, Jingyao Li, Bei Yu, and Jiaya Jia. VisionZip: Longer is better but not necessary in vision language models. In CVPR , 2025. 11 [36] Hanrong Ye, Chao-Han Huck Yang, Arushi Goel, Wei Huang, Ligeng Zhu, Yuanhang Su, Sean Lin, An-Chieh Cheng, Zhen Wan, Jinchuan Tian, et al. OmniVinci: Enhancing architecture and data for Omni-Modal understanding LLM. In ICLR , 2026. [37] Tianyu Yu, Zefan Wang, Chongyi Wang, Fuwei Huang, Wenshuo Ma, Zhihui He, Tianchi Cai, Weize Chen, Yuxiang Huang, Yuanqian Zhao, et al. MiniCPM-V 4.5: Cooking efficient MLLMs via architecture, data, and training recipe. arXiv preprint arXiv:2509.18154 , 2025. [38] Kaichen Zhang, Bo Li, Peiyuan Zhang, Fanyi Pu, Joshua Adrian Cahyono, Kairui Hu, Shuai Liu, Yuanhan Zhang, Jingkang Yang, Chunyuan Li, et al. LMMs-Eval: Reality check on the evaluation of large multimodal models. In Findings of NAACL , pages 881–916, 2025. [39] Qizhe Zhang, Aosong Cheng, Ming Lu, Renrui Zhang, Zhiyong Zhuo, Jiajun Cao, Shaobo Guo, Qi She, and Shanghang Zhang. Beyond text-visual attention: Exploiting visual cues for effective token pruning in VLMs. In CVPR , 2025. [40] Qizhe Zhang, Mengzhen Liu, Lichen Li, Ming Lu, Yuan Zhang, Junwen Pan, Qi She, and Shanghang Zhang. Beyond Attention or Similarity: Maximizing conditional diversity for token pruning in MLLMs. In NeurIPS , 2025. [41] Yuan Zhang, Chun-Kai Fan, Junpeng Ma, Wenzhao Zheng, Tao Huang, Kuan Cheng, Denis Gudovskiy, Tomoyuki Okuno, Yohei Nakata, Kurt Keutzer, et al. SparseVLM: Visual token sparsification for efficient vision-language model inference. In ICML , 2025. [42] Yuanhan Zhang, Jinming Wu, Wei Li, Bo Li, Zejun Ma, Ziwei Liu, and Chunyuan Li. Llava-video: Video instruction tuning with synthetic data. Transactions on Machine Learning Research , 2025. [43] Ziwei Zhou, Rui Wang, and Zuxuan Wu. Daily-omni: Towards audio-visual reasoning with temporal alignment across modalities. arXiv preprint arXiv:2505.17862 , 2025. 12 We provide additional details, extended experimental results, and further discussion in this supple-mentary material, including: • More experimental results and analysis. • Detailed experimental setup and implementation. • Further discussion. 
+
+## A Derivation of the Scale Factor δ
+
+As described in Sec. 4.2.1, the overall TRR R equals the layer-count weighted average of the per-block 
+
+TRR s. Since no token selection occurs in the shallow block ( TRR = rs = λR ) and all non-textual tokens are removed in the late block ( TRR = 0 ), only the shallow and middle blocks contribute: 
+
+R = 1L
+
+ LsX
+
+> i=1
+
+rs
+
+| {z } 
+
+> shallow
+
++ 
+
+> Lm1−1
+
+X
+
+> i=Ls+1
+
+rm1
+
+| {z }
+
+> middle sub-block 1
+
++ 
+
+> Lm2−1
+
+X
+
+> i=Lm1
+
+rm2
+
+| {z }
+
+> middle sub-block 2
+
++
+
+> Ll−1
+
+X
+
+> i=Lm2
+
+rm3
+
+| {z }
+
+> middle sub-block 3
+
+
+
+= 1L
+
+
+
+Ls rs + ( Lm1 −Ls −1) rm1 + ( Lm2 −Lm1 ) rm2 + ( Ll −Lm2 ) rm3
+
+
+
+= 1L
+
+
+
+(Ll −1) λR +  Ls +1 + e L m1 + e2Lm2 − (1+ e+e2)Ll
+
+| {z } 
+
+> Constant C
+
+·δ
+
+
+
+.
+
+(2) Solving for δ:
+
+δ = (L − Llλ + λ) RC , C = Ls + 1 + e L m1 + e2Lm2 − (1 + e + e2)Ll. (3) For the Qwen2.5-Omni-7B configuration ( L=28, Ls=16, Lm1 =19, Lm2 =21, Ll=24, λ=1.4), we have 
+
+C ≈ − 42 .759 . With R=0.3, this yields δ ≈ 0.02947 .
+
+## B Experimental Details 
+
+B.1 Test Sets 
+
+Tab. 6 summarizes the five test sets. The benchmarks collectively span a wide range of temporal scales and differ in their reliance on audio and visual cues, enabling a thorough assessment of compression robustness across durations and modality dependencies. In what follows, we describe each benchmark in more detail. 
+
+WorldSense [ 12 ] comprises 1,662 synchronized audio-visual videos spanning 8 domains, with 3,172 expert-annotated multiple-choice questions across 26 cognitive tasks. Its core design principle is tight audio-visual coupling: every question requires jointly integrating visual and audio evidence, and removing either modality leads to a drastic accuracy drop. The average video duration is approximately 141 seconds. 
+
+Daily-Omni [43 ] collects 684 real-world YouTube videos of 30 to 60 seconds with 1,197 multiple-choice questions across six task families. Its distinguishing feature is temporal precision: answering Table 6: Five benchmarks used in our experiments .
+
+Benchmark #Videos #QA Pairs Duration (sec) WorldSense [12] 1,662 3,172 140.7 Daily-Omni [43] 684 1,197 43.2 OmniVideoBench [15] 628 1,000 409.0 Video-MME [9] 900 2,700 1021.3 LVOmniBench [27] 275 1,014 2069.7 13 Table 7: Per-modality retention ratios ( Rv -Ra) for each TRR (R). Audio-intact : only visual tokens are selected ( Ra=100% ). Both-selected : token selection applied to both modalities. 
+
+TRR (R) Qwen2.5-Omni-7B Qwen3-Omni-30B 
+
+Audio-intact Both-selected Audio-intact Both-selected 
+
+35 24-100 30-65 29-100 32-70 25 12-100 20-55 18-100 22-60 15 – 10-45 8-100 12-50 10 – 6-35 – 7-45 requires pinpointing the correspondence between audio events and visual actions along the timeline, not global semantic matching. 
+
+OmniVideoBench [15 ] comprises 628 videos ranging from several seconds to 30 minutes, with 1,000 manually annotated multiple-choice questions covering 13 task types. Each question is accompanied by a multi-step reasoning chain (5.68 steps on average), explicitly recording the modalities and evidence involved, making it well suited for diagnosing weak links in a model’s reasoning pipeline. 
+
+Video-MME [9 ] contains 900 videos across 6 domains with durations from 11 seconds to 1 hour, divided into short, medium, and long tiers, yielding 2,700 human-annotated QA pairs. It supports subtitle and audio auxiliary inputs. We report results without subtitles to exclude external textual cues and isolate the effect of token compression. 
+
+LVOmniBench [27 ] is, to our knowledge, the only benchmark dedicated to ultra-long audio-visual understanding. It curates 275 videos of 10 to 90 minutes (34.5 minutes on average, 140 hours in total) with 1,014 multiple-choice questions. Its average duration is 6 to 20 times longer than that of existing omni-modal benchmarks, specifically stressing multi-modal information retention and temporal localization over extended sequences. 
+
+B.2 Reproduction Details of Compared Baselines 
+
+Tab. 7 lists the per-modality retention ratios used in our experiments. As stated in Sec. 5.1, each 2-second window contains nv =288 video tokens and na audio tokens ( na=50 for Qwen2.5-Omni, 
+
+na=26 for Qwen3-Omni). The overall budget constraint is Rv · nv + Ra · na = R · (nv + na).Since na < n v , audio tokens constitute a smaller portion of the total budget, making it natural to preserve them and apply selection only to visual tokens. We therefore evaluate two modes. Under the 
+
+Audio-intact mode, Ra=100% and Rv is solved accordingly (“–” indicates cases where the resulting 
+
+Rv is impractically low). Under the Both-selected mode, the budget is allocated to both modalities proportionally. In what follows, we detail how each baseline is adapted to the om-LLM setting and which mode it operates under: • FastV 1 [3] (ECCV 2024). FastV prunes tokens at the K-th LLM layer using cross-modal attention scores, with a pruning ratio r. We follow the official setting with K=2 . The original method targets only visual tokens, so we evaluate it under the Audio-intact mode. We also extend it to both visual and audio tokens, yielding FastV-om under the Both-selected mode. The pruning ratio r is set to match Rv and Ra in Tab. 7 for fair comparison. • VisionZip 2 [35 ] (CVPR 2025). VisionZip selects dominant tokens by encoder attention and merges the rest into contextual tokens. Since the original method operates at the encoder output, conflicting with pooling in Qwen-Omni, we apply compression after pooling instead [ 21 ]. We retain dominant and contextual tokens at a ratio of (R−0.05):0 .05 per frame. The original method also targets only visual tokens, so we evaluate it under the Audio-intact mode. We further extend it to both modalities with window-level compression for audio tokens, yielding VisionZip-om under the Both-selected 
+
+mode. 
+
+> 1https://github.com/pkunlp-icler/FastV .
+> 2https://github.com/dvlab-research/VisionZip , Apache 2.0 License.
+
+14 • DivPrune 3 [1] (CVPR 2025). DivPrune retains a maximally diverse subset via greedy Max-Min cosine distance selection. The original method operates on pre-projector embeddings, which leads to noticeable degradation on om-LLMs. We therefore apply selection on post-projector embeddings after pooling instead. Selection is performed per frame for visual tokens. The original method targets only visual tokens, so we evaluate it under the Audio-intact mode. We further extend it to both modalities with window-level selection for audio tokens, yielding DivPrune-om under the 
+
+Both-selected mode. • DyCoke 4 [ 25 ] (CVPR 2025). DyCoke operates at both the prefill and decode stages. Following the evaluation protocol of [ 26 ], we use only its prefill-stage TTM module, which partitions the video into 4-frame groups, keeps the first frame in each group intact, and merges temporally redundant visual tokens in the remaining frames based on inter-frame similarity. Since one frame is always preserved in each 4-frame window, the minimum video-token retention ratio Rv is 25%. As TTM targets only video tokens, we evaluate it under the Audio-intact mode, which limits the lowest feasible R to 35%. • FastVID 5 [21 ] (NeurIPS 2025). FastVID prunes visual tokens via spatiotemporal DPC-kNN. It dynamically segments video tokens based on transition similarities, selects salient tokens per frame, and merges the remaining ones by spatiotemporal redundancy elimination. We follow the official hyperparameters: minimum segment count c=8 , segment threshold τ =0 .9, salient token ratio d=0 .4,anchor frame step p=4 , and merging factor α=0 .6. As it targets only video tokens, we evaluate it under the Audio-intact mode. • OmniZip 6 [ 26 ] (CVPR 2026). OmniZip derives per-time-group retention scores from audio saliency to guide dynamic video token pruning, combined with interleaved spatiotemporal compres-sion. Its video branch also preserves the first frame in each 4-frame group, resulting in a minimum 
+
+Rv of 25%. We follow the latest official implementation, which computes audio encoder attention within each window to avoid the heavy memory overhead of global audio token attention computation (over 30GB). As OmniZip handles both modalities, we evaluate it under the Both-selected mode. At R=25% , Rv cannot be reduced below 25%, thus we set Ra=25% and gray out this entry. In addition, since OmniZip’s audio branch merges 5% contextual tokens, we count both selected and merged tokens toward Ra to ensure a fair budget comparison. All methods are evaluated using LMMs-Eval 7 [ 38 ] for consistency. The base omni-modal large language models used are Qwen2.5-Omni-7B 8 [33] and Qwen3-Omni-30B 9 [34]. 
+
+## C More Experimental Results 
+
+Tab. 8 presents the full results on Qwen3-Omni-30B, complementing the Qwen2.5-Omni-7B results in Sec. 5.2. 
+
+C.1 Detailed Hyperparameter Analysis 
+
+Under the unified setup described in Sec. 5.1, we perform a sensitivity analysis of the scale hyperpa-rameter λ at 35% retention ratio on Qwen2.5-Omni, with results reported in Tab. 9. Performance exhibits small variance across the tested range, demonstrating robustness to this hyperparameter. 
+
+## D Discussion 
+
+D.1 Broader Impacts 
+
+This work enhances omni-modal large language models (om-LLMs) inference efficiency, addressing a key barrier to deployment and scalability. By reducing computational cost and memory consumption, it broadens access to advanced audio-visual AI in resource-constrained settings. We do not foresee negative societal impacts beyond those inherent to the underlying om-LLMs. 
+
+> 3https://github.com/vbdi/divprune , CC BY-NC 4.0 License.
+> 4https://github.com/KD-TAO/DyCoke , Apache 2.0 License.
+> 5https://github.com/LunarShen/FastVID , MIT License.
+> 6https://github.com/KD-TAO/OmniZip , Apache 2.0 License.
+> 7https://github.com/EvolvingLMMs-Lab/lmms-eval , Apache 2.0 License.
+> 8https://github.com/QwenLM/Qwen2.5-Omni , Apache 2.0 License.
+> 9https://github.com/QwenLM/Qwen3-Omni , Apache 2.0 License.
+
+15 Table 8: Comparison of different methods on Qwen3-Omni-30B-A3B-Instruct. 
+
+Method R (Rv -Ra) TFLOPs ↓ WorldSense Daily-Omni OmniVideo Bench Video-MME LVOmni Video Mean 
+
+Full tokens 100 (100-100) 47.2 54.3 71.8 40.3 73.1 38.0 55.5 100.0% 
+
+Random 35 (32-70) 13.4 52.6 69.5 39.5 70.7 35.7 53.6 96.6% 
+
+FastV 35 (29-100) 13.7 51.5 68.6 40.0 69.5 37.1 53.3 96.0% 
+
+FastV-om 35 (32-70) 13.7 49.7 66.4 37.8 67.5 35.7 51.4 92.6% 
+
+VisionZip 35 (29-100) 13.4 53.0 71.4 40.3 70.6 36.6 54.4 98.0% 
+
+VisionZip-om 35 (32-70) 13.4 53.3 71.1 39.1 71.6 37.5 54.5 98.2% 
+
+DivPrune 35 (29-100) 13.4 53.4 69.8 39.6 70.7 36.6 54.0 97.3% 
+
+DivPrune-om 35 (32-70) 13.4 53.2 70.4 39.5 71.5 36.6 54.2 97.7% 
+
+DyCoke 35 (29-100) 13.4 52.9 68.6 40.1 70.3 36.6 53.7 96.7% 
+
+OmniZip 35 (32-70) 13.4 53.8 70.9 40.1 71.6 36.8 54.6 98.4% 
+
+SEATS 35 (32-70) 13.3 54.1 71.9 39.8 72.7 38.5 55.4 99.8% 
+
+Random 25 (22-60) 9.4 51.3 68.1 39.0 70.4 35.6 52.9 95.3% 
+
+FastV 25 (18-100) 9.8 49.5 67.0 39.7 66.1 35.7 51.6 93.0% 
+
+FastV-om 25 (22-60) 9.8 47.2 62.9 38.1 65.7 33.7 49.5 89.2% 
+
+VisionZip 25 (18-100) 9.4 51.9 68.0 39.0 68.8 36.7 52.9 95.3% 
+
+VisionZip-om 25 (22-60) 9.4 51.8 69.8 39.8 71.2 36.4 53.8 96.9% 
+
+DivPrune 25 (18-100) 9.4 52.1 69.5 39.6 70.2 36.8 53.6 96.6% 
+
+DivPrune-om 25 (22-60) 9.4 52.2 69.0 40.0 70.9 36.2 53.7 96.7% 
+
+FastVID 25 (18-100) 9.1 51.4 68.3 40.2 68.0 36.5 52.9 95.3% 
+
+OmniZip 25 (25-25) 8.5 50.7 66.0 39.4 70.1 36.0 52.5 94.5% 
+
+SEATS 25 (22-60) 9.0 53.6 71.2 39.9 71.8 37.0 54.7 98.6% 
+
+Random 15 (12-50) 5.8 49.8 64.6 36.8 67.9 33.9 50.6 91.2% 
+
+FastV-om 15 (12-50) 6.3 44.6 58.4 35.0 61.1 34.4 46.7 84.2% 
+
+VisionZip 15 (8-100) 5.8 49.8 65.4 39.1 65.6 35.9 51.2 92.3% 
+
+VisionZip-om 15 (12-50) 5.8 50.2 66.0 37.6 67.7 36.2 51.5 92.8% 
+
+DivPrune 15 (8-100) 5.8 51.0 67.8 38.0 66.8 35.2 51.8 93.3% 
+
+DivPrune-om 15 (12-50) 5.8 50.7 66.3 37.8 68.6 35.4 51.8 93.3% 
+
+SEATS 15 (12-50) 5.5 51.9 70.1 39.9 71.2 36.0 53.8 96.9% 
+
+Random 10 (7-45) 4.0 48.3 61.2 36.6 65.3 34.2 49.1 88.5% 
+
+VisionZip-om 10 (7-45) 4.0 48.9 61.8 38.3 65.2 35.0 49.8 89.7% 
+
+DivPrune-om 10 (7-45) 4.0 49.3 64.0 38.7 67.2 35.3 50.9 91.7% 
+
+SEATS 10 (7-45) 3.9 51.5 68.1 40.1 69.7 35.7 53.0 95.5% 
+
+Table 9: Effect of the scale hyperparameter λ.
+
+Method λ WorldSense Daily-Omni OmniVideoBench Video-MME LongVideoBench Mean 
+
+Full tokens – 46.7 64.0 34.1 65.3 33.3 48.7 Ours 1.25 45.7 61.7 35.0 66.9 35.8 49.0 Ours 1.30 45.8 62.2 34.7 67.1 35.5 49.1 Ours 1.35 45.9 62.2 35.1 66.9 35.4 49.1 Ours 1.40 46.2 62.1 35.0 66.8 36.3 49.3 Ours 1.45 46.1 62.1 35.3 66.7 35.4 49.1 
+
+D.2 Limitations 
+
+The current framework relies on heuristic hyperparameters ( e.g . and drop layer positions) that are tuned per backbone. Automatically adapting these configurations to new om-LLMs, and extending the approach to streaming inference where the full sequence is unavailable at prefill time, are directions worthy of future investigation. 16

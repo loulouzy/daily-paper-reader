@@ -1,0 +1,631 @@
+Title: MetaRA: Metamorphic Robustness Assessment for Multimodal Large Language Model-based Visual Question Answering Systems
+
+URL Source: https://arxiv.org/pdf/2605.19307v1
+
+Published Time: Wed, 20 May 2026 00:50:56 GMT
+
+Number of Pages: 11
+
+Markdown Content:
+IEEE TRANSACTIONS ON MULTIMEDIA, 2026 1
+
+# MetaRA: Metamorphic Robustness Assessment for Multimodal Large Language Model-based Visual Question Answering Systems 
+
+Quanxing Xu , Yuhao Tian , Ling Zhou , Xian Zhong , Senior Member, IEEE ,Xiaohua Huang , Senior Member, IEEE , Rubing Huang , Senior Member, IEEE , and Chia-Wen Lin , Fellow, IEEE 
+
+Abstract —Visual Question Answering (VQA), as the represen-tative multimodal task, serves as a key benchmark for evaluating the reasoning capabilities of Multimodal Large Language Models (MLLMs). However, existing evaluations largely rely on static datasets and accuracy-based metrics, which fail to capture robust-ness, consistency, and generalization. Inspired by Metamorphic Testing (MT), we propose Meta morphic R obustness Assessment (MetaRA), a testing framework that employs Metamorphic Relations (MRs) to systematically probe vulnerabilities in MLLM-based VQA systems. MetaRA generates controlled variations of image-question inputs based on specific MRs and evaluates models across diverse conditions. Applying MetaRA to multiple MLLM-based VQA models across different tasks reveals nuanced failure patterns, including sensitivity to linguistic perturbations, over-reliance on superficial visual cues, and deeper weaknesses in multimodal reasoning. Experimental results demonstrate that MetaRA provides richer diagnostic insights than conventional accuracy metrics, exposing failure modes that remain hidden under standard benchmarks. Overall, this work highlights the need for systematic robustness evaluation in VQA and positions metamorphic assessment as a scalable, model-agnostic approach toward trustworthy multimodal AI. 
+
+Index Terms —Visual question answering, multimodal large language models, metamorphic testing, metamorphic relations, robustness evaluation 
+
+I. I NTRODUCTION Manuscript received May 8, 2026. This work was supported in part by the Science and Technology Development Fund of Macau, Macao SAR, under Grants 0069/2025/RIB2 and 0021/2023/RIA1, in part by the National Natural Science Foundation of China under Grant 62271361, in part by the Hubei Provincial Key Research and Development Program under Grant 2024BAB039, and in part by the Hubei Provincial Natural Science Foundation under Grant 2026AFB663. ( Corresponding authors: Ling Zhou and Xian Zhong .) Quanxing Xu, Yuhao Tian, and Ling Zhou are with the School of Computer Science and Engineering, Macau University of Science and Technology, Macao SAR 999078, China (e-mail: 3230002299@student.must.edu.mo; 3250010506@student.must.edu.mo; lzhou@must.edu.mo). Xian Zhong is with the Hubei Key Laboratory of Transportation Internet of Things, School of Computer Science and Artificial Intelligence, Wuhan University of Technology, Wuhan 430070, China, and also with the State Key Laboratory of Maritime Technology and Safety, Wuhan University of Technology, Wuhan 430063, China (e-mail: zhongx@whut.edu.cn). Xiaohua Huang is with the Oulu School, Nanjing Institute of Technology, Nanjing 210096, China (e-mail: xiaohuahwang@gmail.com). Rubing Huang is with the School of Computer Science and Engineering, Macau University of Science and Technology, Macao SAR 999078, China, and also with the Macau University of Science and Technology Zhuhai MUST Science and Technology Research Institute, Zhuhai 519099, China (e-mail: rbhuang@must.edu.mo). Chia-Wen Lin is with the Department of Electrical Engineering, National Tsing Hua University, Hsinchu 30013, Taiwan (e-mail: cwlin@ee.nthu.edu.tw). (b) Understanding 
+
+Consistency 
+
+(c) Mutation Robustness (Ours) 
+
+(a) Language Prior Question -Image pair 
+
+> MR 1
+> MRs
+> MR 2
+> MR n
+> MR 1
+> MRs
+> MR 2
+> MR n
+> Q1: What is the cat wear?
+
+# ··· 
+
+> Q2:Is there something on
+> the cat's head?
+> Generated Question -
+> Image pairs
+
+VQA System VQA System   
+
+> Q2:What is the cat wear?
+> Revised Question -Image Pair
+> Q2:What is the cat wear?
+> Revised Question -Image Pair
+> Q1: What is the cat
+> dressed in?
+
+I1
+
+> Q1: What is the cat
+> dressed in?
+
+I1
+
+> Q1: What is the cat
+> dressed in?
+
+I1
+
+MRs MRs Q1: What is the cat 
+
+> dressed in?
+
+I1
+
+> Q1: What is the cat
+> dressed in?
+
+I1
+
+> Q1: What is the cat
+> dressed in?
+
+I1
+
+> Qn: What does the
+> cat have on?
+
+In
+
+> Qn: What does the
+> cat have on?
+
+In
+
+> Qn: What does the
+> cat have on?
+
+In
+
+> Qn: What does the
+> cat have on?
+
+In
+
+> Qo: What is the cat
+> wear?
+
+Io 
+
+> Qo: What is the cat
+> wear?
+
+Io 
+
+> Question -Image Pair
+> Q1: What is the cat wear?
+> Question -Image Pair
+> Q1: What is the cat wear?
+
+Which characteristics of the 
+
+model will be evaluated? 
+
+Fig. 1: Comparison of robustness evaluation paradigms for VQA. Existing approaches focus on isolated aspects, including (a) language-bias evaluation and (b) image-understanding evaluation, whereas the proposed method (c) performs a systematic assessment by constructing multiple Metamorphic Relations (MRs) to probe diverse model behaviors. 
+
+# VISION-language tasks serve as representative benchmarks for evaluating models’ capabilities in multimodal learning and visual-linguistic understanding, including visual story-telling [1], video captioning [2], [3], and Visual Question Answering (VQA) [4]. As one of the most fundamental vision-language tasks, VQA requires generating accurate natural-language answers to a question about images and has therefore attracted substantial attention in recent years. This growing interest reflects a broader shift in the image processing community from conventional “bucketed” recognition problems toward more complex multimodal reasoning challenges [4], [5]. Despite recent progress, robustness remains a critical chal-lenge in VQA [6]. Although Multimodal Large Language Models (MLLMs) have achieved strong performance in VQA, systematic evaluation of robustness in MLLM-driven VQA systems remains largely underexplored. Given their black-box nature, identifying vulnerabilities in the fusion, understand-ing, and inference processes is essential for narrowing the interpretability gap in large multimodal models.  
+
+> arXiv:2605.19307v1 [cs.CV] 19 May 2026 IEEE TRANSACTIONS ON MULTIMEDIA, 2026 2
+
+Inspired by Metamorphic Testing (MT) [7] in software testing, we introduce a new framework to assess the robustness of MLLM-based VQA systems. MT is built upon Metamorphic Relations (MRs), which specify expected logical relationships between inputs and outputs, enabling effective evaluation with-out explicit ground-truth annotations. Following this principle, we construct a multi-perspective, multi-objective robustness evaluation framework for VQA. As illustrated in Fig. 1, our approach moves beyond evaluating isolated model properties to conduct a comprehensive assessment by systematically designing and applying multiple MRs. Accordingly, we propose Meta morphic Robustness 
+
+Assessment (MetaRA ), which employs MR-defined test cases to evaluate MLLM-based VQA models and uncover previously unexplored vulnerabilities in handling bimodal inputs. MetaRA focuses on assessing perceptual robustness with respect to both visual-textual interactions and textual information embedded in visual content. The core contributions of this work are summarized as fourfold:  
+
+> •
+
+We propose MetaRA, the first metamorphic testing frame-work dedicated to robustness assessment of MLLM-based VQA systems, enabling systematic evaluation without relying on ground-truth annotations.  
+
+> •
+
+We design a comprehensive suite of MRs tailored for VQA, covering general multimodal comprehension, semantic perception stability, content preservation consistency, and implicit information understanding.  
+
+> •
+
+We conduct extensive experiments on mainstream MLLMs across both knowledge-based VQA and OCR-VQA tasks, revealing that state-of-the-art models remain vulnerable to fine-grained visual changes and implicit textual mutations.  
+
+> •
+
+We provide in-depth diagnostic insights beyond conven-tional accuracy metrics, demonstrating that metamorphic assessment serves as a scalable, model-agnostic approach to building trustworthy multimodal AI. Experimental results show that, while current models are relatively robust to global perturbations, they remain vulnerable to fine-grained local visual changes and implicit textual knowledge mutations, revealing weaknesses in multimodal alignment and semantic grounding. Overall, MetaRA provides richer diagnostic insights by systematically uncovering hidden failure modes across diverse VQA tasks, positioning MT-based assessment as a scalable, model-agnostic approach toward trustworthy multimodal AI. II. R ELATED WORK 
+
+A. VQA Using MLLMs 
+
+Multimodal Large Language Model (MLLM)-based VQA employs joint vision-language representations to answer natural-language questions grounded in images, thereby improving reasoning and semantic alignment. Existing MLLM-based VQA research mainly focuses on two representative tasks: Knowledge-based VQA (KBVQA) [8] and OCR-VQA [9]. KBVQA emphasizes reasoning over visual content combined with external or commonsense knowledge, while OCR-VQA targets the understanding and integration of textual information embedded in images. Despite strong performance on these tasks, robustness evaluation for MLLM-based VQA remains limited. This work addresses this gap by studying robustness testing for MLLM-based VQA under both KBVQA and OCR-VQA settings. 
+
+B. Metamorphic Testing for AI 
+
+Metamorphic Testing (MT) [7], [10] is a software testing technique that detects faults by checking whether expected relations hold across multiple inputs and their outputs, thereby alleviating the oracle problem when exact ground truth is unavailable. This property makes MT particularly suitable for MLLMs, where complex cross-modal reasoning can conceal subtle errors. Recent studies have applied MT as a scalable framework for evaluating the reliability of multimodal AI systems [11], [12] across diverse, realistic variations. Building on these efforts, our work employs carefully designed Metamor-phic Relations (MRs) to systematically probe vulnerabilities in MLLM-based VQA models. 
+
+C. Robustness Evaluation in VQA 
+
+Robustness evaluation has become an indispensable approach to ensuring the reliability and real-world deployment of VQA systems, particularly those built on MLLMs. Conventional VQA evaluation mainly relies on accuracy-based metrics over fixed datasets, which fail to expose model vulnerabilities such as over-reliance on language priors, sensitivity to input perturbations, and unstable multimodal alignment [6]. Early works assess ro-bustness through unimodal perturbations, including visual noise injection, geometric transformations, and textual paraphrasing, to verify output consistency under mild input changes [11], [12]. Nevertheless, these methods typically evaluate robustness from isolated perspectives and lack a unified framework for system-atically probing cross-modal defects across diverse transforma-tions. Moreover, most approaches depend on explicit ground-truth answers, limiting their applicability to complex MLLM-based VQA systems with black-box inference mechanisms. In contrast, metamorphic testing offers a promising solution by defining expected relations between inputs and outputs without requiring ground-truth annotations [10]. Building on this paradigm, our MetaRA framework constructs dedicated metamorphic relations to generate controllable visual-textual variations, enabling comprehensive, model-agnostic robustness assessment for MLLM-driven VQA systems. III. P ROPOSED METHOD 
+
+Fig. 2 summarizes the proposed MetaRA framework. We first introduce the MT-based concept (see Section III-A ), then describe the overall procedure (see Section III-B ), present MR design (see Section III-C ) and case generation tools (see Section III-D ), and finally detail failure detection (see Section III-E). 
+
+A. Concept 
+
+Metamorphic Testing (MT) in multimodal systems provides a practical way to evaluate robustness and reliability when IEEE TRANSACTIONS ON MULTIMEDIA, 2026 3MLLM -based        
+
+> VQA System
+> MLLM -based
+> VQA System
+> Complexity Evaluator Complexity Evaluator Complexity Evaluator
+> Vision /Text Encoder Vision /Text Encoder Vision /Text Encoder Vision /Text Encoder
+
+Visual /Text Embedding  Difficulty Level Difficulty Level 
+
+> Generation Tool Generation Tool
+
+Generated QI pairs 
+
+Designed Metamorphic Relations and their Testing Targets        
+
+> MR 1: A ppl ying regular vis ual
+> transformations and changes .
+> MR 2: M odif ying local object features
+> within the original image .
+> MR 3: M anipulat ing global properties
+> within the original image .
+> MR 4: A ugment ing the image with
+> embedded textual elements.
+> Testing the general content comprehensibility.
+> Testing the semantic perception stability.
+> Testing the content preservation consistency.
+> Testing the implicit information comprehensibility.
+
+Designed Metamorphic Relations and their Testing Targets         
+
+> MR 1: A ppl ying regular vis ual
+> transformations and changes .
+> MR 2: M odif ying local object features
+> within the original image .
+> MR 3: M anipulat ing global properties
+> within the original image .
+> MR 4: A ugment ing the image with
+> embedded textual elements.
+> Testing the general content comprehensibility.
+> Testing the semantic perception stability.
+> Testing the content preservation consistency.
+> Testing the implicit information comprehensibility.
+> Which item is
+> used for
+> transportatio
+> npurposes?
+
+Q1 I1
+
+> What object
+> in the image
+> serves for
+> traveling?
+
+Q2 I2
+
+> What object
+> in the picture
+> can be used
+> for traveling?
+
+Q3 I3
+
+> What
+> transportatio
+> n object is in
+> the photo?
+
+I4Q4 
+
+> Which item is
+> used for
+> transportatio
+> npurposes?
+
+Q1 I1
+
+> What object
+> in the image
+> serves for
+> traveling?
+
+Q2 I2
+
+> What object
+> in the picture
+> can be used
+> for traveling?
+
+Q3 I3
+
+> What
+> transportatio
+> n object is in
+> the photo?
+
+I4Q4What object in 
+
+> the photo is
+> used for
+> transportation?
+
+Original QI pair 
+
+QO IO
+
+> What object in
+> the photo is
+> used for
+> transportation?
+
+Original QI pair 
+
+QO IO
+
+Answer Set     
+
+> Inference Inference
+> AO: bike
+> A1: off -road bike
+> A2: bicycle
+> A3: mountain bike
+> A4: bike
+> AO: bike
+> A1: off -road bike
+> A2: bicycle
+> A3: mountain bike
+> A4: bike
+> If R(M) = 0 Comp uting FailRate GT
+> According to the failure rate, the lower the failure rate, the higher the robustness of the model.
+> Input Understanding Case Generation Interface Testing
+> Failure Detection
+
+Fig. 2: Overview of the MetaRA framework. The framework consists of four stages: Input Understanding, Case Generation, Inference Testing, and Failure Detection, which respectively estimate input difficulty, construct transformation ensembles, evaluate models via systematic testing, and analyze potential defects. ground-truth outputs are difficult to define across heteroge-neous inputs such as text and images. Instead of requiring exact expected answers, it leverages MRs, logical consistency properties that should hold under transformations across modalities. For instance, in VQA systems [11], rephrasing a question with synonyms or slightly altering an image ( e.g. ,rotation or brightness adjustment) should not change the semantic correctness of the answer; in Image Captioning (IC) systems [12], employing systematic image-level reductions and checking whether generated captions remain semantically consistent can be used to evaluate model robustness. Given that MLLMs are typically black-box systems that cannot be fully interpreted, especially in multimodal tasks, their performance can be unstable and may even exhibit anomalous behavior. Motivated by prior work on MT in AI, we conduct a case study to comprehensively evaluate the robustness of MLLM-based VQA systems. Formally, let M denote an MLLM-based VQA model, and let x = ( I, Q ) denote a Question-Image (QI) pair consisting of an image I and a question Q. Let xo = ( IO , Q O ) denote the original input, and let {xt,i }ni=1 denote the transformed test cases generated by applying MR-guided transformations. Let 
+
+C(M, x ) denote a correctness function that evaluates whether the prediction of model M on input x is consistent with the expected answer ( e.g. , the ground-truth answer or the MR-consistent output). We establish the following criterion: a tested model M
+
+shall be recognized as robust if and only if it correctly responds to all given inputs (including the original input and all transformed cases); otherwise, it shall be deemed lacking in robustness. Accordingly, the robustness evaluation function can be formulated as: 
+
+Robust (M ) = 
+
+(
+
+1, if C (M, x o) ∧ Vni=1 C (M, x t,i ) ,
+
+0, if ¬C (M, x o) ∨ Wni=1 ¬C (M, x t,i ) ,
+
+(1) where, C(M, x o) ensures correctness on the original input, while Vni=1 C(M, x t,i ) enforces consistency across all trans-formed inputs. 
+
+B. MetaRA 
+
+We establish an evaluation framework for MLLM-based VQA methods, grounded in the above principle. As shown in Fig. 2, our procedure comprises four core processes: Input Understanding, Case Generation, Inference Testing, and Failure Detection, which assess the difficulty of the original input, construct transformation schemes, systematically evaluate models, and analyze potential defects, respectively. Specifically, when a QI pair xo = ( IO , Q O ) is fed into the framework, the Complexity Evaluator (CE) first assesses the inference difficulty based on the relevance between the image and the question, as well as the intrinsic content of both modal-ities. Although existing MLLMs are capable of performing relatively accurate inference on QI pairs with complex content and high answering difficulty ( e.g. , commonsense reasoning and knowledge-based answering), the difficulty level of QI pairs can serve as a reference metric to reflect the confidence level of the model’s current inference process. In other words, the easier a QI pair is, the higher the probability that the model will yield a correct result; conversely, the more difficult a QI pair is, the lower this probability becomes. Furthermore, this preliminary step is a prerequisite for subsequent procedures, in which the test case generation module constructs cases tailored to the assessed difficulty level. Upon completion of the difficulty assessment, we generate test cases based on the input QI pair using a vision-text editing tool. For image mutation, inspired by the work of Wang et al. [13] and Wang et al. [14], we adopt a variety of transformation schemes to evaluate the ability of MLLMs to perceive image semantics. These schemes include horizontal flipping, style transfer, local feature manipulation, modification of scene information, and geometric transformations ( e.g. ,IEEE TRANSACTIONS ON MULTIMEDIA, 2026 4
+
+Algorithm 1 MetaRA                                                         
+
+> Require: Model M, original input xori , set of transformation schemes
+> T
+> Ensure: Robustness assessment result
+> 1: // Establish baseline and estimate input difficulty
+> 2: Input Understanding: Analyze xori to determine semantic complexity and expected ground-truth answer yori
+> 3: // Generate MR-consistent variations
+> 4: Case Generation: Construct test cases {xadd ,i }ni=1 by applying transformations ti∈ T
+> 5: // Collect outputs under systematic perturbations
+> 6: Inference Testing: Evaluate Mon xori and {xadd ,i }, obtaining predictions ˆyori and {ˆyadd ,i }
+> 7: // Check consistency across all cases
+> 8: Failure Detection:
+> 9: if ˆyori =yori and ˆyadd ,i =yadd ,i for all ithen
+> 10: // All predictions satisfy MR constraints
+> 11: Mark Mas Robust
+> 12: else
+> 13: // Identify violation patterns
+> 14: Mark Mas Not Robust Enough and record failure types
+> 15: end if
+
+scaling, rotation, and translation). For the question mutation task, given the limited variability in question vocabulary and the relatively low ambiguity of linguistic information, we employ conventional sentence-variation methods, such as synonymous rewriting and constituent replacement. It is worth noting that image information may convey non-unique semantic meanings, and the complexity of image content tends to increase with the number of applied transformation schemes. Therefore, during the image transformation process, the number and types of transformations are selectively adjusted based on the pre-assessed difficulty level of the QI pair, ensuring that the generated test cases remain comparable in difficulty to the original input. The selection of mutation schemes is determined by the corresponding MRs, as detailed in Section III-C. Subsequently, a systematic test suite consisting of the original input xo and the generated test cases {xt,i }ni=1 is fed into the model M in a single batch (analogous to sequential examples in a prompt). The model produces predictions ˆyo = M (xo)
+
+and ˆyt,i = M (xt,i ). Considering previous studies [15] on the influence of instance input order, we conduct repeated tests with different input sequences for each input set to evaluate the model’s sensitivity to ordering effects. Finally, we perform an in-depth analysis of the model’s out-puts. By examining incorrect responses, we identify latent flaws and further analyze MLLMs’ characteristics in multimodal reasoning and image-text understanding tasks. The detailed procedure is illustrated in Algorithm 1. 
+
+C. Design of MRs 
+
+At the core of MetaRA, MRs define specific transformation strategies for uncovering potential weaknesses in MLLM-based VQA models. In this work, we construct a set of MRs according to the testing objectives and determine the corresponding transformation operations, thereby completing the generation of test cases. Specifically, regardless of the difficulty level of the original QI pairs, each input is subjected to four types of MRs, and four corresponding categories of test cases are generated through mutation operations. These four MRs are defined as follows: 
+
+M R 1 (General Multimodal Content Comprehensibility), M R 2
+
+(Multimodal Semantic Perception Stability), M R 3 (Multimodal Content Preservation Consistency), and M R 4 (Multimodal Implicit Information Comprehensibility). Since many existing studies have already explored unimodal perception capabilities, this work does not conduct additional tests on unimodal variations. Note that the original QI pair includes the ground-truth an-swer GT . Therefore, the robustness of model M is considered valid only when the predictions for all transformed cases AT
+
+and the prediction for the original input AO are consistent with 
+
+GT :
+
+Robust (M ) = 1 ⇐⇒ AO = AT = GT. (2) where AO = M (IO , Q O ) and AT = {M (It,i , Q t,i )}ni=1 
+
+denote the predicted answers. For the original question QO and image IO , M R 1 applies both textual and visual transformations simultaneously. The question is paraphrased via operations such as synonym substitution or word reordering, and the image is adjusted via benign transformations such as brightness changes, slight rotations, or scaling. This MR evaluates whether the model can maintain semantic stability under minor perturbations: 
+
+M (IO , Q O ) = GT → M (tb (IO ) , p (QO )) = GT, (3) where tb(·) denotes benign image adjustments and p(·) denotes paraphrasing. The other three MRs adopt the same textual transformation 
+
+p(QO ) but introduce different forms of image mutation to probe distinct aspects of multimodal robustness. M R 2 modifies local object features within IO , such as changing color shades or fine-grained textures, to assess sensitivity to detailed visual perception: 
+
+M (IO , Q O ) = GT → M (tℓ (IO ) , p (QO )) = GT, (4) where tℓ(·) denotes local object-level transformations that preserve object identity and spatial layout. 
+
+M R 3 manipulates global image properties, such as back-ground information or artistic style ( e.g. , rendering the image in a Van Gogh style), thereby testing whether the model can preserve global semantic consistency under domain shifts: 
+
+M (IO , Q O ) = GT → M (tg (IO ) , p (QO )) = GT, (5) where tg (·) denotes global transformations that do not alter scene semantics. 
+
+M R 4 augments the image with embedded textual elements (e.g. , captions or labels) to evaluate whether the model can correctly interpret and align visual-textual relationships: 
+
+M (IO , Q O ) = GT → M (overlay ( IO , T ) , p (QO )) = GT, 
+
+(6) where overlay( IO , T ) denotes the operation of embedding visually readable text T into the image. IEEE TRANSACTIONS ON MULTIMEDIA, 2026 5
+
+TABLE I: Metamorphic relations (MRs) and their cor-responding multimodal transformation operations. Each MR targets a specific aspect of robustness and is instantiated through a combination of question paraphrasing and image-level transformations.               
+
+> MRs (Testing Target) Mutation Operation
+> General Content Comprehensibility question paraphrasing +benign visual modifications Semantic Perception Stability question paraphrasing + local fea-ture modifications Content Preservation Consistency question paraphrasing +back-ground or style transformations Implicit Information Comprehensi-bility
+> question paraphrasing +visual-textual entailment augmentation
+
+Together, as illustrated in Table I, these four metamorphic relations provide a structured methodology for evaluating MLLMs in VQA by systematically probing their robustness to paraphrasing, fine-grained perception, global semantic consis-tency, and cross-modal alignment. 
+
+D. Generation Tools 
+
+To support the MRs defined in Section III-C and to realize the multimodal transformations described above, we construct a practical mutation pipeline that uses transformer-based models for question mutation and a combination of lightweight Python programs (OpenCV and Pillow) and Stable Diffusion–based generative models for image mutation. Specifically, for a given original QI pair xo = ( IO , Q O ), the transformation functions 
+
+tQ(·) and tI (·) introduced in Section III-B are instantiated through the following tools. For question mutation, the paraphrasing function p(QO )
+
+is implemented using a transformer-based text generation model, which performs synonymous rewriting and constituent replacement while preserving the semantic intent of the original question. This ensures that the generated question Q′ 
+
+> i
+
+= p(QO )
+
+remains logically consistent with the original answer. For image mutation, the transformation functions tb(·), tℓ(·),
+
+tg (·), and overlay( ·, ·) corresponding to different MRs are realized as follows: 
+
+1) M R 1: Benign Adjustment Operations . The function 
+
+tb(IO ) is implemented using OpenCV and Pillow, including global brightness adjustment, rotation, scaling, and minor geo-metric transformations. These operations preserve the overall scene semantics while introducing mild visual perturbations. 
+
+2) M R 2: Local Feature Modification . The function tℓ(IO )
+
+focuses on object-level regions. Region masks are first gener-ated via OpenCV-based segmentation and masking; the masked regions are then modified through fine-grained operations ( e.g. ,slight color shifts, texture perturbations, or selective occlusion) and composited back into the original image using Pillow. This enables targeted manipulation of local features while preserving the global structure. 
+
+3) M R 3: Global Style and Background Transformation .The function tg (IO ) is implemented using Stable Diffusion and related neural style transfer frameworks. These methods modify global appearance, including background replacement and artistic style transfer, while maintaining the semantic consistency of objects and their relationships. 
+
+4) M R 4: Image-Text Entailment Augmentation . The func-tion overlay( IO , T ) embeds textual elements T (e.g. , captions, labels, or watermarks) into the image using Pillow’s ImageDraw module, with controlled positioning, font, and color. This ensures that the added textual information is visually coherent and can be consistently interpreted by multimodal models. By combining these tools, the proposed framework real-izes a comprehensive mutation pipeline that covers benign adjustments, local feature modifications, global style transfor-mations, and image-text augmentation. Each transformation is designed to balance controllability, reproducibility, and semantic preservation, ensuring that the generated test cases are both meaningful and suitable for robust evaluation of MLLMs in VQA. 
+
+E. Failure Detection 
+
+After model inference, if Robust (M ) = 0 , we further quan-tify robustness using the failure rate. Let {xt,i = ( I′ 
+
+> i
+
+, Q ′
+
+> i
+
+)}ni=1 
+
+denote the set of transformed QI pairs generated from xo,and let C(M, x ) denote the correctness function defined in Section III-A. The failure rate is defined as: 
+
+FailRate (M ) = 1
+
+n
+
+> n
+
+X
+
+> i=1
+
+1 [¬C (M, x t,i )] , (7) where 1[·] is the indicator function that equals 1 if the condition holds and 0 otherwise. The FailRate quantifies the proportion of transformed test cases in which the model violates the expected MR-induced consistency. For each transformed input xt,i , the predicate C(M, x t,i ) evaluates whether the model’s prediction 
+
+ˆyt,i = M (xt,i ) is consistent with the expected answer (i.e., the ground-truth answer GT or MR-consistent output). A lower 
+
+FailRate indicates stronger robustness and stability across the four metamorphic relations, whereas a higher value reveals sensitivity to different types of perturbations, including textual paraphrasing, benign image transformations, local feature modifications, global style shifts, and image-text entailment augmentation. In addition to this quantitative metric, we further analyze fail-ure cases by categorizing errors by MR type and transformation operation. This enables a more fine-grained diagnosis of model weaknesses in multimodal alignment, semantic grounding, and cross-modal reasoning. IV. E XPERIMENTAL RESULTS 
+
+We reorganize the experimental study to provide a clearer and more structured evaluation of MetaRA. We first introduce the evaluation protocol and metrics, followed by datasets and implementation details. We then present quantitative results, MR-level diagnostic analysis, and cross-task comparisons. Finally, we discuss limitations revealed by the experiments. IEEE TRANSACTIONS ON MULTIMEDIA, 2026 6
+
+TABLE II: Failure rate ( FR ) comparison of MLLM-based KBVQA models on E-VQA and I NFO SEEK . FR is computed for each QI pair and averaged over all samples within a dataset, while the final FR denotes the average across datasets. Lower values indicate stronger robustness under metamorphic perturbations. Note that lower FR indicate higher robustness of models,                                                                                                                                          
+
+> Method LLM/MLLM E-VQA INFO SEEK
+> Final FR (%) Single-Hop All Unseen-Q Unseen-E All
+> LLaVA-1.5 [16] LLaMA-3.1-8B 16.0 16.9 8.3 8.9 7.8 12.5 LLaVA-1.5 [16] Vicuna-7B 16.3 16.9 9.6 9.4 9.5 12.5 Qwen2-VL-7B [17] -16.2 17.0 15.4 16.8 16.1 11.1 Qwen2.5-VL-3B [18] -17.9 19.6 20.2 21.7 20.7 10.0 Qwen2.5-VL-7B [18] -21.7 20.3 22.8 24.0 23.2 9.0 LLaVA-NeXT-7B [19] -22.1 20.8 23.2 23.4 23.1 9.0 LLaVA-NeXT-8B [19] -22.5 21.4 23.7 24.0 23.6 9.0 DPR V+T[20] Multi-passage BERT 29.1 ---12.4 11.2 RORA-VLM [21] Vicuna-7B -20.3 25.1 27.3 26.0 9.2 EchoSight [22] Mistral-7B/LLaMA-3-8B 19.4 ---27.5 9.1 EchoSight [22] LLaMA-3.1-8B 26.4 24.9 18.0 19.8 18.8 9.1 Wiki-LLaVA [23] LLaMA-3.1-8B 18.3 19.6 28.6 25.7 27.1 8.3 Wiki-LLaVA [23] Vicuna-7B 17.7 20.3 30.1 27.8 28.9 8.2 ReflectiVA [24] LLaMA-3.1-8B 35.5 35.5 28.6 28.1 28.3 9.0 KU-RAG [25] GPT-4o 38.3 ---26.1 7.1 MMKB-RAG [26] Qwen2-VL-7B 39.7 35.9 36.4 36.3 36.4 6.6 VLM-PRF [27] Qwen2.5-VL-7B 28.9 28.6 40.0 39.4 39.5 6.4 VLM-PRF w/ RL [27] InternVL3-8B 40.1 39.2 43.5 42.1 42.5 5.8
+
+A. Evaluation Protocol and Metrics 
+
+MetaRA is designed to conduct a systematic robustness evaluation of MLLM-based VQA models through MR-guided test cases. In addition to standard VQA accuracy [4], we adopt the failure rate ( FR ) defined in Section III-E as a primary robustness metric. Different from conventional evaluation, a lower FR indicates stronger robustness, while a higher FR reflects the model’s vul-nerability under controlled perturbations. FR captures failures in multimodal semantic perception, content preservation, and visual-textual alignment that are not reflected by accuracy alone. Therefore, accuracy and FR are jointly reported to provide complementary insights into both predictive performance and robustness. 
+
+B. Datasets and Tasks 
+
+Given the widespread application of MLLMs in both knowledge-intensive and text-centric scenarios, we conduct experiments on two representative VQA task categories: KB-VQA and OCR-VQA. For KBVQA, we adopt ENCYCLOPEDIC -VQA (E-VQA) [28] and I NFO SEEK [29]. E-VQA is constructed on a curated Wikipedia-based knowledge base, in which each visual question is associated with supporting textual evidence, enabling knowledge-grounded reasoning. I NFO SEEK 
+
+provides a large-scale benchmark for information-seeking VQA, containing both human-annotated and automatically collected samples, with over one million examples for training and evaluation. It emphasizes questions that require external knowledge beyond the visual content, thereby evaluating the model’s ability to integrate visual perception with knowledge reasoning. For OCR-VQA, we adopt D OC VQA [30], I NFO VQA [31], CHART QA [32], and T EXT VQA [33]. D OC VQA contains approximately 50,000 questions over more than 12,000 docu-ment images, focusing on structured document understanding and text extraction tasks. I NFO VQA consists of about 30K questions across 5K infographic images, requiring models to interpret complex visual layouts that combine text, graphics, and numerical information. C HART QA includes over 30K questions on more than 20K charts, covering both human-written and machine-generated queries that require numerical reasoning over visualized data. T EXT VQA contains over 45K questions on around 28K images, emphasizing the ability to read and reason over text embedded in natural scenes. These datasets collectively cover diverse text-rich scenarios and form representative benchmarks for evaluating OCR-based multimodal reasoning. 
+
+C. Implementation Details 
+
+Following Section III-C , four MRs are employed to generate transformed test cases. For each original QI pair xo, we construct a set {xt,i }ni=1 using MR-guided transformations. The number of test cases n is determined by the input difficulty 
+
+d(xo) estimated in Section III-B . More difficult inputs are assigned more test cases to ensure sufficient coverage of complex reasoning scenarios. During inference, we feed the sequence xo +xt,i (1 ≤ i ≤ n)into the model. To account for order sensitivity [15], we repeat the evaluation under multiple permutations of the input order and report the average FR .For images containing rich textual content, we follow [14] and replace the local feature modification in M R 2 with a mirror flip operation. This setting explicitly evaluates the robustness of models to geometric transformations affecting textual semantics. 
+
+D. Overall Performance Analysis 1) KBVQA Results: We evaluate 18 MLLM-based methods on KBVQA tasks. As shown in Table II and Fig. 3, the overall FR demonstrates a clear decreasing trend across model IEEE TRANSACTIONS ON MULTIMEDIA, 2026 7
+
+TABLE III: Failure rate ( FR ) comparison of MLLM-based OCR-VQA models on D OC VQA, I NFO VQA, C HART QA, and T EXT VQA. FR is computed for each QI pair and averaged over all samples within each dataset, while the final FR 
+
+denotes the average across datasets. Lower values indicate stronger robustness under metamorphic perturbations. 
+
+Method Size DOC VQA INFO VQA CHART QA TEXT VQA Final FR (%) 
+
+UReader [34] 7B 65.4 42.2 59.3 57.6 14.2 InternVL2 [35] 8B 91.6 74.8 83.3 77.4 9.1 LLaVA-1.5 [16] 7B 50.3 31.6 39.4 59.0 14.4 DocOwl-1.5 [36] 8B 81.6 50.4 70.5 68.8 9.1 DocOwl-1.5-Chat [36] 8B 82.2 50.7 70.2 68.6 9.0 CogAgent [37] 17B 81.6 44.5 68.4 76.1 8.2 Monkey [38] 9B 66.5 36.1 65.1 67.6 12.1 TextHawk [39] 7B 76.4 50.6 66.6 59.3 11.6 TextHawk2 [40] 7B 89.6 67.8 81.4 75.1 8.0 HRVDA [41] 7B 72.1 43.5 67.6 73.3 9.3 Vary [42] 7B 76.3 45.0 66.1 60.6 9.2 MM1.5 [43] 7B 88.1 59.5 78.6 76.8 10.3 Marten [44] 8B 92.0 75.2 81.7 74.4 8.6 
+
+Fig. 3: Average failure rate ( FR ) of MLLM-based KBVQA models on E-VQA and I NFO SEEK . Lower FR indicates stronger robustness, and models with better reasoning ability and multimodal alignment generally achieve lower FR .UReader     
+
+> InternVL2
+> LLaVA-1.5
+> DocOwl-1.5
+> DocOwl-1.5-Chat
+> CogAgent
+> Monkey
+> TextHawk
+> TextHawk2
+> HRVDA
+> Vary
+> MM1.5
+> Marten
+> 0
+> 2
+> 4
+> 6
+> 8
+> 10
+> 12
+> 14
+> 16
+> Average Failure Rate (FR) (%)
+> 14.2
+> 9.1
+> 14.4
+> 9.1 9.0 8.2
+> 12.1 11.6
+> 8.0
+> 9.3 9.2
+> 10.3
+> 8.6
+
+Fig. 4: Failure rate ( FR ) comparison of MLLM-based OCR-VQA models across four benchmarks. Results are reported on D OC VQA, I NFO VQA, C HART QA, and T EXT VQA, with the final FR representing the average across all datasets, where lower values indicate higher robustness. evolution. Methods built upon the same backbone exhibit consistent FR values. Earlier models, such as LLaVA-1.5 [16] and Qwen2-VL [17], show relatively high FR , indicating limited robustness. In contrast, more recent models achieve both improved accuracy and reduced FR , suggesting that advances in reasoning capability are generally accompanied by enhanced robustness. VLM-PRF [27] achieves the best overall performance, exhibiting the lowest FR .
+
+2) OCR-VQA Results: We further evaluate 13 methods on OCR-VQA tasks. As illustrated in Table III and Fig. 4, FR 
+
+exhibits a fluctuating pattern rather than a monotonic decrease. (a)  (b) 
+
+Fig. 5: FR comparison and ranking consistency between MetaVQA (a) and MetaRA (b) on E - VQA and T EXT VQA. 
+
+Note that lower FR indicates stronger robustness. The dashed lines show the perfectly consistent ranking trend. Even recent models, such as MM1.5 [43], maintain relatively high FR . This behavior is mainly attributed to the increased difficulty of OCR-VQA, in which the mirror-flip operation in M R 2 significantly disrupts text perception. These results indicate that improvements in robustness in general VQA do not directly transfer to text-intensive scenarios. 
+
+E. Consistency Between MetaRA and MetaVQA 
+
+To verify the correctness and effectiveness of the proposed MetaRA, we conduct a consistency experiment comparing our method with the previous MT-based VQA approach proposed in [11] (MetaVQA). We select five mainstream MLLMs and evaluate them on E-VQA (KBVQA) and T EXT VQA (OCR-VQA) using both methods. Table IV shows the ranking consistency between the pro-posed MetaRA and MetaVQA [11]. Specifically, MetaRA Rank 
+
+refers to the robustness rank of models sorted by FR values obtained from our MetaRA framework, and MetaVQA Rank 
+
+indicates the rank obtained from the baseline MT method MetaVQA. In both ranking schemes, Rank 1 denotes the most robust model, while a larger rank number indicates weaker robustness. The ✓ in the Rank Consistency column means that the model achieves exactly the same robustness rank under both MetaRA and MetaVQA evaluation paradigms. As shown in Fig. 5, all compared models yield fully consistent robustness rankings across MetaRA and MetaVQA on both the E-VQA and T EXT VQA datasets. The identical trends of the two methods demonstrate that MetaRA not only inherits the IEEE TRANSACTIONS ON MULTIMEDIA, 2026 8
+
+TABLE IV: Robustness ranking consistency between the proposed MetaRA and MetaVQA [11]. A lower FR indicates stronger robustness, and Rank 1 denotes the most robust model.                                                  
+
+> Model Size E-VQA TEXT VQA MetaRA Rank MetaVQA Rank Rank Consistency MetaVQA MetaRA MetaVQA MetaRA
+> LLaVA-1.5 [16] 7B 28.7 16.0 37.2 59.0 55✓
+> Qwen2-VL [17] 7B 27.1 16.2 35.8 60.6 44✓
+> LLaVA-NeXT [19] 7B 22.3 22.1 31.5 73.3 33✓
+> Qwen2.5-VL [18] 7B 21.6 21.7 30.1 67.6 22✓
+> InternVL2 [35] 8B ––26.3 77.4 –––
+
+TABLE V: Failure rate ( FR ) of LLaVA-1.5 (7B) across KBVQA and OCR-VQA benchmarks. Results are reported on six datasets, illustrating the model’s heterogeneous robustness across task types, with higher FR observed on text-intensive OCR-VQA benchmarks.               
+
+> Method KBVQA OCR-VQA E-VQA INFO SEEK DOC VQA INFO VQA CHART QA TEXT VQA
+> LLaVA-1.5 [16] 11.4 13.6 14.2 16.8 16.6 10.0 E-VQA
+> InfoSeek DocVQA
+> InfoVQA
+> ChartQA TextVQA
+> 2.5 5.0 7.5 10.0
+> 12.5
+> 15.0
+> 17.5
+> 20.0
+> LLaVA-1.5 (7B)
+
+Fig. 6: Dataset-wise FR distribution of LLaVA-1.5 (7B) across KBVQA and OCR-VQA benchmarks. The radar chart highlights higher FR on I NFO VQA and C HART QA, indicating these datasets pose greater robustness challenges. core logic of MT but also provides a more comprehensive and fine-grained robustness diagnosis, confirming its correctness and reliability. 
+
+F. Cross-Task Robustness Comparison 
+
+To further analyze robustness across task types, we evaluate the same model on both KBVQA and OCR-VQA benchmarks. As shown in Table V and Figs. 6 and 7, LLaVA-1.5 [16] exhibits highly heterogeneous FR distributions across datasets. The radar chart (see Fig. 6) provides a unified view, highlighting I NFO VQA and C HART QA as the most challenging datasets with the highest FR . The boxplot (see Fig. 7) further shows that OCR-VQA tasks have both a higher average FR and greater variance than KBVQA. These observations indicate that text-rich reasoning introduces greater instability and sensitivity to perturbations. KBVQA OCR-VQA 
+
+> 8
+> 10
+> 12
+> 14
+> 16
+> 18
+> 20
+> Failure Rate (%)
+
+Fig. 7: FR distribution comparison between KBVQA and OCR-VQA tasks. OCR-VQA exhibits a wider distribution range and higher overall FR , indicating increased difficulty in text-intensive multimodal reasoning. TABLE VI: Average FR across four MRs for KBVQA and OCR-VQA. The reported values are obtained by averaging 
+
+FR of each MR over all corresponding datasets, highlighting differences in robustness across testing targets.           
+
+> MRs (Testing Target) Average FR (%) KBVQA OCR-VQA
+> General Content Comprehensibility 6.4 7.1 Semantic Perception Stability 7.2 11.3 Content Preservation Consistency 9.1 9.3 Implicit Information Comprehensibility 5.8 13.5
+
+G. MR-Level Diagnostic Analysis 
+
+We further analyze robustness with respect to the four MRs, as shown in Table VI and Fig. 8. The average FR indicates that models are relatively robust to benign transformations ( M R 1)and global style changes ( M R 3), while exhibiting significantly higher FR under local perturbations ( M R 2) and implicit visual-textual reasoning ( M R 4). Notably, the maximum FR on OCR-VQA (13.5%) is nearly 50% higher than the highest FR on IEEE TRANSACTIONS ON MULTIMEDIA, 2026 9(a)  (b) 
+
+Fig. 8: MR-specific robustness of models on KBVQA and OCR-VQA tasks. Note that a darker color indicates a higher 
+
+FR , implying worse robustness. What year was the  
+
+> vehicle in the picture
+> invented?
+> What is the title of this
+> book?
+> In which year was the
+> vehicle depicted in the
+> picture invented?
+> MR
+> What ’s the title written
+> on this book?
+> MR MR
+> A: Golden retriever
+> GT: Golden retriever
+> A: TNOMREV LUFITUAEB
+> GT: Vermont Beautiful
+> (a)
+> (b)
+
+Fig. 9: Examples of metamorphic mutations in KBVQA and OCR-VQA QI pairs. The comparison illustrates how different mutation strategies affect visual-textual consistency across the two task types. KBVQA (9.1%), demonstrating that models’ robustness varies significantly with task type, with OCR-VQA presenting a more challenging robustness evaluation scenario. The models’ robustness across both tasks and all four MRs is further analyzed, with results visualized in a heatmap. This enables an intuitive comparison of failure rates across different settings. As illustrated in Fig. 8, vulnerability patterns differ across task types, with a darker color indicating a higher FR ,implying worse robustness. While M R 1 and M R 3 maintain relatively low FR across both KBVQA and OCR-VQA, M R 2
+
+and M R 4 lead to substantially higher failure rates, particularly in OCR-VQA. This indicates that local structural changes and implicit visual–textual reasoning introduce more severe robustness degradation in text-centric scenarios. We attribute this phenomenon to the distinct roles of textual information in images across the two tasks. In OCR-VQA, textual content is explicit and often central to answering ques-tions, making models highly sensitive to geometric distortions and semantic perturbations. This effect is further illustrated in Fig. 9. In case (a), although a large portion of the image content is altered, the textual information remains interpretable, and the model is able to produce a correct answer. In contrast, in case (b), the overall scene appears largely unchanged, yet subtle distortions in the embedded textual content lead to incorrect predictions. This observation highlights that OCR-VQA tasks impose stringent geometric and structural constraints on textual visual information, where even minor perturbations can disrupt semantic understanding. In contrast, KBVQA relies more heavily on external knowl-edge, with images primarily serving as contextual anchors for knowledge retrieval rather than the main source of semantic content. Consequently, perturbations that affect textual salience or visual precision have a disproportionately larger impact on OCR-VQA than on KBVQA. These findings further confirm that equivalent metamorphic perturbations can lead to task-specific differences in robustness, emphasizing the need for task-aware evaluation strategies. 
+
+H. Discussion and Limitation Analysis 
+
+The experimental results reveal several limitations of current MLLM-based VQA models. Although models demonstrate robustness to global perturbations such as background shifts and stylistic transformations, their performance degrades under fine-grained local modifications and implicit textual mutations. This suggests that multimodal alignment and semantic grounding remain fragile in challenging scenarios. Furthermore, cross-task comparisons indicate that KBVQA models struggle to consistently integrate external knowledge, whereas OCR-VQA models are particularly sensitive to struc-tural and geometric variations in text. Overall, these findings suggest that, despite strong perfor-mance on standard benchmarks, current MLLMs lack robust mechanisms for handling fine-grained visual changes and implicit multimodal semantics. Future work should focus on im-proving multimodal alignment, enhancing retrieval-augmented reasoning, and developing training strategies that explicitly target robustness under metamorphic transformations. V. C ONCLUSION 
+
+We present Meta morphic Robustness Assessment (MetaRA ), a robustness testing framework for MLLM-based VQA that leverages specifically designed MRs to systematically probe model vulnerabilities. By generating controlled variations of QI pairs, MetaRA reveals subtle weaknesses in current methods, including sensitivity to linguistic perturbations, over-reliance on superficial visual cues, and deeper inconsistencies in multimodal association. Experimental results demonstrate that MetaRA provides diagnostic insights beyond conventional accuracy metrics, effectively uncovering failure modes that remain hidden under standard benchmarks. These findings highlight the necessity of robustness-oriented evaluation in multimodal AI. Overall, MetaRA establishes metamorphic testing as a scalable, model-agnostic methodology that facilitates the development of more reliable, interpretable, and trustworthy VQA systems. Future work will explore more diverse MR design strategies to further improve testing coverage, and investigate evaluation metrics that more precisely quantify the effectiveness and accuracy of metamorphic testing. IEEE TRANSACTIONS ON MULTIMEDIA, 2026 10 
+
+REFERENCES [1] L. Yang, Z. Xiao, W. Huang, and X. Zhong, “StoryLLaVA: Enhancing visual storytelling with multi-modal large language models,” in Proc. Int. Conf. Comput. Linguistics , pp. 3936–3951, 2025. [2] X. Zhong, Z. Li, S. Chen, K. Jiang, C. Chen, and M. Ye, “Refined semantic enhancement towards frequency diffusion for video captioning,” in Proc. AAAI Conf. Artif. Intell. , pp. 3724–3732, 2023. [3] S. Chen, X. Zhong, Y. Zhang, L. Zhu, P. Li, X. Yang, and B. Sheng, “Action-aware linguistic skeleton optimization network for non-autoregressive video captioning,” ACM Trans. Multimedia Comput. Commun. Appl. , vol. 20, no. 10, pp. 326:1–326:24, 2024. [4] S. Antol, A. Agrawal, J. Lu, M. Mitchell, D. Batra, C. L. Zitnick, and D. Parikh, “VQA: Visual question answering,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. , pp. 2425–2433, 2015. [5] Y. Goyal, T. Khot, A. Agrawal, D. Summers-Stay, D. Batra, and D. Parikh, “Making the V in VQA matter: Elevating the role of image understanding in visual question answering,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. , pp. 6904–6913, 2017. [6] J. Ma, P. Wang, D. Kong, Z. Wang, J. Liu, H. Pei, and J. Zhao, “Robust visual question answering: Datasets, methods, and future challenges,” 
+
+IEEE Trans. Pattern Anal. Mach. Intell. , vol. 46, no. 8, pp. 5575–5594, 2024. [7] T. Y. Chen, S. Cheung, and S. Yiu, “Metamorphic testing: A new approach for generating next test cases,” arXiv preprint arXiv:2002.12543 , 2002. [8] S. Shah, A. Mishra, N. Yadati, and P. P. Talukdar, “KVQA: Knowledge-aware visual question answering,” in Proc. AAAI Conf. Artif. Intell. ,pp. 8876–8884, 2019. [9] A. Mishra, S. Shekhar, A. K. Singh, and A. Chakraborty, “OCR-VQA: Visual question answering by reading text in images,” in Proc. Int. Conf. Document Anal. Recognit. , pp. 947–952, 2019. [10] T. Y. Chen, F. Kuo, H. Liu, P. Poon, D. Towey, T. H. Tse, and Z. Q. Zhou, “Metamorphic testing: A review of challenges and opportunities,” 
+
+ACM Comput. Surv. , vol. 51, no. 1, pp. 4:1–4:27, 2018. [11] Y. Yuan, S. Wang, M. Jiang, and T. Y. Chen, “Perception matters: Detecting perception failures of VQA models using metamorphic testing,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. , pp. 16908– 16917, 2021. [12] X. Xie, X. Li, and S. Chen, “Metamorphic testing of image captioning systems via image-level reduction,” IEEE Trans. Softw. Eng. , vol. 50, no. 11, pp. 2962–2982, 2024. [13] L. Wang, Y. Yuan, A. Sun, Z. Li, P. Ma, D. Wu, and S. Wang, “How multi-modal LLMs reshape visual deep learning testing? A comprehensive study through the lens of image mutation,” arXiv preprint arXiv:2404.13945 ,2024. [14] T. Wang, Y. Yang, L. Yang, S. Lin, J. Zhang, G. Guo, and B. Zhang, “CLIP in mirror: Disentangling text from visual images through reflection,” in Adv. Neural Inf. Process. Syst. , 2024. [15] Z. Tan, X. Chu, W. Li, and T. Mo, “Order matters: Exploring or-der sensitivity in multimodal large language models,” arXiv preprint arXiv:2410.16983 , 2024. [16] H. Liu, C. Li, Y. Li, and Y. J. Lee, “Improved baselines with visual instruction tuning,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. , pp. 26286–26296, 2024. [17] P. Wang, S. Bai, S. Tan, S. Wang, Z. Fan, J. Bai, K. Chen, X. Liu, J. Wang, W. Ge, Y. Fan, K. Dang, M. Du, X. Ren, R. Men, D. Liu, C. Zhou, J. Zhou, and J. Lin, “Qwen2-VL: Enhancing vision-language model’s perception of the world at any resolution,” arXiv preprint arXiv:2409.12191 , 2024. [18] S. Bai, K. Chen, X. Liu, J. Wang, W. Ge, S. Song, K. Dang, P. Wang, S. Wang, J. Tang, et al. , “Qwen2.5-VL technical report,” arXiv preprint arXiv:2502.13923 , 2025. [19] F. Li, R. Zhang, H. Zhang, Y. Zhang, B. Li, W. Li, Z. Ma, and C. Li, “LLaVA-NeXT-InterleaveTackling multi-image, video, and 3D in large multimodal models,” arXiv preprint arXiv:2407.07895 , 2024. [20] P. Lerner, O. Ferret, and C. Guinaudeau, “Cross-modal retrieval for knowledge-based visual question answering,” in Proc. Eur. Conf. Inf. Retrieval , pp. 421–438, 2024. [21] J. Qi, Z. Xu, R. Shao, Y. Chen, J. Di, Y. Cheng, Q. Wang, and L. Huang, “RoRA-VLM: Robust retrieval-augmented vision language models,” arXiv preprint arXiv:2410.08876 , 2024. [22] Y. Yan and W. Xie, “EchoSight: Advancing visual-language models with wiki knowledge,” in Findings Conf. Empirical Methods Natural Lang. Process. , pp. 1538–1551, 2024. [23] D. Caffagni, F. Cocchi, N. Moratelli, S. Sarto, M. Cornia, L. Baraldi, and R. Cucchiara, “Wiki-LLaVA: Hierarchical retrieval-augmented generation for multimodal LLMs,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. Workshops , pp. 1818–1826, 2024. [24] F. Cocchi, N. Moratelli, M. Cornia, L. Baraldi, and R. Cucchiara, “Augmenting multimodal LLMs with self-reflective tokens for knowledge-based visual question answering,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. , pp. 9199–9209, 2025. [25] Z. Zhang, Y. Wu, Y. Luo, and N. Tang, “Fine-grained retrieval-augmented generation for visual question answering,” arXiv preprint arXiv:2502.20964 , 2025. [26] Z. Ling, Z. Guo, Y. Huang, Y. An, S. Xiao, J. Lan, X. Zhu, and B. Zheng, “MMKB-RAG: A multi-modal knowledge-based retrieval-augmented generation framework,” arXiv preprint arXiv:2504.10074 , 2025. [27] Y. Hong, J. Gu, Q. Yang, L. Fan, Y. Wu, Y. Wang, K. Ding, S. Xiang, and J. Ye, “Knowledge-based visual question answering with multimodal processing, retrieval, and filtering,” arXiv preprint arXiv:2510.14605 ,2025. [28] T. Mensink, J. Uijlings, L. Castrejon, A. Goel, F. Cadar, H. Zhou, F. Sha, A. Araujo, and V. Ferrari, “Encyclopedic VQA: Visual questions about detailed properties of fine-grained categories,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. , pp. 3090–3101, 2023. [29] Y. Chen, H. Hu, Y. Luan, H. Sun, S. Changpinyo, A. Ritter, and M. Chang, “Can pre-trained vision and language models answer visual information-seeking questions?,” in Proc. Conf. Empirical Methods Natural Lang. Process. , pp. 14948–14968, 2023. [30] M. Mathew, D. Karatzas, and C. V. Jawahar, “DocVQA: A dataset for VQA on document images,” in Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis. , pp. 2199–2208, 2021. [31] M. Mathew, V. Bagal, R. Tito, D. Karatzas, E. Valveny, and C. V. Jawahar, “InfographicVQA,” in Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis. ,pp. 2582–2591, 2022. [32] A. Masry, D. X. Long, J. Q. Tan, S. R. Joty, and E. Hoque, “ChartQA: A benchmark for question answering about charts with visual and logical reasoning,” in Findings Annu. Meeting Assoc. Comput. Linguistics ,pp. 2263–2279, 2022. [33] A. Singh, V. Natarajan, M. Shah, Y. Jiang, X. Chen, D. Batra, D. Parikh, and M. Rohrbach, “Towards VQA models that can read,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. , pp. 8317–8326, 2019. [34] J. Ye, A. Hu, H. Xu, Q. Ye, M. Yan, G. Xu, C. Li, J. Tian, Q. Qian, J. Zhang, Q. Jin, L. He, X. Lin, and F. Huang, “UReader: Universal OCR-free visually situated language understanding with multimodal large language model,” in Findings Conf. Empirical Methods Natural Lang. Process. , pp. 2841–2858, 2023. [35] Z. Chen, J. Wu, W. Wang, W. Su, G. Chen, S. Xing, M. Zhong, Q. Zhang, X. Zhu, L. Lu, B. Li, P. Luo, T. Lu, Y. Qiao, and J. Dai, “InternVL: Scaling up vision foundation models and aligning for generic visual-linguistic tasks,” arXiv preprint arXiv:2312.14238 , 2023. [36] A. Hu, H. Xu, J. Ye, M. Yan, L. Zhang, B. Zhang, J. Zhang, Q. Jin, F. Huang, and J. Zhou, “mPLUG-DocOwl 1.5: Unified structure learning for OCR-free document understanding,” in Findings Conf. Empirical Methods Natural Lang. Process. , pp. 3096–3120, 2024. [37] W. Hong, W. Wang, Q. Lv, J. Xu, W. Yu, J. Ji, Y. Wang, Z. Wang, Y. Dong, M. Ding, and J. Tang, “CogAgent: A visual language model for GUI agents,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. ,pp. 14281–14290, 2024. [38] Z. Li, B. Yang, Q. Liu, Z. Ma, S. Zhang, J. Yang, Y. Sun, Y. Liu, and X. Bai, “Monkey: Image resolution and text label are important things for large multi-modal models,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. , pp. 26753–26763, 2024. [39] Y. Yu, M. Liao, J. Wu, Y. Liao, X. Zheng, and W. Zeng, “TextHawk: Exploring efficient fine-grained perception of multimodal large language models,” arXiv preprint arXiv:2404.09204 , 2024. [40] Y. Yu, M. Liao, J. Zhang, and J. Wu, “TextHawk2: A large vision-language model excels in bilingual OCR and grounding with 16 × fewer tokens,” arXiv preprint arXiv:2410.05261 , 2024. [41] C. Liu, K. Yin, H. Cao, X. Jiang, X. Li, Y. Liu, D. Jiang, X. Sun, and L. Xu, “HRVDA: High-resolution visual document assistant,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. , pp. 15534–15545, 2024. [42] H. Wei, L. Kong, J. Chen, L. Zhao, Z. Ge, J. Yang, J. Sun, C. Han, and X. Zhang, “Vary: Scaling up the vision vocabulary for large vision-language models,” in Proc. Eur. Conf. Comput. Vis. , pp. 408–424, 2024. [43] H. Zhang, M. Gao, Z. Gan, P. Dufter, N. Wenzel, F. Huang, D. Shah, X. Du, B. Zhang, Y. Li, S. Dodge, K. You, Z. Yang, A. Timofeev, M. Xu, H. Chen, J. Fauconnier, Z. Lai, H. You, Z. Wang, A. Dehghan, P. Grasch, and Y. Yang, “MM1.5: Methods, analysis & insights from multimodal LLM fine-tuning,” in Proc. Int. Conf. Learn. Represent. , 2025. [44] Z. Wang, T. Guan, P. Fu, C. Duan, Q. Jiang, Z. Guo, S. Guo, J. Luo, W. Shen, and X. Yang, “Marten: Visual question answering with mask generation for multi-modal document understanding,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. , pp. 14460–14471, 2025. IEEE TRANSACTIONS ON MULTIMEDIA, 2026 1
+
+SUPPLEMENTARY MATERIALS FOR 
+
+MetaRA: Metamorphic Robustness Assessment for Multimodal Large Language Model-based Visual Question Answering Systems 
+
+This is the supplementary material accompanying our main paper, “MetaRA: Metamorphic Robustness Assessment for Multimodal Large Language Model-based Visual Question Answering Systems”. In this supplementary material, we provide additional information that could not be included in the main paper due to space constraints. We further elaborate on the different influences of four MRs in two subsections: Section A presents an intuitive average FR comparison of four MRs across two VQA tasks, and Section B gives an obvious difference in MR robustness across two VQA tasks. 
+
+A. Average FR Comparison 
+
+Fig. A compares the average FR across four MRs for KBVQA and OCR-VQA tasks. The results show that FR 
+
+generally increases with the complexity of the robustness aspect being tested, from basic content comprehensibility to implicit information reasoning. Across all MRs, OCR-VQA exhibits consistently higher FR values than KBVQA, particularly under Semantic Perception Stability (11.3% vs. 7.2%) and Implicit Information Comprehensibility (13.5% vs. 5.8%). These significant gaps reflect the differing importance of textual information in the two tasks. KBVQA relies more on general visual and common-sense knowledge, resulting in relatively stable performance even under perturbations. In contrast, OCR-VQA depends heavily on accurate text parsing and contextual reasoning, making it far more vulnerable to subtle changes in semantic and implicit information, as captured by M R 2 and M R 4.
+
+B. Robustness Comparison 
+
+Fig. B presents waterfall plots of FR across the four MRs for KBVQA and OCR-VQA, illustrating the progressive degradation of robustness. For KBVQA, FR rises gradually from 6.4% ( M R 1) to 9.1% ( M R 3) before dropping to 5.8% (M R 4), indicating moderate and relatively stable fragility across most MRs, with the exception of implicit information perturbations. In contrast, OCR-VQA shows a steeper, more volatile trend, starting at 7.1% ( M R 1) and peaking at 13.5% (M R 4), with sharp increases in M R 2 and M R 4.This heterogeneous pattern reveals that OCR-VQA models have multiple critical failure points, particularly in semantic perception and implicit text comprehension. The results confirm that robustness degradation is task-dependent and uneven, highlighting the need for multidimensional MR testing to expose the full spectrum of vulnerabilities in VQA models. 
+
+Fig. A: FR comparison across four MRs for KBVQA and OCR-VQA. Significant differences are observed in semantic perception stability and implicit information comprehensibility, reflecting the varying importance of textual information in the two tasks. (a)  (b) 
+
+Fig. B: MR robustness waterfall plots on KBVQA (a) and OCR-VQA (b). Each bar represents the FR under four MRs. The plots highlight the progressive, heterogeneous degradation of robustness across different MRs and tasks.
