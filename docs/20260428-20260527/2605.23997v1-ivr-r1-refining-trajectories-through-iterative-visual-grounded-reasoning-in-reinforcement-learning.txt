@@ -1,0 +1,271 @@
+Title: IVR-R1: Refining Trajectories through Iterative Visual-Grounded Reasoning in Reinforcement Learning
+
+URL Source: https://arxiv.org/pdf/2605.23997v1
+
+Published Time: Tue, 26 May 2026 00:08:25 GMT
+
+Number of Pages: 13
+
+Markdown Content:
+# IVR-R1: Refining Trajectories through Iterative Visual-Grounded Reasoning in Reinforcement Learning 
+
+# Chenghao Li 1 Fusheng Hao 4 Xikai Zhang 1 Likang Xiao 1 Yanwei Ren 3
+
+# Fuxiang Wu 4 Quan Chen 3 Liu Liu 2,1∗
+
+> 1
+
+# Hangzhou International Innovation Institute, Beihang University 
+
+> 2
+
+# School of Artificial Intelligence, Beihang University 
+
+> 3
+
+# Kuaishou Technology 
+
+> 4
+
+# Shenzhen Institute of Advanced Integration Technology, Shenzhen 
+
+# Abstract 
+
+Multimodal large language models via reinforcement learning (RL) have demonstrated remarkable capabilities in complex visual reasoning tasks, yet they remain limited in long-horizon multimodal scenarios, often suffering from visual hallucination and logical error. Current methods typically pre-encode high-dimensional visual scenes into discrete textual proxies to facilitate downstream reasoning. As the reasoning chain unfolds, however, the inherent information asymmetry between text and visual scenes tends to erode visual grounding, resulting in misguided reasoning and erroneous outputs. To address these issues, we propose IVR-R1 (Iterative Visual-grounded Reasoning), a novel RL training framework that enables dynamic visual re-alignment to rectify reasoning trajectories and improve policy optimization. To this end,we design two key components. The first is visual erosion localization, which identifies flawed rollouts through a reward-driven screening mechanism and performs fine-grained erosion localization within the multimodal context. The second is automated trajectory rectification, which iteratively cross-references intermediate reasoning states against pristine visual priors and rectifies erroneous trajectories via a Re-Reasoning Loop, thereby synthesizing expert-level demonstrations that serve as high-fidelity reasoning templates for the policy model. Our experiments across diverse multimodal benchmarks demonstrate that IVR-R1 consistently outperforms existing reinforcement learning methods, establishing a superior paradigm for maintaining logical and visual consistency in complex multimodal reasoning. The source code will be made publicly available.  
+
+> *Corresponding author: liuliubh@buaa.edu.cn
+
+Figure 1: Illustration of the proportions of various errors for the Qwen3-vl-4b model [ 1 ] across different datasets. The circular radar charts illustrate model vulnerabilities in complex visual reasoning tasks, highlighting that high rates of logic errors and persistent hallucinations remain the primary bottlenecks alongside significant Vision Error. 1
+
+> arXiv:2605.23997v1 [cs.CV] 18 May 2026
+
+Figure 2: Illustrative example of the self-correction process in IVR-R1. (Left) The initial response fails due to visual grounding erosion, erroneously identifying "repeated patterns." (Middle) The framework performs fine-grained error attribution to identify semantic misalignments. (Right) The Re-Reasoning Loop rectifies the trajectory by re-anchoring the logic to visual evidence (e.g., fluid brushwork), leading to the correct answer. 
+
+# 1. Introduction 
+
+Recent advances in Multimodal Large Language Models (MLLMs) have centered on integrating pre-trained language backbones with visual encoders via instruction tuning [ 1 , 2, 10 , 17 , 37 , 44 ]. To further bridge the gap between perception and complex problem-solving, the field has increasingly pivoted toward post-training alignment [ 8 , 16 , 31 ], notably Group Relative Policy Optimization [ 7]—a critic-less reinforcement learning (RL) paradigm that leverages group-relative rewards to catalyze advanced Chain-of-Thought (CoT) reasoning. While this allows models to "think" through visual evidence with greater logical depth, it often inadvertently encourages a "thinking over seeing" bias, where internal linguistic reasoning overrides external visual perception [ 38 ]. Especially in long-horizon scenarios, this imbalance leads to visual grounding erosion, causing reasoning trajectories to decouple from original visual priors [ 20 , 24 , 29 , 30 ]. Consequently, despite apparent improvements in logical fluency, MLLMs remains susceptible to reward hacking and persistent hallucinations, as they increasingly rely on language shortcuts from prior knowledge rather than rigorous visual anchoring [43]. One significant factor contributing to these failures is the information asymmetry between high-dimensional visual scenes and discrete textual proxies [ 24 , 29 ], Figure 1 quantitatively highlights the severity of this issue, revealing that a substantial and persistent Vision Error remains a critical bottleneck alongside complex logic flaws across multiple datasets. In most existing post-training methods for vision-language models, visual information is typically pre-encoded into a fixed set of tokens to facilitate downstream reasoning [ 14 , 33 ]. As the reasoning chain unfolds, however, the model’s internal state tends to drift away from the original visual priors—a phenomenon exemplified by the failure case in Figure 2. While some methods have attempted to mitigate this modality gap by explicitly aligning internal visual representations with pre-trained vision foundation models to retain fine-grained details [ 38 , 43 ], the broader challenge of visual grounding erosion remains prevalent. This erosion leads to a progressive decoupling of reasoning logic from visual evidence [ 30 , 36 ], causing the model to "hallucinate" details absent from the image or follow misguided reasoning paths that contradict the visual context [ 24 , 29 ]. Consequently, even with advanced CoT capabilities, MLLMs often produce erroneous outputs when their linguistic "thinking" is no longer strictly anchored to the visual scene. To address these challenges, we introduce IVR-R1 (Iterative Visual-grounded Reasoning), a novel RL training framework characterized by its modularized pipeline of Visual Erosion Localization and Automated Trajectory Rectification. Unlike standard RL approaches that merely penalize incorrect final answers—often resulting in a sparse and suboptimal learning signal, IVR-R1 actively rectifies the flawed rollouts by probing the internal reasoning process via two cohesive core stages. First, it employs a reward-driven screening mechanism to identify "grounding-eroded" rollouts and pinpoints fine-grained, step-level misalignments by cross-referencing intermediate logical states against the original visual features, thus enabling visual erosion localization. Second, guided by these diagnostic insights, it revises flawed reasoning paths into high-fidelity, expert-level demonstrations by re-anchoring 2Figure 3: Overview of the IVR-R1 framework. The pipeline consists of two primary stages: (1) Visual Erosion Localization , which identifies faulty reasoning rollouts ( Oi) using reward signals; and (2) Automated Trajectory Rectification , where a Re-Reasoning Loop iteratively corrects CoT errors ( Ei) by re-anchoring to the original image, then the Refiner & Replace module synthesizes optimized trajectories ( O′′ 
+
+> n
+
+) with calculated advantages ( An)to facilitate iterative policy updates. the logic to the visual evidence, thereby realizing automated trajectory rectification. Our contributions are summarized as follows: • We formalize the phenomenon of visual grounding erosion stemming from modality information asymmetry, providing a novel perspective on why MLLMs struggle with logical-visual consistency in long-horizon reasoning. • We propose visual erosion localization , which cross-references internal reasoning chains with pristine visual features, thus enabling the model to autonomously perform step-level error attribution and pinpointing exactly where and why the reasoning decoupled from the visual evidence. • We propose automated trajectory rectification , which transforms flawed on-policy rollouts into high-fidelity expert demonstrations, thus offering a scalable, self-bootstrapping alternative to reliance on external black-box models for data purification and trajectory enhancement. • Extensive experiments across diverse benchmarks show that IVR-R1 consistently outperforms competing methods, validating the effectiveness of both visual erosion localization and automated trajectory rectification, and establishing a new standard for multimodal RL. 
+
+# 2. Related Work 
+
+The rapid evolution of Multimodal Large Language Models (MLLMs) has transitioned from basic instruction following toward complex, long-horizon reasoning capabilities [ 2, 13 , 19 , 21 ]. Current research addresses this progression through three interconnected pillars: (1) post-training alignment to harmonize model behavior with human intent, (2) structured reinforcement learning to provide granular feedback for intricate tasks, and (3) visual representation alignment to ensure internal reasoning remains anchored to high-fidelity visual evidence. Together, these domains aim to bridge the gap between high-dimensional perception and discrete logical inference, mitigating the "internal state drift" and "grounding erosion" that frequently lead to hallucinations in current multimodal architectures. 
+
+2.1. Post-Training alignment 
+
+Recent advancements in MLLMs have increasingly prioritized post-training alignment techniques, such as instruction tuning [ 44 ] and reinforcement learning (RL), to bolster multimodal performance. While early methods relied on supervised fine-tuning with synthetic data to emulate high-level visual assistant capabilities [ 4, 5], recent trends have shifted toward RL to enhance complex reasoning [ 9, 27 , 35 ]. These strategies often involve sophisticated reward engineering [ 14 ], including step-wise supervision of intermediate reasoning chains, the integration of explicit visual grounding into reward functions, and the use of multi-stage curricula that transition from text-only to multimodal tasks [ 14 , 33 ]. Furthermore, preference-based alignment using AI feedback has emerged as a powerful tool for reducing object hallucinations and improving the reliability of model outputs [22, 31, 39]. 
+
+2.2. Structured Reinforcement Learning 
+
+The exploration of reinforcement learning within the MLLMs domain has evolved significantly to address the unique challenges of multimodal perception and logical consistency [ 9, 11 , 27 ]. Beyond simple preference signals, current research investigates how to provide denser, more informative feedback for complex visual tasks, where sparse rewards often hinder convergence [ 20 , 23 , 26 , 28 ]. A pivotal development in this area is the move toward 3reasoning decomposition [ 14 , 33 ], where intricate multimodal queries are deconstructed into simpler, verifiable sub-steps [ 12 ]. This structured approach allows the RL policy to receive more granular feedback throughout the reasoning process, effectively bridging the gap between raw visual perception and final textual answers [ 14 , 26 ]. By integrating these decomposed signals, MLLMs can achieve superior alignment in long-horizon reasoning tasks and improve their ability to generalize across diverse visual environments without relying on exhaustive external human supervision [14]. 
+
+2.3. Visual Representation Alignment 
+
+A significant factor contributing to performance degradation in MLLMs is the information asymmetry between high-dimensional visual scenes and discrete textual proxies [ 24 , 29 , 34 ]. Current research indicates that while visual information is typically pre-encoded into fixed tokens for downstream reasoning [ 15 , 34 , 38 ], the model’s internal state often drifts away from the original visual priors as the reasoning chain unfolds [ 14 , 33 ]. To address this, current research attempts to mitigate the modality gap by explicitly aligning internal representations with pre-trained vision foundation models (VFMs) to retain fine-grained spatial details [ 38 , 43 ]. However, the broader challenge of visual grounding erosion remains prevalent, leading to a progressive decoupling of reasoning logic from visual evidence [ 30 , 36 ]. This decoupling frequently causes the model to "hallucinate" absent details or pursue misguided reasoning paths that contradict the visual context [ 29 ]. Consequently, current research suggests that even with advanced Chain-of-Thought (CoT) capabilities, MLLMs produce erroneous outputs when their linguistic "thinking" is no longer strictly anchored to the visual scene. 
+
+# 3. Method 
+
+In this section, we begin with a brief introduction to the Group Relative Policy Optimization (GRPO) paradigm and then detail the IVR-R1 (Iterative Visual-grounded Reasoning) framework, including visual erosion localization and automated trajectory rectification. 
+
+3.1. Preliminary: GRPO 
+
+To facilitate efficient policy alignment without the computational burden of an external value critic, we adopt the GRPO paradigm. For each multimodal query Q = {i, q }, where i and q denote the visual and textual inputs respectively, the policy πθ samples a group of K candidate responses SQ = {s1, . . . , s K }.The group-relative advantage ˆAgrp for the k-th response sk is estimated by standardizing its reward r(Q, s k)
+
+against the intra-group performance: 
+
+ˆAgrp (Q, s k) = r(Q, s k) − mean ({r(Q, s j )}Kj=1 )
+
+std ({r(Q, s j )}Kj=1 ) . (3.1) This standardization effectively removes question-level biases and stabilizes the policy gradient. The standard GRPO loss LGRPO is defined as: 
+
+LGRPO (θ) = EQ∼D 
+
+" KX
+
+> k=1
+
+ˆAgrp (Q, s k) log πθ (sk|Q) − βDKL (πθ ∥πθ0 )
+
+#
+
+, (3.2) where πθ0 is the reference model and β is the Kullback–Leibler (KL) divergence coefficient. 
+
+3.2. Iterative Visual-Grounded Reasoning 
+
+To mitigate the pervasive issue of visual grounding erosion —where the reasoning chain gradually decouples from visual evidence during long-horizon inference—we propose the IVR-R1 framework. As illustrated in Figure 3, the methodology transitions from standard policy gradient methods to a dynamic, self-bootstrapping paradigm. The execution flow is structured into three synergistic phases: (1) Visual Erosion Localization, and (2) Automated Trajectory Rectification. 
+
+3.2.1 Visual Erosion Localization Step I: Exploration and Screening: Reward-Driven Error Identification The process begins with an expansive exploration of the reasoning space for each multimodal query Q = {i, q }. The policy πθ generates a group of K candidate responses: 
+
+SQ = {s1, . . . , s K }, sk ∼ πθ (·| Q). (3.3) 4Figure 4: Ablation study on MMMU-Pro. Image-based rectification ( 58 .1% ) significantly outperforms description-based ( 54 .9% ) , validating the expressive superiority of raw pixels over textual proxies for trajectory re-anchoring. Detailed experiments and analysis are provided in Section 4.2. To identify instances of visual grounding erosion , each response sk is evaluated by a pre-computed scalar reward 
+
+r(Q, s k), which serves as a diagnostic signal for the model’s performance. Specifically, we flag a rollout as "grounding-eroded" if its reward falls below a correctness threshold τ :Flag sk as failed if r(Q, s k) < τ. (3.4) The core objective of this stage is to precisely pinpoint reasoning failures where the model’s linguistic "thinking" has bypassed the actual visual evidence. By isolating these failed rollouts, we establish a targeted set of samples for subsequent rectification, ensuring training resources are focused on correcting flawed multimodal logic. 
+
+Step II: First Visual Interrogation and Visual Erosion Localization. 
+
+Building on these identified failures, the Re-Reasoning Loop serves as the core diagnostic engine of IVR-R1, designed to bridge the "reasoning-perception gap" by forcing the model to re-interrogate raw visual signals when its linguistic logic drifts. For each failed response sk, the model is explicitly prompted to perform a "post-mortem" analysis. The core motivation for this step is the empirical evidence that original visual features i possess a significant expressive superiority over textual descriptions , as demonstrated by the widening performance gap in MMMU-Pro benchmarks ( 58 .1% vs. 54 .9% ). A more comprehensive set of experiments and a fine-grained analysis regarding the impact of these modality-specific features are provided in the ablation study in Section 4.2. Unlike standard reasoning which may rely on potentially drifted internal tokens or incomplete textual proxies, this step injects the high-fidelity visual pixels back into the context. The model must cross-reference its failed reasoning chain sk, think against the actual features of i to generate a fine-grained critique Ek:
+
+Ek = Critique (i, q, s k, think , s k, ans ). (3.5) By re-introducing i, the framework provides an objective "ground truth" that allows the model to identify precisely where its linguistic logic contradicted the visual evidence, a process essential for resolving "visual erosion" that text alone cannot fix. 
+
+3.2.2 Automated Trajectory Rectification Step I: Secondary Direct Visual Re-Interrogation and Automated Trajectory Rectification 
+
+Guided by the critique Ek and the continuous presence of image i, the model reconstructs its reasoning path to produce a rectified response ˆsk:
+
+ˆsk = Refine (i, q, E k, Context ori ). (3.6) In this step, the model is required to re-anchor every logical deduction to specific visual cues identified in Ek by leveraging the context Context ori of the previously failed rollout sk. The purpose is to transform a failed CoT into 5a visually-consistent expert demonstration . These self-bootstrapped traces ˆsk are logically rigorous and strictly grounded in the visual domain. Because these traces are generated using the model’s own internal parameters while being corrected by the objective image i, they serve as highly effective training signals. 
+
+Step II: Policy Shaping via Regularized Optimization 
+
+To internalize the reasoning logic from the rectified traces ˆsk, we apply Policy Shaping using a nonlinear transformation f (x) = xx+γ (where γ = 0 .1) on the importance sampling ratio. This transformation increases the gradient emphasis on low-probability yet high-value corrective tokens. The final integrated objective is: 
+
+J (θ) = EQ∼D 
+
+" KX
+
+> k=1
+
+f (ˆ rk(θ)) · ˆAgrp k − βDKL (πθ ∥πθ0 )
+
+#
+
+, (3.7) where ˆAgrp k is defined in Eq. equation 3.1. By re-weighting the policy update, IVR-R1 ensures the model effectively learns unfamiliar but correct grounding decisions, maintaining logical anchoring to visual evidence while following a stable learning trajectory. 
+
+# 4. Experiments 
+
+In this section, we provide a comprehensive evaluation of the IVR-R1 framework. We describe our data synthesis strategy , the multi-stage training pipeline , and the diverse benchmarks spanning mathematical and general multimodal reasoning. Then, we present empirical results and detailed analyses to validate the effectiveness of our approach in mitigating visual grounding erosion and enhancing long-horizon reasoning. 
+
+4.1. Experimental Setup 
+
+Model Configurations. We evaluate our IVR-R1 framework across two representative scales of vision-language models: Qwen2.5-VL-7B [ 2] and Qwen3-VL-4B [1]. These models serve as the policy backbones ( πθ ) due to their robust native multimodal processing capabilities. All experiments are conducted using a distributed training setup to accommodate the iterative generation and optimization phases. 
+
+Training Pipeline. Our training follows a two-stage paradigm to ensure both instruction-following stability and reasoning depth: 1. SFT Cold-start : To initialize the model with basic Chain-of-Thought (CoT) reasoning capabilities, we perform a supervised fine-tuning (SFT) warm-up. We utilize a curated set of 9k high-quality samples from the Vision-SR1 
+
+dataset [9], which provides structured, step-by-step reasoning trajectories. 2. IVR-R1 RL Optimization : Following the SFT phase, the model is further optimized using the proposed 
+
+IVR-R1 reinforcement learning framework. This stage leverages the 32k reasoning samples to enhance visual grounding and logical consistency through our re-reasoning loop. 
+
+4.2. Data Composition 
+
+To cultivate robust multimodal logic and alleviate grounding erosion, we curated a diverse and high-quality training corpus for the reinforcement learning phase. We extracted 32k reasoning-intensive samples from several state-of-the-art datasets, ensuring a balanced representation of perceptual breadth and logical depth: • General Visual Understanding : We incorporate samples from LLaVA-CoT-RL [ 35 ] to provide a foundational multimodal perception. these samples ensure the model maintains broad recognition and descriptive capabilities across a wide range of natural scenes [35]. • Complex Visual Reasoning : To challenge the model’s logical depth, we aggregate samples from Vision-R1 [ 9 ], 
+
+MM-K12 [6 ], and WeMath [ 25 ]. These datasets target long-horizon reasoning, geometric analysis, and structured mathematical problem-solving [ 6, 9, 25 ], which are the primary scenarios where visual grounding erosion is most likely to occur. 
+
+4.3. Evaluation Benchmarks 
+
+We evaluate IVR-R1 on six representative benchmarks, covering both math and general visual understanding, to assess its performance across diverse visual tasks. 
+
+Mathematical and Numerical Reasoning. To test the model’s ability to interpret and solve complex mathemat-ical problems, we employ: • MathVista [18]: A comprehensive benchmark for mathematical reasoning in visual contexts. • MathVerse [42 ]: consists of 2.6K diagram-centric problems (e.g., geometry,functions), each rendered in six visual-text variants to disentangle true visual understandingfrom linguistic shortcuts. Evaluation is based on step-by-step Chain-of-Thought (CoT) correctness. 6• MATH-Vision [ 32 ]: presents 3K competition-grade problems across 16 disciplines. We specifically employ the 
+
+testmini version to evaluate advanced multimodal reasoning capabilities across five difficulty levels. 
+
+General Multimodal Understanding. To verify the framework’s versatility in expert-level knowledge and general visual tasks, we evaluate on: • MMMU [ 40 ] tests cross-modal reasoning and subject knowledge with 11.5K college-level, four-choice questions spanning six disciplines. • MMMU-Pro [41 ] increases the difffculty with ten choices per question and adds a challenging vision-only setting, where all text is embedded within the image to necessitate robust visual parsing. • MMStar [ 3 ]: A curated benchmark designed to evaluate "true" multimodal capabilities by filtering out samples solvable through language alone. Table 1: Main comparison of IVR-R1 against baseline methods and open-source models across mathematical reasoning (MathVista, MathVerse, MathVision) and general visual understanding (MMStar, MMMU-Pro, MMMU) benchmarks. To ensure a fair comparison, all reinforcement learning methods are trained on our 32k reasoning dataset. All results are reported under a unified setting of Temperature = 0 with a single sampling trial ( N = 1 ). Bold values indicate the best performance within each backbone category.                                                                                                      
+
+> Models Math General Visual Understanding avg
+> MathVista MathVerse MathVision MMStar MMMU-Pro MMMU Qwen2.5-VL-72B-Instruct [2] 48.1 40.9 34.5 45.5 36.6 34.9 40.1 Qwen2.5-VL-32B-Instruct [2] 37.2 24.3 23.4 48.3 21.7 22.9 29.6 Qwen3-VL-32B-Instruct [1] 68.7 37.4 28 69.8 56.9 58 53.1 Methods Backbone model: Qwen2.5-VL-7B Zero-shot Inference (before RL) 32.6 17.4 21.1 41.7 16.2 21.6 25.1 Supervised Fine-tuning (before RL) 63.6 40.7 28.9 56.7 43.6 46.1 46.6 Vision-R1 [9] 67.4 43 30.3 58.3 47.2 50.9 49.5 Vision-SR1 [14] 63.5 41.9 30.6 57.7 45.5 47.6 47.8
+> IVR-R1 (our method) 67.9 ↑4.4 42.6 ↑0.7 31.3 ↑0.7 61.1 ↑3.4 47.8 ↑2.3 53.6 ↑5.0 50.7 ↑2.9
+> Methods Backbone model: Qwen3-VL-4B Zero-shot Inference (before RL) 54.5 29.4 18.8 58.3 42.7 47.4 41.9 Supervised Fine-tuning (before RL) 65.6 44.4 29.3 58.9 48.6 48.4 49.2 Vision-R1 [9] 68.3 47.5 32.6 63.8 52.5 54.1 53.1 Vision-SR1 [14] 68.2 46.2 35.5 63.1 49.3 52.4 52.5
+> IVR-R1 (our method) 69.6 ↑1.4 49.4 ↑3.2 35.2 ↓0.3 63.3 ↑0.2 53.3 ↑4.0 56 ↑3.6 54.5 ↑2.0
+
+4.4. Main Results 
+
+Overall Performance. As illustrated in Table 1, IVR-R1 consistently outperforms both SFT and RL baselines across different model scales. On the Qwen2.5-VL-7B backbone, IVR-R1 achieves a 50.5% average score, marking a +3.9% absolute improvement over the SFT baseline. Remarkably, IVR-R1 (4B) attains an average of 
+
+54.5% , even surpassing the performance of the significantly larger Qwen3-VL-32B-Instruct (53.1%). This result underscores that high-fidelity reasoning alignment can be more effective than raw parameter scaling in enhancing multimodal intelligence. 
+
+Domain-Specific Excellence. The superiority of IVR-R1 is most pronounced in benchmarks requiring tight visual-logic coupling: • Logical Anchoring: On MathVerse , IVR-R1 (4B) reaches 49.4% , significantly exceeding the SFT baseline (44.4%). This demonstrates its resilience against “internal state drift” during complex, multi-step reasoning chains. • Visual Fidelity: On MMMU , the 4B model achieves 56.0% , outperforming Vision-R1 (+1.9%) and Vision-SR1 (+3.6%). This indicates a superior ability to preserve and utilize professional-grade visual details during the reasoning process. 
+
+The Re-Reasoning Advantage. Unlike Vision-R1 , which primarily incentivizes reasoning length, IVR-R1 maintains balanced performance across both mathematical and general visual tasks. The core of this success lies in our Re-Reasoning Loop , which effectively mitigates visual grounding erosion . By re-anchoring logical trajectories to the original visual evidence in a self-bootstrapping manner, IVR-R1 achieves superior alignment and generalization without requiring external expert supervision or human-annotated rationales. 75. Ablation Study 
+
+To further investigate the contribution of each component within the IVR-R1 framework, we perform extensive ablation studies. We first analyze the impact of the number of rectified trajectories, seeking to identify the sweet spot between diversity of expert demonstrations and training stability. Subsequently, we justify the necessity of our visual re-anchoring mechanism by comparing the rectification performance using original visual features against discrete textual proxies. Together, these results provide a comprehensive understanding of how automated trajectory rectification facilitates iterative self-improvement in Multimodal large language models. Table 2: Ablation study on the number of rectified responses in IVR-R1 using the Qwen3-VL-4B backbone. With a sampling group size of N = 8 and a baseline accuracy of approximately 50%, we compare the impact of rectifying one, two, and multiple (up to 4) failed trajectories. Bold values indicate the best performance for each benchmark.                              
+
+> Pattern Math General Visual Understanding avg MathVista MathVerse MathVision MMStar MMMU-Pro MMMU One response for IVR 68.5 48.1 32.2 64.4 52.7 56.1 53.7 Two responses for IVR 69.6 49.4 35.2 63.3 53.3 56 54.5
+> Multiple responses for IVR 70.8 48.2 29.9 64.6 52.5 56.5 53.8
+
+5.1. Impact of the Number of Rectified Trajectories 
+
+A key component of the IVR-R1 framework is the transformation of failed rollouts into expert demonstrations. Given that our base model, Qwen3-VL-4B [ 1 ], exhibits an accuracy of approximately 50%, a group of N = 8 
+
+samples typically yields about 4 incorrect responses. We investigate the optimal number of such trajectories to rectify within each training step, comparing settings with one, two, and multiple (up to 4) rectified responses. As shown in Table 2, the performance follows a non-monotonic trend as the number of rectified samples increases. Transitioning from one to two rectified responses results in a significant improvement in the average score (from 53.7% to 54.5%), with peak performances in MathVerse (49.4%) and MMMU-Pro (53.3%). This suggests that providing a moderate diversity of self-bootstrapped expert signals helps the model internalize robust grounding patterns. 
+
+Figure 5: Ablation study comparing the impact of modality-specific feedback on rectification accuracy across four benchmarks (MMMU-Pro, MathVista, MathVerse, and MMStar). We contrast the performance of the Rectification with Image (blue) against Rectification with Description (orange) under a deterministic setting (Temperature=0, single sampling). The results demonstrate that direct access to original visual features significantly outperforms textual proxies, validating the necessity of visual re-anchoring in our framework. However, when increasing the rectification count to "multi" (up to 4), we observe a slight degradation in the overall average (53.8%), despite gains in specific benchmarks like MathVista (70.8%) and MMMU (56.5%). This phenomenon indicates a potential trade-off: while more rectified traces provide more positive signals, they may also introduce higher variance or redundant gradients that slightly destabilize the policy shaping process. Consequently, we select two rectified responses as our default configuration to balance learning efficiency with visual-logic consistency. 
+
+5.2. Superiority of Visual Features in Trajectory Rectification 
+
+To further investigate the role of multimodal information in the Automated Trajectory Rectification process, we conduct a comparative analysis between two input configurations: (1) providing the model with original image pixels ( Rectification with Image ) and (2) providing high-quality textual descriptions of the scene ( Rectification with 
+
+8Description ). This experiment, performed on Qwen3-VL-4B at Temperature=0, aims to quantify the information loss associated with discrete textual proxies and validate our hypothesis regarding the necessity of raw visual anchoring. As illustrated in Figure 5, while both configurations show steady accuracy improvements over the Initial Acc. , a profound performance gap emerges as the rectification iterations progress. Specifically, the Rectification with Image setting consistently achieves a significantly higher performance ceiling, whereas the description-based approach appears to encounter a "semantic bottleneck." For instance, on the MMStar benchmark—which is specifically curated to evaluate vision-centric tasks that are unsolvable by LLMs alone—utilizing original visual features leads to a peak accuracy of 81.1% , outperforming the description-based approach by a substantial 11.8% 
+
+margin. Similar trends are observed in MathVista (+6.4% lead) and MMMU-Pro (+3.2% lead). These disparities suggest that even the most meticulous textual descriptions suffer from "lossy translation," failing to capture the intrinsic high-dimensionality and spatial-logical coherence present in raw pixels. These results yield three critical insights: • Textual Proxies as a Semantic Bottleneck: The 11.8% performance gap in MMStar confirms that textual descriptions act as a low-bandwidth proxy. While text can summarize what is in an image, it often fails to convey the spatial-relational nuances (e.g., precise geometric intersections or subtle texture gradients) required for complex deduction. This empirical evidence supports our claim that information asymmetry between modalities is a primary driver of reasoning failure. • Re-anchoring to Counteract Internal Drift: The superior performance of image-based rectification proves that "visual erosion" cannot be mitigated by linguistic logic alone. By re-accessing the original pixels, the model can verify its internal "thinking" against high-fidelity ground truth. This process effectively resets the internal state drift , ensuring that the corrected trajectory is not merely a linguistically plausible guess, but a visually grounded conclusion. • High-Fidelity Demonstration Synthesis: The steep trajectory from Initial Acc. to 3rd Gain demonstrates that the IVR-R1 framework effectively facilitates iterative self-improvement. By leveraging original images, the framework transforms failed reasoning into high-fidelity expert demonstrations . These visual-centric signals provide a superior learning signal for policy optimization, which textual descriptions fail to replicate because they lack the raw evidence necessary for the model to "see" why its previous logic was flawed. 
+
+# 6. Conclusion 
+
+In this paper, we present IVR-R1 (Iterative Visual-grounded Reasoning), a reinforcement learning framework designed to mitigate visual grounding erosion in Multimodal Large Language Models. By addressing the infor-mation asymmetry between high-dimensional visual inputs and discrete textual reasoning, IVR-R1 ensures that reasoning trajectories remain grounded in visual evidence. Our approach consists of two synergistic stages. Visual Erosion Localization identifies grounding-eroded rollouts via reward-based screening and performs step-level error attribution by re-injecting visual features into the reasoning process. Automated Trajectory Rectification then refines flawed trajectories through a Re-Reasoning Loop, producing high-quality, visually grounded demonstrations without relying on external models. Experiments on six benchmarks, including MMMU, MathVista, and MathVerse, demonstrate that IVR-R1 achieves state-of-the-art performance in multimodal reinforcement learning, while also revealing that direct visual re-anchoring is essential, as raw visual features provide a substantially higher perfor-mance ceiling than textual abstractions. These findings establish IVR-R1 as a robust paradigm for maintaining logical and visual consistency in complex, long-horizon reasoning tasks. 
+
+# A. Appendix 
+
+A.1. Composition of the Reward Function 
+
+To encourage the model to generate structured reasoning trajectories while maintaining high task accuracy, we design a composite reward function. The total reward Rtotal for a given prediction y and ground truth g is defined as a weighted sum: 
+
+Rtotal (y, g ) = (1 − λ) · Racc (y, g ) + λ · Rf ormat (y) (A.1) where λ is a hyper-parameter that balances formatting constraints and task correctness. Following our imple-mentation, we set λ = 0 .1.
+
+Format Reward ( Rf ormat ) The format reward ensures that the model strictly adheres to the mandated three-stage output structure: (1) a visual description block, (2) a chain-of-thought reasoning block, and (3) a boxed final answer. 9Formally, Rf ormat (y) is a binary reward: 
+
+Rf ormat (y) = 
+
+(
+
+1.0 if y matches P
+
+0.0 otherwise (A.2) where P denotes the template: <desc> ... <think> ... \boxed{...} . This reward serves as a structural reg-ularizer, forcing the model to explicitly anchor its reasoning in visual observations before proceeding to logic derivation. 
+
+Accuracy Reward ( Racc ) The accuracy reward evaluates the correctness of the final conclusion. The system first extracts the content within the \boxed{} delimiter from the model’s output. The extracted answer ˆa is then compared against the ground truth g using a task-specific grader: 
+
+Racc (y, g ) = 
+
+(
+
+1.0 if Grade (ˆ a, g ) is True 
+
+0.0 otherwise (A.3) If no \boxed{} content is found, the accuracy reward defaults to 0.0.
+
+A.2. Experimental Settings and Evaluation Metrics 
+
+In this section, we provide additional details regarding the experimental configurations to ensure transparency and reproducibility: • Training Epochs: In all experiments, the Reinforcement Learning (RL) phase is conducted for only 1 epoch .• Baseline Alignment: For a fair comparison, all baseline models are trained using the identical SFT data and 
+
+RL data as our proposed framework. • Training Hyperparameters: During the RL training sampling phase, we set the temperature to 1.0 and 
+
+top_p to 0.99 . For each problem, 8 responses are sampled to compute rewards. • Evaluation Settings: To facilitate result reproduction, we use temperature: 0.0 for all models during evaluation. Due to limited computational resources, we do not employ an LLM-as-a-judge approach; instead, we utilize the same automated accuracy calculation method used during training. 
+
+A.3. Prompts 
+
+This section lists the primary prompts used in our framework. To ensure readability and maintain original formatting, long single-line prompts are automatically wrapped using the listings environment within the styled blocks. 
+
+Prompt for Response Generation (Training Phase) The following prompt is used during the Reinforcement Learning training phase to guide the model in generating structured responses. 
+
+Training Phase Prompt                                           
+
+> Please solve the following math problem. Your output must strictly follow this specific format: <description>Briefly describe the problem</description> <think> Step-by-step reasoning process</think> The final answer is \boxed{result}. Ensure that all mathematical expressions are properly rendered in LaTeX format and that the logic is coherent throughout the entire reasoning trajectory.
+
+Prompt for Visual Erosion Localization This prompt is utilized within the Visual Erosion Localization module to identify and analyze specific regions within the visual embedding space. 
+
+Visual Erosion Localization Prompt               
+
+> As an AI expert, analyze the following incorrect mathematical reasoning based on the provided image. Question: {Question}
+
+10 Incorrect Reasoning: {Original_CoT} Incorrect Answer: {Original_Answer} Please carefully examine the image and the incorrect reasoning. Identify the exact mistakes made. List the errors clearly as: Error 1: ... Error 2: ... 
+
+Prompt for Automated Trajectory Rectification The following prompt guides the model in rectifying reasoning trajectories based on detected inconsistencies or errors. 
+
+Automated Trajectory Rectification Prompt 
+
+Based on the image, the original question, the incorrect attempt, and the error analysis, please provide the correct step-by-step reasoning and the final answer .Question: {Question} Incorrect Attempt: {Original_CoT} Error Analysis: {Error_Analysis} Please avoid the mistakes mentioned in the error analysis. Think step by step and enclose your final answer in \boxed{}. Output format: <description> [New visual description] </description> <think> [New and correct reasoning process, without referencing the previous attempt] </think> Final Answer: \boxed{[Answer]} 
+
+# References 
+
+[1] S. Bai, Y. Cai, R. Chen, K. Chen, X. Chen, Z. Cheng, L. Deng, W. Ding, C. Gao, C. Ge, W. Ge, Z. Guo, Q. Huang, J. Huang, F. Huang, B. Hui, S. Jiang, Z. Li, M. Li, M. Li, K. Li, Z. Lin, J. Lin, X. Liu, J. Liu, C. Liu, Y. Liu, D. Liu, S. Liu, D. Lu, R. Luo, C. Lv, R. Men, L. Meng, X. Ren, X. Ren, S. Song, Y. Sun, J. Tang, J. Tu, J. Wan, P. Wang, P. Wang, Q. Wang, Y. Wang, T. Xie, Y. Xu, H. Xu, J. Xu, Z. Yang, M. Yang, J. Yang, A. Yang, B. Yu, F. Zhang, H. Zhang, X. Zhang, B. Zheng, H. Zhong, J. Zhou, F. Zhou, J. Zhou, Y. Zhu, and K. Zhu. Qwen3-vl technical report, 2025. [2] S. Bai, K. Chen, X. Liu, J. Wang, W. Ge, S. Song, K. Dang, P. Wang, S. Wang, J. Tang, H. Zhong, Y. Zhu, M. Yang, Z. Li, J. Wan, P. Wang, W. Ding, Z. Fu, Y. Xu, J. Ye, X. Zhang, T. Xie, Z. Cheng, H. Zhang, Z. Yang, H. Xu, and J. Lin. Qwen2.5-vl technical report, 2025. [3] L. Chen, J. Li, X. Dong, P. Zhang, Y. Zang, Z. Chen, H. Duan, J. Wang, Y. Qiao, D. Lin, and F. Zhao. Are we on the right way for evaluating large vision-language models?, 2024. [4] Z. Chen, J. Wu, W. Wang, W. Su, G. Chen, S. Xing, M. Zhong, Q. Zhang, X. Zhu, L. Lu, B. Li, P. Luo, T. Lu, Y. Qiao, and J. Dai. Internvl: Scaling up vision foundation models and aligning for generic visual-linguistic tasks, 2024. [5] W. Dai, J. Li, D. Li, A. M. H. Tiong, J. Zhao, W. Wang, B. Li, P. Fung, and S. Hoi. Instructblip: Towards general-purpose vision-language models with instruction tuning, 2023. [6] L. Du, F. Meng, Z. Liu, Z. Zhou, P. Luo, Q. Zhang, and W. Shao. Mm-prm: Enhancing multimodal mathematical reasoning with scalable step-level supervision, 2025. [7] D. Guo, D. Yang, H. Zhang, J. Song, P. Wang, Q. Zhu, R. Xu, R. Zhang, S. Ma, X. Bi, X. Zhang, X. Yu, Y. Wu, Z. F. Wu, Z. Gou, Z. Shao, Z. Li, Z. Gao, A. Liu, B. Xue, B. Wang, B. Wu, B. Feng, C. Lu, C. Zhao, C. Deng, C. Ruan, D. Dai, D. Chen, D. Ji, E. Li, F. Lin, F. Dai, F. Luo, G. Hao, G. Chen, G. Li, H. Zhang, H. Xu, H. Ding, H. Gao, H. Qu, H. Li, J. Guo, J. Li, J. Chen, J. Yuan, J. Tu, J. Qiu, J. Li, J. L. Cai, J. Ni, J. Liang, J. Chen, K. Dong, K. Hu, K. You, K. Gao, K. Guan, K. Huang, K. Yu, L. Wang, L. Zhang, L. Zhao, L. Wang, L. Zhang, L. Xu, L. Xia, M. Zhang, M. Zhang, M. Tang, M. Zhou, M. Li, M. Wang, M. Li, N. Tian, P. Huang, P. Zhang, Q. Wang, Q. Chen, Q. Du, R. Ge, R. Zhang, R. Pan, R. Wang, R. J. Chen, R. L. Jin, R. Chen, S. Lu, S. Zhou, S. Chen, S. Ye, S. Wang, S. Yu, S. Zhou, S. Pan, S. S. Li, S. Zhou, S. Wu, T. Yun, T. Pei, T. Sun, T. Wang, W. Zeng, W. Liu, W. Liang, W. Gao, W. Yu, W. Zhang, W. L. Xiao, W. An, X. Liu, X. Wang, X. Chen, X. Nie, X. Cheng, X. Liu, X. Xie, X. Liu, X. Yang, X. Li, X. Su, X. Lin, X. Q. Li, X. Jin, X. Shen, X. Chen, X. Sun, X. Wang, X. Song, X. Zhou, X. Wang, X. Shan, Y. K. Li, Y. Q. Wang, Y. X. Wei, Y. Zhang, Y. Xu, Y. Li, Y. Zhao, Y. Sun, Y. Wang, Y. Yu, Y. Zhang, Y. Shi, Y. Xiong, Y. He, Y. Piao, Y. Wang, Y. Tan, Y. Ma, Y. Liu, Y. Guo, Y. Ou, Y. Wang, Y. Gong, Y. Zou, Y. He, Y. Xiong, Y. Luo, Y. You, Y. Liu, Y. Zhou, Y. X. Zhu, Y. Huang, Y. Li, Y. Zheng, Y. Zhu, Y. Ma, Y. Tang, Y. Zha, Y. Yan, Z. Z. Ren, Z. Ren, Z. Sha, Z. Fu, Z. Xu, Z. Xie, Z. Zhang, Z. Hao, Z. Ma, Z. Yan, Z. Wu, 
+
+11 Z. Gu, Z. Zhu, Z. Liu, Z. Li, Z. Xie, Z. Song, Z. Pan, Z. Huang, Z. Xu, Z. Zhang, and Z. Zhang. Deepseek-r1 incentivizes reasoning in llms through reinforcement learning. Nature , 645(8081):633–638, Sept. 2025. [8] A. Hosseini, X. Yuan, N. Malkin, A. Courville, A. Sordoni, and R. Agarwal. V-star: Training verifiers for self-taught reasoners, 2024. [9] W. Huang, B. Jia, Z. Zhai, S. Cao, Z. Ye, F. Zhao, Z. Xu, X. Tang, Y. Hu, and S. Lin. Vision-r1: Incentivizing reasoning capability in multimodal large language models, 2026. [10] J. Li, D. Li, S. Savarese, and S. Hoi. Blip-2: Bootstrapping language-image pre-training with frozen image encoders and large language models, 2023. [11] P. Li, M. Skripkin, A. Zubrey, A. Kuznetsov, and I. Oseledets. Confidence is all you need: Few-shot rl fine-tuning of language models, 2025. [12] Z. Li, H. Miao, X. Yan, V. Pascucci, M. Berger, and S. Liu. See or recall: A sanity check for the role of vision in solving visualization question answer tasks with multimodal llms, 2025. [13] Z. Li, X. Wu, H. Du, F. Liu, H. Nghiem, and G. Shi. A survey of state of the art large vision language models: Alignment, benchmark, evaluations and challenges, 2025. [14] Z. Li, W. Yu, C. Huang, R. Liu, Z. Liang, F. Liu, J. Che, D. Yu, J. Boyd-Graber, H. Mi, and D. Yu. Self-rewarding vision-language model via reasoning decomposition, 2025. [15] H. Lin, X. Pan, Z. Wang, Y. Zhang, C. Wang, J. Cho, and M. Bansal. V-co: A closer look at visual representation alignment via co-denoising, 2026. [16] H. Liu, C. Li, Y. Li, and Y. J. Lee. Improved baselines with visual instruction tuning, 2024. [17] H. Lu, W. Liu, B. Zhang, B. Wang, K. Dong, B. Liu, J. Sun, T. Ren, Z. Li, H. Yang, Y. Sun, C. Deng, H. Xu, Z. Xie, and C. Ruan. Deepseek-vl: Towards real-world vision-language understanding, 2024. [18] P. Lu, H. Bansal, T. Xia, J. Liu, C. Li, H. Hajishirzi, H. Cheng, K.-W. Chang, M. Galley, and J. Gao. Mathvista: Evaluating mathematical reasoning of foundation models in visual contexts, 2024. [19] P. Lu, S. Mishra, T. Xia, L. Qiu, K.-W. Chang, S.-C. Zhu, O. Tafjord, P. Clark, and A. Kalyan. Learn to explain: Multimodal reasoning via thought chains for science question answering. In S. Koyejo, S. Mohamed, A. Agarwal, D. Belgrave, K. Cho, and A. Oh, editors, Advances in Neural Information Processing Systems , volume 35, pages 2507–2521. Curran Associates, Inc., 2022. [20] M. Luo, Z. Xue, A. Dimakis, and K. Grauman. When thinking drifts: Evidential grounding for robust video reasoning, 2025. [21] R. Luo, Z. Zheng, Y. Wang, X. Ni, Z. Lin, S. Jiang, Y. Yu, C. Shi, L. Wang, R. Chu, J. Zeng, and Y. Yang. Unlocking multimodal mathematical reasoning via process reward model, 2025. [22] T. M. Luu, Y. Lee, D. Lee, S. Kim, M. J. Kim, and C. D. Yoo. Enhancing rating-based reinforcement learning to effectively leverage feedback from large vision-language models, 2025. [23] H. Peng, Y. Qi, X. Wang, Z. Yao, B. Xu, L. Hou, and J. Li. Agentic reward modeling: Integrating human preferences with verifiable correctness signals for reliable reward systems, 2025. [24] R. Peng, X. Wu, J. Lei, L. Hou, Y. Ma, and X. Li. Deeper thought, weaker aim: Understanding and mitigating perceptual impairment during reasoning in multimodal large language models, 2026. [25] R. Qiao, Q. Tan, G. Dong, M. Wu, C. Sun, X. Song, Z. GongQue, S. Lei, Z. Wei, M. Zhang, R. Qiao, Y. Zhang, X. Zong, Y. Xu, M. Diao, Z. Bao, C. Li, and H. Zhang. We-math: Does your large multimodal model achieve human-like mathematical reasoning?, 2024. [26] R. Shao, S. S. Li, R. Xin, S. Geng, Y. Wang, S. Oh, S. S. Du, N. Lambert, S. Min, R. Krishna, Y. Tsvetkov, H. Hajishirzi, P. W. Koh, and L. Zettlemoyer. Spurious rewards: Rethinking training signals in rlvr, 2026. [27] H. Shen, P. Liu, J. Li, C. Fang, Y. Ma, J. Liao, Q. Shen, Z. Zhang, K. Zhao, Q. Zhang, R. Xu, and T. Zhao. Vlm-r1: A stable and generalizable r1-style large vision-language model, 2025. [28] T. Simonds, K. Lopez, A. Yoshiyama, and D. Garmier. Rlsr: Reinforcement learning from self reward, 2025. [29] H.-L. Sun, Z. Sun, H. Peng, and H.-J. Ye. Mitigating visual forgetting via take-along visual conditioning for multi-modal long cot reasoning, 2025. [30] X. Sun, Y. Wang, H. Cao, and L. Xu. When thinking hurts: Mitigating visual forgetting in video reasoning via frame repetition, 2026. [31] C. van Niekerk, R. Vukovic, B. M. Ruppik, H. chin Lin, and M. Gaši´ c. Post-training large language models via reinforcement learning from self-feedback, 2025. [32] K. Wang, J. Pan, W. Shi, Z. Lu, M. Zhan, and H. Li. Measuring multimodal mathematical reasoning with math-vision dataset, 2024. [33] J. Xia, Y. Zang, P. Gao, S. Li, and K. Zhou. Visionary-r1: Mitigating shortcuts in visual reasoning with reinforcement learning, 2025. [34] M. Xie, N. Khan, T. Wang, N. Dhingra, S. Nam, H. Yang, Z. Hui, C. Metzler, A. Vedaldi, H. Pirsiavash, and L. Luo. Lavr: Scene latent conditioned generative video trajectory re-rendering using large 4d reconstruction models, 2026. [35] G. Xu, P. Jin, Z. Wu, H. Li, Y. Song, L. Sun, and L. Yuan. Llava-cot: Let vision language models reason step-by-step, 2025. [36] H. Ye, D.-A. Huang, Y. Lu, Z. Yu, W. Ping, A. Tao, J. Kautz, S. Han, D. Xu, P. Molchanov, and H. Yin. X-vila: Cross-modality alignment for large language model, 2024. [37] S. Yin, C. Fu, S. Zhao, K. Li, X. Sun, T. Xu, and E. Chen. A survey on multimodal large language models. National Science Review , 11(12), Nov. 2024. [38] H. Yoon, J. Jung, J. Kim, H. Choi, H. Shin, S. Lim, H. An, C. Kim, J. Han, D. Kim, C. Eom, S. Hong, and S. Kim. Visual representation alignment for multimodal large language models, 2025. [39] T. Yu, H. Zhang, Q. Li, Q. Xu, Y. Yao, D. Chen, X. Lu, G. Cui, Y. Dang, T. He, X. Feng, J. Song, B. Zheng, Z. Liu, T.-S. 
+
+12 Chua, and M. Sun. Rlaif-v: Open-source ai feedback leads to super gpt-4v trustworthiness, 2025. [40] X. Yue, Y. Ni, K. Zhang, T. Zheng, R. Liu, G. Zhang, S. Stevens, D. Jiang, W. Ren, Y. Sun, C. Wei, B. Yu, R. Yuan, R. Sun, M. Yin, B. Zheng, Z. Yang, Y. Liu, W. Huang, H. Sun, Y. Su, and W. Chen. Mmmu: A massive multi-discipline multimodal understanding and reasoning benchmark for expert agi, 2024. [41] X. Yue, T. Zheng, Y. Ni, Y. Wang, K. Zhang, S. Tong, Y. Sun, B. Yu, G. Zhang, H. Sun, Y. Su, W. Chen, and G. Neubig. Mmmu-pro: A more robust multi-discipline multimodal understanding benchmark, 2025. [42] R. Zhang, D. Jiang, Y. Zhang, H. Lin, Z. Guo, P. Qiu, A. Zhou, P. Lu, K.-W. Chang, P. Gao, and H. Li. Mathverse: Does your multi-modal llm truly see the diagrams in visual math problems?, 2024. [43] W. Zhang, Z. Xie, Y. Feng, Y. Li, X. Xing, S. Zheng, and Z. Lu. From pixels to tokens: Byte-pair encoding on quantized visual modalities, 2025. [44] F. Zhao, T. Pang, C. Li, Z. Wu, J. Guo, S. Xing, and X. Dai. Aligngpt: Multi-modal large language models with adaptive alignment capability, 2024. 
+
+13

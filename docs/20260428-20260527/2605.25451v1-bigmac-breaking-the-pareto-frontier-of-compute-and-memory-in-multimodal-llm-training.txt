@@ -1,0 +1,384 @@
+Title: BigMac: Breaking the Pareto Frontier of Compute and Memory in Multimodal LLM Training
+
+URL Source: https://arxiv.org/pdf/2605.25451v1
+
+Published Time: Tue, 26 May 2026 02:16:41 GMT
+
+Number of Pages: 12
+
+Markdown Content:
+BIG MAC : Compute-Memory Efficient MLLM Training 
+
+# BIG MAC : BREAKING THE PARETO FRONTIER OF 
+
+# COMPUTE AND MEMORY IN 
+
+# MULTIMODAL LLM T RAINING 
+
+Zili Zhang 1∗† , Chengxu Yang 2∗
+
+, Shenglong Zhang 2, Chenyu Wang 2, Yufan Zhang 2,Tuo Dai 3, Zhouyang Li 2, Yuhong Ge 3, Chao Jin 1†, Xin Jin 1‡, Yuliang Liu 2‡
+
+> 1
+
+Peking University 2Independent Researcher 3Rednote 
+
+## ABSTRACT 
+
+Training multimodal large language models (MLLMs) is challenged by both 
+
+model and data heterogeneity . Existing systems redesign the training pipeline to address these challenges, but remain bound by a Pareto frontier between com-pute and memory efficiency, improving one only at the expense of the other. We present B IG MAC , a new training pipeline for multimodal LLMs. The core idea of BIG MAC is to elegantly nest the encoder and generator computation into the orig-inal LLM pipeline, forming a dependency-safe nested pipeline structure. With this design, B IG MAC reduces the activation memory complexity of the encoder and generator to O(1) while keeping the activation memory complexity of the LLM unchanged. At the same time, it achieves the same computational efficiency as the idealized setting with unlimited memory. As a result, B IG MAC breaks the Pareto frontier between computational efficiency and memory usage, enabling si-multaneous optimization of both computation and memory in MLLM training. We evaluate B IG MAC on multiple MLLMs and training workloads. Experimental results show that B IG MAC achieves a 1.08 ×–1.9 × training speedup over baseline systems while maintaining stable memory usage as batch size increases. Modality            
+
+> Encoder Input s
+> LLM
+> Backbone
+> Modality
+> Generator
+> ViT
+> Whisper
+> . . .
+> SD
+> LDM
+> Output s
+> Tokenizer
+> & Embed
+> Transformer
+> Attention
+> FFN
+> Multimodal
+> Embedding
+> Text ... T!T"T#
+> Image ... I!I"I$
+> Audio ... A!A"A%
+> Concat
+> ×𝑁 LM Head &
+> Detokenizer
+> . . .
+
+Figure 1: The architecture of multimodal LLMs. 
+
+## 1 INTRODUCTION 
+
+Multimodal large language models (MLLMs) provide a unified framework for processing multi-modal inputs and generating multimodal outputs, making them a powerful foundation for next-generation AI systems. By combining the reasoning, instruction-following, and generative capa-bilities of LLMs with modality-specific components, MLLMs enable more general and flexible in-teraction across modalities such as vision, audio, and language. This capability has made MLLMs increasingly important for a broad range of applications, including visual understanding (Liu et al., 2023b) and generation (Chameleon Team, 2024), audio understanding (Chu et al., 2024), embodied AI (Driess et al., 2023; Brohan et al., 2023), and interactive multimodal assistants (OpenAI, 2023). The rapid progress of recent MLLM systems further demonstrates their growing importance in both research and real-world deployment. 
+
+> ∗
+
+Equal contribution. 
+
+> †
+
+Work done during internships at Rednote. 
+
+> ‡
+
+Co-corresponding authors. 
+
+1
+
+> arXiv:2605.25451v1 [cs.LG] 25 May 2026
+
+BIG MAC : Compute-Memory Efficient MLLM Training Encoder Forward Encoder Backward LLM Forward LLM Backward 
+
+> ……
+> PP0
+> PP1
+> PP2
+> PP3
+> Figure 2: The pipeline structure of compute-efficient MLLM training (pp size = 4, batch size = 64).
+
+Figure 1 illustrates a representative multimodal LLM architecture (OpenAI, 2023; Wu et al., 2025), consisting of a modality encoder, an LLM backbone, and a modality generator connected by projec-tors such as MLPs or cross-attention modules. The encoder maps multimodal inputs into modality tokens, which are organized into a token sequence and processed by the LLM; the generator maps the LLM outputs back to the target modality. Training such architectures is challenging due to both model and data heterogeneity, as identified by DistTrain (Zhang et al., 2025). Model heterogene-ity arises from the structural and computational differences among the encoder, LLM backbone, and generator, which exhibit distinct execution patterns. Data heterogeneity further complicates training: even with a fixed sequence length, multimodal samples may contain different numbers of modality tokens, causing workload imbalance and inefficient resource utilization. Existing systems address these challenges by redesigning the training pipeline, but remain con-strained by a Pareto frontier between compute and memory efficiency. Compute-efficient systems, such as LoongCat (Team et al., 2025) and Optimus (Feng et al., 2025), improve throughput by decou-pling encoder computation from the LLM pipeline and executing encoder outside the LLM pipeline. While this eliminates computational interference between the encoder and LLM, it requires retain-ing all encoder activations until the LLM pipeline finishes, resulting in O(M/P ) encoder activation memory, where M is the number of microbatches and P is the pipeline parallelism degree. With a generator, the problem is further amplified because LLM activations must also be preserved until generator computation completes. In contrast, memory-efficient systems, such as DistTrain (Zhang et al., 2025) and Megatron (Shoeybi et al., 2019), integrate the encoder and generator into the LLM pipeline as its initial and final layers. This reduces the activation memory complexity of the encoder and generator to O(P ) and O(1) , respectively. However, sequentially executing all components in one pipeline introduces computational interference, making the iteration time dictated by the slowest stage. Consequently, these systems achieve substantially lower compute efficiency than compute-efficient alternatives. To this end, we present B IG MAC , a new training framework for multimodal LLMs. Its key idea is a dependency-safe nested pipeline that interleaves the encoder and generator with the original LLM pipeline without altering its dependencies. This design matches the compute efficiency of an idealized compute-efficient setting with unlimited memory, while reducing encoder and generator activation memory to O(1) . As a result, B IG MAC breaks the Pareto frontier between compute efficiency and memory usage, enabling both high compute efficiency and low memory usage in MLLM training. 
+
+## 2 BACKGROUND AND RELATED WORK 
+
+2.1 BACKGROUND 
+
+Multimodal LLMs. Large language models (LLMs) (OpenAI, 2023; Wu et al., 2025) have demon-strated strong capabilities in language understanding and generation, but their native interface is limited to text. Multimodal LLMs (MLLMs) extend LLMs with modality-specific components to process multimodal inputs such as images and audio and generate outputs beyond plain text. As shown in Figure 1, a representative MLLM consists of modality encoders, an LLM backbone, and modality generators. The encoders convert raw modality inputs into intermediate features, e.g., us-ing ViT (Dosovitskiy et al., 2021) for images or Whisper (Radford et al., 2023) for audio, which are then projected into the LLM embedding space through MLP or cross-attention projectors. The LLM backbone performs multimodal reasoning over the resulting embeddings, and the output rep-resentations are mapped by output projectors to modality generators, such as diffusion (Rombach et al., 2022) for images or AudioLDM (Liu et al., 2023a) for audio. Training such architectures is challenging due to model and data heterogeneity, as identified by DistTrain (Zhang et al., 2025). 
+
+Model heterogeneity. MLLMs exhibit substantial model heterogeneity because their constituent modules differ in architecture and computational characteristics. Modality encoders such as ViT 2BIG MAC : Compute-Memory Efficient MLLM Training 0                    
+
+> 0
+> 0
+> 0
+> Encoder Forward Encoder Backward LLM Forward LLM Backward Generator Forward Generator Backward
+> 1
+> 1
+> 1
+> 0
+> 23
+> 2
+> 20
+> 0
+> 0
+> 3
+> 1122
+> 1
+> 1
+> 32
+> 2
+> 415
+> 4
+> 4
+> 3344
+> 5
+> 3
+> 3
+> 4
+> 4
+> 234
+> 5
+> 55
+> 5
+> 5
+> 5
+> Bubbles
+> 6
+> 6
+> 6
+> 66
+> 7
+> 7
+> 7
+> 77
+> 6
+> 6
+> 6
+> 7
+> 7
+> 7PP0
+> PP1
+> PP2
+> PP3
+
+Figure 3: The pipeline structure of memory-efficient MLLM training (pp size = 4, batch size = 8). 
+
+typically use relatively narrow transformer layers, the LLM backbone uses much wider transformer layers, and modality generators such as diffusion models combine convolution and attention op-erators. As a result, the encoder, backbone, and generator have distinct execution times, creating imbalance in pipeline-parallel (PP) training. If an LLM PP stage is the bottleneck, the encoder and generator stages wait, reducing resource utilization. Conversely, if the encoder or generator is slower than the LLM stages, it stalls the LLM pipeline and introduces bubbles. This latter case is particu-larly harmful at scale, where most GPUs are allocated to the LLM backbone, leading to substantial resource underutilization. 
+
+Data heterogeneity. MLLM training data exhibit substantial data heterogeneity because modality subsequences within each sample are highly skewed in both length and count, causing large varia-tion in the number of modality tokens (Deng et al., 2025). For example, one sample may contain only a few tokens from a single image, while another may contain hundreds or thousands tokens from multiple high-resolution images. This heterogeneity leads to significant execution-time varia-tion in the modality encoder and generator, even when the LLM backbone has stable execution time under a fixed sequence length. As a result, pipeline-parallel training suffers from microbatch strag-glers: slower microbatches delay faster ones and introduce pipeline bubbles that disrupt pipeline progress (Zhang et al., 2025). This further amplifies computation imbalance, reduces GPU utiliza-tion, and prolongs end-to-end MLLM training. 2.2 RELATED WORK 
+
+Compute-efficient systems. To address model and data heterogeneity, existing compute-efficient systems (Team et al., 2025; Feng et al., 2025) redesign the MLLM training pipeline to eliminate computational interference among the encoder, generator, and LLM backbone. They typically apply different parallelization strategies to different modules: data parallelism for the encoder and gen-erator, and pipeline parallelism for the LLM backbone. As shown in Figure 2, these systems first execute the encoder forward pass for all microbatches and retain the resulting activations for back-ward computation. After the encoder forward finishes, the LLM pipeline processes the modality embeddings using a 1F1B schedule (Narayanan et al., 2019). By separating encoder and LLM com-putation along the time dimension, this design avoids cross-module interference; thus, differences in encoder, generator, and LLM execution times do not introduce pipeline bubbles. However, this compute efficiency comes at the cost of high memory usage. All encoder activations must be re-tained until the LLM pipeline completes, and the problem becomes more severe when a generator is included. In that case, LLM activations must also be preserved until generation finishes. Since LLM activations are substantially larger than encoder activations, this approach becomes impractical for production-scale MLLM training with modality generators. 
+
+Memory-efficient systems. Memory-efficient systems (Zhang et al., 2025; Shoeybi et al., 2019) take the opposite approach by integrating the modality encoder and generator into the LLM pipeline as the initial and final layers, respectively. As shown in Figure 3, they execute the encoder, LLM backbone, and generator sequentially in a single 1F1B pipeline. This design reduces the activa-tion memory complexity of the encoder and generator to O(P ) and O(1) , respectively, where P
+
+is the pipeline-parallelism degree. However, this memory efficiency comes at the cost of compute efficiency. While LLM microbatches have relatively stable execution time under a fixed sequence length, encoder and generator microbatches can vary substantially due to model and data hetero-geneity. Because all components are coupled by sequential pipeline dependencies, this variation introduces bubbles across the pipeline, as shown in Figure 3. Although automatic parallelism tun-ing (Zheng et al., 2022) and dynamic microbatch scheduling (Zhang et al., 2025) can partially miti-gate the issue, they still fall short of the compute efficiency achieved by compute-efficient systems. 
+
+Performance analysis. The two baselines above expose a fundamental memory–compute tradeoff. Let M be the number of microbatches and P the LLM pipeline-parallelism degree, and assume that one encoder/generator microbatch has activation footprint Am while one full LLM microbatch 3BIG MAC : Compute-Memory Efficient MLLM Training Encoder Forward Encoder Backward LLM Forward (Chunk0) LLM Backward (Chunk0) Generator Forward Generator Backward LLM Forward (Chunk1) LLM Backward (Chunk1) 
+
+> ……
+> PP0
+> PP1
+> PP2
+> PP3
+> PP0
+> PP1
+> PP2
+> PP3
+
+Figure 4: The pipeline scheme of B IG MAC (pp size = 4, vpp size = 2, batch size = 64). 
+
+has footprint Al. Compute-efficient systems decouple encoder and generator computation from the LLM pipeline, so the LLM only incurs the standard 1F1B fill/drain overhead, with bubble rate approximately (P − 1) /(M + P − 1) , which becomes small when M ≫ P . However, this low bubble rate comes from extending activation lifetime: on the first pipeline stage, peak activation memory is approximately MP Am + Al, because modality activations for all assigned microbatches must be retained while the LLM pipeline executes. Memory-efficient systems instead integrate the encoder and generator into the pipeline, bounding peak modality activation memory by P A m on the first PP stage or P −1 
+
+> P
+
+Al on the second PP stage, thereby removing the memory term that grows with M . However, this design introduces additional steady-state bubbles beyond 1F1B fill/drain overhead, because encoder and generator microbatches may have different execution times. Thus, when M is large, compute-efficient systems achieve low bubble rates at high activation-memory cost, while memory-efficient systems reduce memory by sacrificing compute efficiency. 
+
+## 3 BIG MAC DESIGN 
+
+BIG MAC consists of two main components: the B IG MAC pipeline scheduler and the B IG MAC 
+
+pipeline executor. The pipeline scheduler is responsible for determining the optimal scheduling of microbatches across different modules, while the pipeline executor manages the execution of the scheduled microbatches on the underlying training framework. 3.1 BIG MAC PIPELINE SCHEDULER 
+
+In this section, we present the details of B IG MAC ’s pipeline scheduler, which is responsible for orchestrating the execution of compute and communication operators by dependency-safe nesting .
+
+Compute operator. Figure 4 shows the overall pipeline scheme. The scheduler targets two goals: preserving the compute efficiency of the LLM pipeline and bounding encoder/generator activation memory. To avoid computational interference, B IG MAC treats the encoder, LLM, and generator as separate parallelism domains rather than a single stage-by-stage pipeline. This matches production MLLM training, where the LLM backbone usually requires pipeline parallelism, while smaller en-coders and generators can run with DDP (Li et al., 2020) or FSDP (Zhao et al., 2023). Thus, within one pipeline group, an LLM micro-batch traverses all pipeline ranks, whereas encoder and generator micro-batches are processed locally. 
+
+Compute efficiency. BIG MAC groups encoder and generator operators into units of pp size micro-batches, where pp size is the LLM pipeline parallelism size. Each unit corresponds to one LLM pipeline column in Figure 4. The scheduler starts from the user-specified LLM schedule, such as interleaved 1F1B, and nests encoder and generator units within it. Since encoder and generator units are not part of the LLM pipeline stages, B IG MAC can nest encoder/generator units into the LLM schedule without introducing bubbles. Furthermore, this nested structure preserves the original LLM dependencies while eliminating cross-module execution interference. 
+
+Memory efficiency. For memory efficiency, B IG MAC executes encoder and generator backward op-erators as soon as their dependencies are satisfied. This requires respecting cross-module edges: LLM forward consumes encoder outputs, and LLM backward depends on gradients produced through generator backward. B IG MAC therefore places each encoder and generator unit at the ear-liest dependency-safe point without changing the LLM order. It first warms up a constant number (W ) of encoder forward units, then pairs each ready encoder backward unit with the next encoder 4BIG MAC : Compute-Memory Efficient MLLM Training                   
+
+> #M: micro-batches; P: pipeline size #W: warmup number of encoder units def build_schedule (llm_schedule, M, P, W): units = partition_microbatches (M, unit_size= P) schedule, next_unit = [], 0
+> # Warm up encoder units. while next_unit < min (W, len (units)): schedule += [ enc_fwd (units[next_unit])] next_unit += 1
+> # Preserve the original LLM pipeline order. for column in columns (llm_schedule): schedule += column
+> for op in column: u = unit (op)
+> if llm_output_ready (op, u): schedule += [ gen_fwd (u), gen_bwd
+> (u)]
+> if encoder_grad_ready (op, u): schedule += [ enc_bwd (u)]
+> if next_unit < len (units): schedule += [ enc_fwd (units[ next_unit])] next_unit += 1
+> return schedule
+
+Figure 5: B UILD SCHEDULE nests encoder/generator units into the LLM pipeline schedule.                                          
+
+> def encoder_forward (data_iter): input_ids, encoder_inputs =next (data_iter) encoder_feature =encoder (encoder_inputs)
+> return input_ids, encoder_feature
+> def llm_forward_step (llm_iter): input_ids, encoder_feature =next (llm_iter) embedding =embed_preprocess (input_ids, encoder_feature )output =llm (embedding)
+> return output
+> def generator_forward (output): loss =generator (output)
+> return loss
+> def train_step(data_iter, pp_size, microbatch_num, warmup_bound):
+> #E.g., interleaved 1F1B schedule
+> llm_schedule =get_llm_schedule (pp_size, microbatch_num)
+> #BigMac pipeline schedule
+> schedule =build_schedule (llm_schedule, microbatch_num, pp_size, warmup_bound) schedule =insert_comm_ops (schedule) schedule =deadlock_check (schedule) executor =create_executor (data_iter,
+> llm_forward_step ,
+> encoder_forward ,
+> generator_forward
+> )executor. load_schedule (schedule) executor. execute ()
+
+Figure 6: B IG MAC pipeline executor interface. 
+
+forward unit. For the generator, it runs forward as soon as LLM outputs are ready and backward im-mediately afterward. This policy preserves all cross-module dependencies, keeps the LLM schedule unchanged, and requires only W = 3 encoder activations and one generator activation. Figure 5 shows the pseudocode of the scheduling algorithm. 
+
+Analysis. For interleaved 1F1B schedules with vpp size ≥ 2, B IG MAC sets W = 3 , because such schedules require only a three-unit encoder lookahead. Let Ui denote the i-th encoder unit, which contains pp size consecutive micro-batches. Let Fi denote the first entry-side LLM forward operator that consumes the encoder output of Ui, and let Gi denote the point at which the LLM produces all the input gradient required by Ui’s backward. At the unit level, interleaved 1F1B with 
+
+vpp size ≥ 2 satisfies the following order property: 
+
+Fi, F i+1 , F i+2 ≺ Gi ≺ Fi+3 .
+
+That is, after the LLM finishes consuming the output of Ui, it consumes the outputs of Ui+1 and 
+
+Ui+2 before the gradient for Ui returns, and this gradient becomes ready before the LLM needs the output of Ui+3 . This property follows from the steady phase of 1F1B: each new forward wave is matched by the backward wave of an older unit, so the distance between forward consumption and backward return is bounded by three encoder units. Therefore, before Fi+3 is reached, B IG MAC can execute the backward of Ui to release the Ui’s activations, and then execute the forward of Ui+3 to prepare the next unit. As a result, the ready window slides from Ui, U i+1 , U i+2 to Ui+1 , U i+2 , U i+3 
+
+before the LLM consumes Ui+3 . This invariant ensures that only three encoder-unit activations need to be kept in memory to keep the LLM pipeline fully fed, yielding O(1) encoder activation memory. By induction on i, encoder outputs are always ready when needed, so encoder units neither stall nor reorder the LLM pipeline, allowing B IG MAC to match the compute-efficient pipeline time. 
+
+Communication operator. BIG MAC makes the compute schedule executable by materializing its implicit data dependencies as communication operators. For each compute operator, B IG MAC de-rives a pre-communication operator that fetches required inputs and a post-communication operator 5BIG MAC : Compute-Memory Efficient MLLM Training Encoder Forward Encoder Backward LLM Forward LLM Backward  
+
+> ……
+> ……
+> LLM CP -0
+> LLM CP -1
+> Figure 7: The pipeline scheme of B IG MAC with context parallel (LLM CP = 2, Encoder CP = 1).
+
+that forwards produced tensors to consumers. This preserves the pipeline compute order in Figure 5 while exposing all cross-device activation and gradient transfers to the executor. 
+
+Pipeline communication. For the LLM backbone, B IG MAC uses standard point-to-point pipeline communication. Stage i receives forward activations from stage i−1 and sends outputs to stage i+1 ,with symmetric communication in the backward pass. Under interleaved 1F1B, each communication operator carries the micro-batch and virtual chunk metadata of its compute operator, allowing the executor to distinguish tensors across chunks and micro-batches. 
+
+Cross-module communication. Cross-module communication connects separately scheduled en-coder/generator units with the LLM pipeline. Encoder forward gathers modality embeddings to the LLM entry stage, while LLM backward scatters input-embedding gradients back to the owning encoder ranks. The generator handoff is analogous on the LLM output side: the last LLM stage scatters generator inputs and gathers generator-input gradients back. These operators provide the concrete producer-consumer links among encoder, LLM, and generator compute. 3.2 BIG MAC PIPELINE EXECUTOR 
+
+BIG MAC ’s pipeline executor turns the operator schedule produced by the scheduler into concrete training execution. Each pipeline rank receives its local schedule, which contains both compute and communication operators. The executor interprets this schedule as an opcode stream: LLM forward and backward operators are dispatched to user-provided LLM runtime, point-to-point com-munication operators are dispatched to the runtime communication backend, and encoder/generator operators are dispatched to user-provided module functions. This design keeps the scheduler in-dependent of framework-specific execution details, while allowing the executor to reuse optimized runtime components such as fused send-receive primitives and DP gradient overlap. Figure 6 illustrates the programming interface of the pipeline executor for executing a training step under a given pipeline schedule. From the user’s perspective, using the executor requires only the forward implementations of the encoder, LLM, and generator. The executor hides the underlying details of parallelism and communication, providing a simple and easy-to-use interface. 
+
+Runtime buffers. The executor maintains runtime buffers keyed by microbatch id, with an addi-tional virtual chunk id under interleaved 1F1B. Forward operators write output activations to these buffers, backward operators consume the corresponding activations and produce gradients. Commu-nication operators transfer tensors in the buffer across adjacent pipeline stages. The executor issues the communication operations and records the returned asynchronous communication handles. The executor waits on receive handles before consuming received tensors. Thus, the executor preserves the scheduler-determined operator order while overlapping communication with computation. 
+
+Module handoff. The executor bridges encoder/generator modules and the LLM through dedicated handoff adapters. For encoder-to-LLM handoff, it validates encoder outputs using explicit metadata, and then gathers them into the LLM entry-stage. The communication is launched asynchronously with readiness events so encoder or LLM computation can overlap with gather communication. The backward path reverses this route: the first LLM stage retains input tensors, collects their gradi-ents after LLM backward, scatters them to the owning encoder ranks, immediately runs encoder backward once a unit’s gradient is ready, and releases saved encoder activations. For distributed data-parallel encoder/generator modules, the executor suppresses non-final gradient synchroniza-tion and finalizes gradients at schedule end to preserve standard accumulation semantics. Generator 6BIG MAC : Compute-Memory Efficient MLLM Training Encoder Forward Encoder Backward LLM Forward LLM Backward     
+
+> …… (a) (b) …… …… ……
+> Figure 8: A pipeline slice of B IG MAC with an encoder trained using FSDP.
+
+handoff follows the same pattern on the LLM output side: the last LLM stage scatters output activa-tions to generator ranks, runs generator forward and backward for the unit, and gathers the resulting input gradients to trigger LLM backward. 3.3 BIG MAC COMPATIBILITY 
+
+In this subsection, we discuss how B IG MAC integrates with common MLLM training techniques. We first discuss its compatibility with context parallelism in the LLM backbone for long-context MLLM training. We then describe its integration with fully sharded data parallelism (FSDP), which is widely used to train modality encoders and generators. 
+
+Context parallelism Context parallelism (CP) (Liu et al., 2024) is a standard technique for train-ing LLMs with long input contexts. CP partitions the input sequence across multiple ranks and parallelizes attention computation. In MLLM training, CP may be applied simultaneously to the LLM backbone, encoder, and generator, with different CP degrees for different modules due to their differing sequence lengths and attention costs. B IG MAC supports this multi-module CP setting by allowing the encoder and LLM to use distinct CP groups and by extending the module handoff and pipeline scheduler accordingly. When the encoder and LLM use different CP groups, the encoder-to-LLM handoff converts modal-ity embeddings from the encoder CP layout to the LLM CP layout through an additional all-to-all communication. B IG MAC represents this conversion as an asynchronous CP-conversion operator between encoder operators and LLM operators, using readiness events to overlap communication with computation. Different CP degrees also constrain pipeline scheduling: pipeline groups within the same LLM CP group consume the same encoder outputs in lockstep because context parallel synchronizes LLM ranks after each micro-batch. Thus, B IG MAC enlarges the encoder scheduling unit from pp size to pp size × llm cp size/encoder cp size micro-batches; in Figure 7, for ex-ample, LLM CP size two and encoder CP size one yield an eight micro-batch encoder unit while preserving the original LLM pipeline order. 
+
+Fully sharded data parallelism. FSDP is a memory-efficient data-parallel runtime that shards model parameters, gradients, and optimizer states across GPUs. Unlike standard data parallelism, FSDP only maintains a parameter shard for each data parallel rank during training. Before executing an FSDP-wrapped module in either the forward or backward pass, all ranks in the FSDP group must first all-gather the full parameters. As a result, each FSDP module introduces a synchronization point across the group, which may interact poorly with B IG MAC ’s nested pipeline scheme. As shown in Figure 8(a), LLM operator time varies across micro-batches; for example, the backward operator of micro-batch 5 takes longer than the others. This variation comes from sequence packing, which creates different attention workloads across micro-batches (Ge et al., 2025), and MoE expert parallelism, where expert load imbalance creates uneven GPU workloads (DeepSeek-AI, 2025). Under such non-uniform execution, FSDP’s strict synchronization introduces additional pipeline bubbles in the steady phase. 
+
+One-Sided pull. To solve this issue, BIG MAC replaces the collective communication, i.e., 
+
+all-gather of FSDP-wrapped encoder and generator with a request-driven one-sided pull mech-anism. Instead of requiring all ranks in an FSDP group to enter the same all-gather at the same time, each rank publishes its local parameter shard in NVSHMEM-accessible memory. When a rank reaches a FSDP-wrapped encoder or generator operator, it materializes the required full pa-rameter bucket by fetching the missing shards from their owner ranks using one-sided NVSHMEM 
+
+get operations. Thus, B IG MAC removes the FSDP synchronization barrier, allowing ranks to pro-ceed independently according to the pipeline schedule. As shown in Figure 8(b), this design keeps 7BIG MAC : Compute-Memory Efficient MLLM Training 2 4 8 12 16                   
+
+> Batch Size per GPU
+> 50
+> 100
+> 150
+> Iteration Time (s)
+> 24812 16
+> Batch Size per GPU
+> 40
+> 80
+> Peak Memory (GB)
+> Megatron-DistTrain Optimus BigMac
+> Figure 9: Overall performance of B IG MAC under training MLLM-Understanding. 24812 16
+> Batch Size per GPU
+> 50
+> 100
+> 150
+> Iteration Time (s)
+> 24812 16
+> Batch Size per GPU
+> 40
+> 80
+> Peak Memory (GB)
+> Megatron-DistTrain Optimus BigMac
+> Figure 10: Overall performance of B IG MAC under training MLLM-Generation.
+
+FSDP’s sharded-memory benefit while removing the all-rank all-gather barrier that creates the pipeline bubbles. 
+
+## 4 EVALUATION 
+
+4.1 EXPERIMENTAL SETUP 
+
+Testbed. We evaluate B IG MAC on a 16-server cluster with 128 NVIDIA Hopper GPUs. Each server contains eight GPUs, 160 Intel Xeon CPU cores, and 1.8 TB of host memory. Intra-server GPU communication uses 900 GB/s NVLink, while inter-server communication uses 400 Gb/s NVIDIA Mellanox InfiniBand with GPUDirect RDMA. The software stack uses PyTorch 2.8.0 and CUDA 12.2 with driver 535.161.08. 
+
+Models & Datasets. We evaluate B IG MAC on two representative MLLM training workloads: MLLM-Understanding and MLLM-Generation. For MLLM-Understanding, we use Qwen3-30B-A3B (Qwen Team, 2025) as the backbone LLM and a 1.3B-parameter ViT (Dosovitskiy et al., 2021) as the vision encoder. The model is trained on image-text pairs from a large-scale web-crawled dataset to learn visual-textual understanding and reasoning. For MLLM-Generation, we use the same backbone LLM and vision encoder, and attach a 20B-parameter MMDiT (Esser et al., 2024) as the multimodal generator. This follows the model architecture in Qwen-Image (Wu et al., 2025). The model is trained on internal text-to-image (T2I), text-image-to-image (TI2I), and image-to-image (I2I) pairs to generate images from textual and visual inputs. Both workloads use an 8K input sequence length for the LLM backbone. All modules remain trainable, with gradients enabled throughout training. 
+
+Baselines & Metrics. We compare B IG MAC with two representative MLLM training baselines. The first is Optimus (Feng et al., 2025), a compute-efficient design that runs encoder forward, LLM forward and backward, and generator backward sequentially. The second is Megatron-DistTrain (Zhang et al., 2025), a memory-efficient design that integrates the encoder and generator as the first and last stages of the pipeline. We call it Megatron-DistTrain since we use Megatron’s open-source implementation of DistTrain. These two baseline systems are widely adopted in pro-duction MLLM training (Team et al., 2025; Huang et al., 2025). We report training iteration time and peak GPU memory usage, the two primary metrics for MLLM training efficiency and scalability. 8BIG MAC : Compute-Memory Efficient MLLM Training 1 2 4 8     
+
+> Context Parallel Size
+> 10
+> 20
+> 30
+> 40
+> Iteration Time (s)
+> (a) Context Parallelism
+> Homogeneous CP BigMac
+> 24812
+> Batch Size per GPU
+> 10
+> 20
+> 30
+> 40
+> 50
+> Iteration Time (s)
+> (b) FSDP
+> All-Gather BigMac
+> Figure 11: Case study of B IG MAC ’s compatibility.
+
+4.2 OVERALL PERFORMANCE 
+
+MLLM-Understanding. We first evaluate B IG MAC on the MLLM-Understanding workload. Fig-ure 9 reports iteration time and peak GPU memory usage under different per-GPU batch sizes. BIG MAC consistently achieves the lowest iteration time, improving over Optimus by 1.08 ×–1.1 ×
+
+and over Megatron-DistTrain by 1.6 ×–1.9 ×. Compared with Megatron-DistTrain, B IG MAC re-moves the execution interference between the encoder and LLM, thereby reducing pipeline bubbles. Compared with Optimus, B IG MAC keeps activation memory low, reducing memory pressure and avoiding the expensive memory operations. For peak memory, B IG MAC and Megatron-DistTrain maintain a stable memory usage when batch size increases, whereas Optimus’s memory usage grows rapidly because it retains encoder activations across the LLM pipeline. When the per-GPU batch size exceeds 8, Optimus runs out of memory; cross markers denote these OOM points. Overall, BIG MAC achieves the best of both compute and memory efficiency. 
+
+MLLM-Generation. We then evaluate B IG MAC on the MLLM-Generation workload as shown in Figure 10. Optimus runs out of memory at all batch sizes since it needs to retain all LLM activations until the generator finishes. Compare with Megatron-DistTrain, B IG MAC reduces iteration time by 1.5 ×–1.9 × by eliminating the execution interference between the encoder, LLM, and generator. For peak memory, B IG MAC and Megatron-DistTrain maintain a stable memory usage when batch size increases. 4.3 CASE STUDY 
+
+Context parallelism. We evaluate whether B IG MAC can benefit from decoupling context paral-lelism (CP) across MLLM components. The homogeneous CP baseline applies the same CP degree to both the encoder and the LLM backbone, which is suboptimal because the two modules have different model architectures and process different tokens. BIG MAC instead allows the encoder and LLM to use separate CP groups. Figure 11(a) compares B IG MAC with homogeneous CP as the LLM CP degree increases. B IG MAC reduces iteration time by up to 1.45 ×, demonstrating the effectiveness of decoupled CP for MLLM training. 
+
+FSDP. We next evaluate B IG MAC ’s compatibility with FSDP-trained modality modules. The base-line uses standard FSDP all-gather communication to materialize full parameters before each FSDP-wrapped encoder or generator operator. BIG MAC replaces this collective synchronization with one-sided pull, allowing each rank to proceed according to its local pipeline schedule. This reduces training iteration time by up to 1.03 × while preserving FSDP’s sharded-parameter memory benefit. 
+
+Bitwise alignment. BIG MAC changes only the order in which module gradients are accumulated, while preserving the synchronous training semantics of the original pipeline. To isolate pipeline effects from kernel-level nondeterminism, we disable FlashAttention and use deterministic compute operators in this study. We then run B IG MAC and Megatron-LM on the same data stream under different per-GPU batch sizes and record their training losses. Across the first 128 iterations, the average absolute loss difference between the two systems remains below 10 −3, indicating that B IG -MAC preserves training semantics. 9BIG MAC : Compute-Memory Efficient MLLM Training 5K 10K 15K   
+
+> Iteration
+> 3
+> 4
+> 5
+> 6
+> 7
+> 8
+> Loss
+> 5K 10K 15K
+> Iteration
+> 10 0
+> 10 1
+> 10 2
+> 10 3
+> 10 4
+> Grad Norm
+> Figure 12: Production deployment metrics of B IG MAC .
+
+4.4 PRODUCTION DEPLOYMENT 
+
+BIG MAC has been deployed in production MLLM training for several months. We present a repre-sentative deployment result from an internal 345B-parameter MLLM training run on 1,536 Hopper GPUs. Figure 12 reports the loss and gradient norm over more than 18K training iterations. The loss decreases rapidly in the early phase and then stabilizes at a low value, showing that B IG MAC 
+
+preserves the expected optimization behavior of the training job. The gradient norm shows transient spikes during the initial high-loss phase, but quickly settles and remains bounded throughout the rest of training. These results indicate that B IG MAC maintains stable training dynamics in production, while enabling the compute-memory efficient execution described in § 3. 
+
+## 5 DISCUSSION AND FUTURE WORK 
+
+MegaScale-Omni (Xue et al., 2026) follows a similar design philosophy for training MLLM-understanding models while reducing encoder memory usage. However, unlike B IG MAC , it targets encoder-only MLLMs and does not support modality generators. It also directly patches Megatron-LM’s LLM pipeline, limiting scheduling flexibility and making it difficult to integrate with different training frameworks. Moreover, its simplified pipeline design lacks support for production LLM training optimizations such as point-to-point communication/computation overlap and combined 1F1B. There are two important directions for future work. First, B IG MAC currently focuses on preserv-ing a user-specified LLM pipeline schedule while nesting the encoder and generator units into it. Extending this design to a broader class of LLM pipeline schedules, such as zero-bubble pipeline parallelism (Qi et al., 2023), would further improve its applicability to emerging large-scale training systems. Second, although B IG MAC removes cross-module execution interference, multimodal data heterogeneity can still create load imbalance within the encoder and generator itself, since different samples may induce different encoder costs. Future work can explore data-aware packing to reduce this intra-module imbalance. 
+
+## 6 CONCLUSION 
+
+BIG MAC addresses the compute–memory tradeoff in MLLM training with a dependency-safe nested pipeline. It preserves the user-specified LLM schedule and nests encoder/generator units only when their dependencies are satisfied, eliminating cross-module interference while keeping modality en-coder and generator’s activation memory O(1) . Across MLLM-understanding and generation work-loads, B IG MAC achieves 1.08 ×–1.9 × speedups while maintaining stable memory usage as batch size increases. 
+
+## REFERENCES 
+
+Anthony Brohan, Noah Brown, Justice Carbajal, Yevgen Chebotar, Xi Chen, Krzysztof Choro-manski, Tianli Ding, Danny Driess, Avinava Dubey, Chelsea Finn, Pete Florence, Chuyuan Fu, Montse Gonzalez Arenas, Keerthana Gopalakrishnan, Kehang Han, Karol Hausman, Alexander Herzog, Jasmine Hsu, Brian Ichter, Alex Irpan, Nikhil Joshi, Ryan Julian, Dmitry Kalashnikov, Yuheng Kuang, Isabel Leal, Kuang-Huei Lee, Sergey Levine, Yao Lu, Henryk Michalewski, Igor Mordatch, Karl Pertsch, Kanishka Rao, Krista Reymann, Michael Ryoo, Grecia Salazar, Pannag 10 BIG MAC : Compute-Memory Efficient MLLM Training Sanketi, Pierre Sermanet, Jaspiar Singh, Anikait Singh, Radu Soricut, Huong Tran, Vincent Van-houcke, Quan Vuong, Ayzaan Wahid, Stefan Welker, Paul Wohlhart, Jialin Wu, Fei Xia, Ted Xiao, Peng Xu, Sichun Xu, Tianhe Yu, and Brianna Zitkovich. RT-2: Vision-language-action models transfer web knowledge to robotic control. arXiv preprint arXiv:2307.15818 , 2023. Chameleon Team. Chameleon: Mixed-modal early-fusion foundation models. arXiv preprint arXiv:2405.09818 , 2024. Yunfei Chu, Jin Xu, Qian Yang, Haojie Wei, Xipin Wei, Zhifang Guo, Yichong Leng, Yuanjun Lv, Jinzheng He, Junyang Lin, Chang Zhou, and Jingren Zhou. Qwen2-audio technical report. arXiv preprint arXiv:2407.10759 , 2024. DeepSeek-AI. EPLB: Expert parallelism load balancer. https://github.com/ deepseek-ai/eplb , 2025. Chaorui Deng, Deyao Zhu, Kunchang Li, Chenhui Gou, Feng Li, Zeyu Wang, Shu Zhong, Weihao Yu, Xiaonan Nie, Ziang Song, et al. Emerging properties in unified multimodal pretraining. arXiv preprint arXiv:2505.14683 , 2025. Alexey Dosovitskiy, Lucas Beyer, Alexander Kolesnikov, Dirk Weissenborn, Xiaohua Zhai, Thomas Unterthiner, Mostafa Dehghani, Matthias Minderer, Georg Heigold, Sylvain Gelly, Jakob Uszko-reit, and Neil Houlsby. An image is worth 16x16 words: Transformers for image recognition at scale. In International Conference on Learning Representations (ICLR) , 2021. Danny Driess, Fei Xia, Mehdi S. M. Sajjadi, Corey Lynch, Aakanksha Chowdhery, Brian Ichter, Ayzaan Wahid, Jonathan Tompson, Quan Vuong, Tianhe Yu, Wenlong Huang, Yevgen Chebotar, Pierre Sermanet, Daniel Duckworth, Sergey Levine, Vincent Vanhoucke, Karol Hausman, Marc Toussaint, Klaus Greff, Andy Zeng, Igor Mordatch, and Pete Florence. Palm-e: An embodied multimodal language model. In International Conference on Machine Learning (ICML) , 2023. Patrick Esser, Sumith Kulal, Andreas Blattmann, Rahim Entezari, Jonas M¨ uller, Harry Saini, Yam Levi, Dominik Lorenz, Axel Sauer, Frederic Boesel, Dustin Podell, Tim Dockhorn, Zion English, Kyle Lacey, Alex Goodwin, Yannik Marek, and Robin Rombach. Scaling rectified flow trans-formers for high-resolution image synthesis. In International Conference on Machine Learning (ICML) , 2024. Weiqi Feng, Yangrui Chen, Shaoyu Wang, Yanghua Peng, Haibin Lin, and Minlan Yu. Optimus: Accelerating large-scale multi-modal llm training by bubble exploitation. In USENIX ATC , 2025. Hao Ge, Junda Feng, Qi Huang, Fangcheng Fu, Xiaonan Nie, Lei Zuo, Haibin Lin, Bin Cui, and Xin Liu. Bytescale: Communication-efficient scaling of llm training with a 2048k context length on 16384 gpus. In ACM SIGCOMM , 2025. Ailin Huang, Boyong Wu, Bruce Wang, Chao Yan, Chen Hu, Chengli Feng, Fei Tian, Feiyu Shen, Jingbei Li, Mingrui Chen, et al. Step-audio: Unified understanding and generation in intelligent speech interaction. arXiv preprint arXiv:2502.11946 , 2025. Shen Li, Yanli Zhao, Rohan Varma, Omkar Salpekar, Pieter Noordhuis, Teng Li, Adam Paszke, Jeff Smith, Brian Vaughan, Pritam Damania, and Soumith Chintala. PyTorch Distributed: Experiences on accelerating data parallel training. Proceedings of the VLDB Endowment , 2020. Hao Liu, Matei Zaharia, and Pieter Abbeel. Ringattention with blockwise transformers for near-infinite context. In International Conference on Learning Representations , 2024. Haohe Liu, Zehua Chen, Yi Yuan, Xinhao Mei, Xubo Liu, Danilo Mandic, Wenwu Wang, and Mark D. Plumbley. AudioLDM: Text-to-audio generation with latent diffusion models. In Inter-national Conference on Machine Learning (ICML) , 2023a. Haotian Liu, Chunyuan Li, Qingyang Wu, and Yong Jae Lee. Visual instruction tuning. In Advances in Neural Information Processing Systems , 2023b. Deepak Narayanan, Aaron Harlap, Amar Phanishayee, Vivek Seshadri, Nikhil R Devanur, Gre-gory R Ganger, Phillip B Gibbons, and Matei Zaharia. PipeDream: generalized pipeline paral-lelism for DNN training. In ACM SOSP , 2019. 11 BIG MAC : Compute-Memory Efficient MLLM Training OpenAI. GPT-4V(ision) system card, 2023. https://openai.com/index/ gpt-4v-system-card/ .Penghui Qi, Xinyi Wan, Guangxing Huang, and Min Lin. Zero bubble pipeline parallelism. arXiv preprint arXiv:2401.10241 , 2023. Qwen Team. Qwen3 technical report. arXiv preprint arXiv:2505.09388 , 2025. Alec Radford, Jong Wook Kim, Tao Xu, Greg Brockman, Christine McLeavey, and Ilya Sutskever. Robust speech recognition via large-scale weak supervision. In International Conference on Ma-chine Learning (ICML) , 2023. Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, and Bj¨ orn Ommer. High-resolution image synthesis with latent diffusion models. In IEEE Conference on Computer Vision and Pattern Recognition , 2022. Mohammad Shoeybi, Mostofa Patwary, Raul Puri, Patrick LeGresley, Jared Casper, and Bryan Catanzaro. Megatron-lm: Training multi-billion parameter language models using model par-allelism. arXiv preprint arXiv:1909.08053 , 2019. Meituan LongCat Team, Bairui Wang, Bin Xiao, Bo Zhang, Bolin Rong, Borun Chen, Chang Wan, Chao Zhang, Chen Huang, Chen Chen, et al. Longcat-flash-omni technical report. arXiv preprint arXiv:2511.00279 , 2025. Chenfei Wu, Jiahao Li, Jingren Zhou, Junyang Lin, Kaiyuan Gao, Kun Yan, Sheng-ming Yin, Shuai Bai, Xiao Xu, Yilei Chen, et al. Qwen-image technical report. arXiv preprint arXiv:2508.02324 ,2025. Chunyu Xue, Yangrui Chen, Jianyu Jiang, Ningxin Zheng, Junda Feng, Jingji Chen, Shixiong Zhao, Shen Yan, Yi Lin, Lei Shi, et al. Megascale-omni: A hyper-scale, workload-resilient system for multimodal llm training in production. In EuroSys , 2026. Zili Zhang, Yinmin Zhong, Yimin Jiang, Hanpeng Hu, Jianjian Sun, Zheng Ge, Yibo Zhu, Daxin Jiang, and Xin Jin. Disttrain: Addressing model and data heterogeneity with disaggregated train-ing for multimodal large language models. In ACM SIGCOMM , 2025. Yanli Zhao, Andrew Gu, Rohan Varma, Liang Luo, Chien-Chin Huang, Min Xu, Less Wright, Hamid Shojanazeri, Myle Ott, Sam Shleifer, Alban Desmaison, Can Balioglu, Pritam Damania, Bernard Nguyen, Geeta Chauhan, Yuchen Hao, Ajit Mathews, and Shen Li. PyTorch FSDP: Experiences on scaling fully sharded data parallel. Proceedings of the VLDB Endowment , 2023. Lianmin Zheng, Zhuohan Li, Hao Zhang, Yonghao Zhuang, Zhifeng Chen, Yanping Huang, Yida Wang, Yuanzhong Xu, Danyang Zhuo, Eric P Xing, et al. Alpa: Automating inter- and intra-operator parallelism for distributed deep learning. In USENIX OSDI , 2022. 12

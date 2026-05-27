@@ -1,0 +1,715 @@
+Title: LLM-ReSum: A Framework for LLM Reflective Summarization through Self-Evaluation
+
+URL Source: https://arxiv.org/pdf/2604.25665v1
+
+Published Time: Wed, 29 Apr 2026 01:02:25 GMT
+
+Number of Pages: 15
+
+Markdown Content:
+# LLM-ReSum: A Framework for LLM Reflective Summarization through Self-Evaluation 
+
+1st Huyen Nguyen 
+
+Cigna Group Evernorth Health Services 
+
+Austin, Texas, USA HuyenNguyen5@my.unt.edu 
+
+2nd Haoxuan Zhang 
+
+dept. of Information Science University of North Texas 
+
+Denton, Texas, USA haoxuanzhang@my.unt.edu 
+
+3rd Yang Zhang 
+
+dept. of Data Science University of North Texas 
+
+Denton, Texas, USA yang.zhang@unt.edu 
+
+5rd Junhua Ding 
+
+dept. of Data Science University of North Texas 
+
+Denton, Texas, USA junhua.ding@unt.edu 
+
+4th Haihua Chen ∗
+
+dept. of Data Science University of North Texas 
+
+Denton, Texas, USA haihua.chen@unt.edu 
+
+Abstract —Reliable evaluation of large language model (LLM)–generated summaries remains an open challenge, par-ticularly across heterogeneous domains and document lengths. We conduct a comprehensive meta-evaluation of 14 automatic summarization metrics and LLM-based evaluators across seven datasets spanning five domains, covering documents from short news articles to long scientific, governmental, and legal texts (2K–27K words) with over 1,500 human-annotated summaries. Our results show that traditional lexical overlap metrics (e.g., ROUGE, BLEU) exhibit weak or negative correlation with human judgments, while task-specific neural metrics and LLM-based evaluators achieve substantially higher alignment, espe-cially for linguistic quality assessment. Leveraging these findings, we propose LLM-ReSum, a self-reflective summarization frame-work that integrates LLM-based evaluation and generation in a closed feedback loop without model finetuning. Across three domains, LLM-ReSum improves low-quality summaries by up to 33% in factual accuracy and 39% in coverage, with human evaluators preferring refined summaries in 89% of cases. We additionally introduce PatentSumEval, a new human-annotated benchmark for legal document summarization comprising 180 expert-evaluated summaries. All code and datasets will be re-leased in GitHub. 
+
+Index Terms —Text Summarization, Meta-evaluation, Evalua-tion metrics, Large Language Model, Agentic AI 
+
+I. I NTRODUCTION 
+
+Text summarization has emerged as an indispensable tech-nology for enabling efficient information consumption across diverse domains, including news media, governmental doc-umentation, scientific literature, social platforms, and legal corpora [1], [2]. Modern summarization systems, increasingly powered by large language models (LLMs), are now deployed at scale in search engines, recommendation systems, and knowledge extraction pipelines [1]–[3]. The proliferation of these systems has intensified the demand for robust evaluation methodologies that align with human quality judgments [4]– [6]. 
+
+Corresponding author: Haihua Chen (Email: haihua.chen@unt.edu) 
+
+Conventional automatic evaluation metrics, such as n-gram overlap measures (ROUGE, BLEU), embedding-based sim-ilarity scores (BERTScore), and task-specific NLP models, have dominated summarization assessment for decades. Tra-ditional approaches have employed topic-based vector space models and semantic measures for evaluation [7], while ex-tractive methods have focused on candidate sentence selection strategies [8]. Nevertheless, accumulating evidence reveals systematic failures of these metrics to capture dimensions of quality prioritized by human evaluators, particularly factual consistency, semantic coverage, and linguistic fluency [5], [9]. Lexical overlap metrics such as ROUGE and BLEU exhibit fundamental limitations in semantic understanding, penalizing paraphrases and rewarding superficial word matches [10]. These shortcomings are especially pronounced for abstractive summarization, where neural models generate novel phrasings rather than extractive fragments [7]. Notably, while human evaluators substantially prefer summaries from prompt-based LLMs such as GPT-3, these outputs receive significantly lower ROUGE scores than earlier fine-tuned models, exposing a critical misalignment between automatic metrics and human preferences [11]–[13]. This discrepancy raises fundamental questions about metric validity across heterogeneous domains, document lengths, and summarization paradigms. Concurrently, recent advancements in LLMs have enabled a paradigm shift: leveraging LLMs as evaluation agents. Given their capacity to process nuanced natural language instruc-tions and assess multiple quality dimensions simultaneously, LLMs present a compelling alternative to handcrafted metrics. Empirical investigations have demonstrated that ChatGPT and similar models, when employed for Likert-scale rating or pairwise comparison, can exceed conventional metrics in cor-relation with human judgments [4], [14], [15]. Recent work has also explored LLM feedback mechanisms for improving text generation quality [16]. However, LLM-based evaluation ex-hibits significant sensitivity to prompt engineering and domain 1
+
+> arXiv:2604.25665v1 [cs.CL] 28 Apr 2026
+
+shift [4], with existing research predominantly concentrated on news corpora. Critical gaps persist regarding cross-domain robustness, quantitative benchmarking against traditional met-rics, and reliability across diverse document types including domain-specific applications such as biomedical literature, patent documents, and legal cases [2], [6], [17]. Beyond their role as evaluators, LLMs offer an opportu-nity to establish a closed-loop framework integrating eval-uation and generation. Iterative refinement driven by eval-uation feedback could enable LLMs to self-correct outputs toward greater human alignment without resource-intensive finetuning [16]. While reinforcement learning from human feedback has proven effective [18], such approaches demand substantial computational infrastructure and curated preference data. Prompt-based self-improvement presents a more scalable alternative, yet poses unresolved challenges in prompt design, feedback representation, convergence criteria, and error am-plification mitigation. The primary objective of this study is to systemati-cally examine the reliability of existing summarization eval-uation methods in the context of large language model (LLM)–generated summaries and to investigate whether eval-uation signals can be effectively leveraged to improve summa-rization quality. Specifically, this research aims (1) to assess the extent to which widely used automatic evaluation metrics align with human judgments across diverse domains and doc-ument lengths; (2) to evaluate the effectiveness and robustness of LLM-based evaluation approaches, including single-agent and multi-agent configurations, as alternatives to conventional metrics; and (3) to develop and empirically validate a self-reflective summarization framework that integrates evaluation and generation to enable iterative quality improvement without model finetuning. To address these objectives, we formulate three research questions (RQs):  
+
+> •
+
+RQ1: To what extent do traditional automatic evaluation metrics correlate with human judgments across diverse domains and document lengths?  
+
+> •
+
+RQ2: How reliably can LLMs function as evaluation metrics for summarization quality assessment compared to conventional approaches?  
+
+> •
+
+RQ3: Can a human-aligned LLM evaluation framework enable iterative self-refinement to improve summarization quality? To answer RQ1, we conduct a systematic meta-evaluation of 14 widely adopted automatic metrics across seven datasets spanning five domains with varying input lengths, quanti-fying their alignment with human judgments on multiple quality dimensions. For RQ2, we investigate single-agent and multi-agent LLM evaluation architectures, benchmarking their performance against conventional metrics and analyzing domain-specific strengths and limitations. Addressing RQ3, we introduce LLM-ReSum , a novel reflective summarization framework wherein LLMs iteratively refine outputs based on self-generated evaluation feedback aligned with human quality criteria. Validation through both automatic metrics and human evaluation demonstrates substantial quality improvements, par-ticularly in factual accuracy and semantic coverage. Our contributions are fourfold:  
+
+> •
+
+We conduct a comprehensive meta-evaluation of widely-used automatic metrics and LLM-based evaluation across seven datasets spanning five domains, revealing system-atic failures of traditional lexical overlap metrics for evaluating LLM-generated summaries and establishing empirical reliability benchmarks across diverse contexts.  
+
+> •
+
+We systematically compare single-agent and multi-agent LLM evaluation architectures, demonstrating that multi-agent frameworks significantly outperform conventional metrics on linguistic quality dimensions, providing clear guidance for selecting appropriate evaluation strategies in practical deployment.  
+
+> •
+
+We propose LLM-ReSum , a novel self-reflective summa-rization framework integrating LLM evaluation and gen-eration in a closed feedback loop, achieving substantial gains of up to 33% in accuracy and 39% in coverage with 89% human preference rate, without requiring model finetuning or reinforcement learning.  
+
+> •
+
+We introduce PatentSumEval , a human-annotated benchmark for legal patent document summarization eval-uation, and release reproducible meta-evaluation code to facilitate future research. II. R ELATED WORK 
+
+A. Evaluation Methods for Summarization 
+
+Summarization evaluation approaches are broadly catego-rized as reference-based or reference-free [5]. Reference-based methods measure similarity against human-authored summaries, while reference-free approaches assess quality directly from source documents. Given the prohibitive cost of reference creation, particularly in specialized domains [2], we focus on reference-free evaluation. Automatic evaluation metrics dominate current practice. N-gram overlap metrics (ROUGE [19], BLEU [20]) quantify lexical similarity through surface-form matching. Embedding-based metrics (BERTScore [9], MoverScore [21]) leverage contextualized representations to capture semantic correspon-dence. Task-specific metrics operationalize quality through auxiliary NLP tasks: SummaC [22] employs natural language inference for consistency verification, while QuestEval [23] utilizes question-answering frameworks. These metrics exhibit systematic deficiencies. Empirical studies reveal weak correla-tions between automated scores and human quality judgments [5], [24], particularly for lexical metrics that penalize seman-tically valid paraphrases [10]. Given these limitations, researchers have conducted meta-evaluations to assess which metrics most reliably correlate with human judgments. However, existing reliability assess-ments suffer from a narrow scope. Prior meta-evaluations typically examine one or two datasets within homogeneous domains [5], [25], [26], constraining generalizability of their 2findings. Consequently, cross-domain robustness and perfor-mance across varying document characteristics remain unchar-acterized. 
+
+B. LLMs in Summarization: Evaluation and Improvement 
+
+The emergence of instruction-tuned LLMs has introduced new paradigms for both evaluation and quality improvement in summarization. Instruction-following capabilities enable direct quality assessment through natural language specifications of evaluation criteria. ChatGPT demonstrates human-comparable performance on Likert scoring and pairwise ranking tasks, surpassing conventional metrics [4]. Zero-shot consistency detection [14] and chain-of-thought evaluation frameworks [15] achieve superior human alignment on established bench-marks. Domain-specific applications, including biomedical summarization [2], further validate LLM evaluator capabilities. Despite these advances, critical limitations persist: evaluation quality exhibits high prompt sensitivity [27] and domain dependence [4], research concentrates predominantly on news corpora while specialized domains remain underexplored, and single-agent versus multi-agent architectures lack systematic comparison across diverse contexts. Beyond evaluation, parallel research investigates LLM-driven quality improvement through two paradigms. Rein-forcement learning methods optimize generation through feed-back signals: early approaches incorporated ROUGE rewards [28], [29], while recent work employs human preference models [30] or LLM-synthesized feedback [31]. Despite ef-fectiveness, these methods demand substantial computational resources and curated training data. Alternatively, prompt-based adaptation enables task-specific behavior through struc-tured instructions without parameter modification [32]. Recent investigations of feedback-driven text refinement [16] demon-strate viability for iterative improvement, though applications to summarization remain limited. Existing work treats evaluation and improvement as inde-pendent processes. While reinforcement learning approaches integrate feedback during training [30], [31], and prompt-based methods enable iterative refinement [16], no prior framework integrates LLM evaluation and generation in a closed feedback loop for iterative summarization quality enhancement. Specif-ically, existing evaluation studies focus on metric reliability [4], [14], [15] without exploring how evaluation outcomes can guide revision, and improvement methods rely on ex-ternal feedback sources [30] or general-purpose refinement strategies [16] rather than summary-specific evaluation cri-teria. Key questions remain unaddressed: whether evaluation feedback can be translated into actionable revision guidance, which quality dimensions respond to iterative refinement, and whether self-correction converges toward improved quality. We address these gaps by proposing LLM-ReSum , a self-reflective architecture wherein LLMs evaluate outputs against human-aligned criteria and leverage generated feedback for iterative refinement, achieving quality improvements without model finetuning. III. M ETHODOLOGY 
+
+A. Framework Overview ROUGE         
+
+> BERTScore
+> BLEU
+> SummaC
+> FactCC
+> ...
+> vs. Human
+> Evaluation
+> Summarization
+> Document
+> Improvement
+> Instruction
+> Task Instruction
+> Feedback
+> Re-evaluating
+> Existing Auto-evaluation
+> Metrics
+> Exploring More Effective
+> Auto-evaluation Methods
+> Improving Summarization
+> Based on
+> Evaluation Feedback
+> RQ1 RQ2 RQ3
+> document summary
+> Rationales Rate 1
+> 2
+> 3
+> Rationales
+> Rationales
+> Rate
+> Rate
+> Leader Agent
+> 1
+> Evaluator Agent
+> 1
+> Quality Definitions
+> Base Instruction
+> Reasoning Reinforced
+> Evaluator Agent
+> 2
+> Quality Definitions
+> Base Instruction
+> Reasoning Reinforced
+> 3
+> final rate
+> Aggregation
+> 12345
+
+Fig. 1. Overview of our three-stage research framework: meta-evaluation of automatic metrics (RQ1), multi-agent LLM evaluation (RQ2), and iterative self-reflective summarization (RQ3). 
+
+This study adopts a three-stage methodological framework to systematically address the research questions posed in Sec-tion I. To answer RQ1, we employ meta-evaluation method-ology to assess the reliability of automatic evaluation metrics by measuring their correlation with human judgments across diverse contexts. For RQ2, we design single-agent and multi-agent LLM evaluation frameworks that leverage instruction-following capabilities and chain-of-thought reasoning to sim-ulate human evaluation behavior. To address RQ3, we propose 
+
+LLM-ReSum , a self-reflective summarization framework that integrates evaluation and generation in a closed feedback loop to enable iterative quality improvement without model finetuning. Figure 1 illustrates the complete research workflow. 
+
+B. Task Formulation 
+
+We formalize the reference-free summarization evaluation and iterative refinement tasks as follows. Let D denote a source document and S denote a candidate summary. The evaluation task computes quality scores across K dimensions 
+
+Q = {q1, q 2, . . . , q K }:
+
+q(S, D ) = [ q1(S, D ), q 2(S, D ), . . . , q K (S, D )] (1) where each qi(S, D ) ∈ [1 , L ] represents a score on a Likert scale with L levels. For iterative refinement, starting with an initial summary 
+
+S(0) = fsum (D), we iteratively improve quality through evaluation-guided feedback: 
+
+S(t+1) = frefine (S(t), D, F (t)) (2) where F (t) = gfeedback (q(t), r(t)) represents structured feed-back constructed from evaluation scores q(t) and rationales 
+
+r(t) at iteration t. The process terminates when min i q(t) 
+
+> i
+
+≥ τ
+
+(quality threshold satisfied) or t = Tmax (maximum iterations reached). 3C. LLM-Based Evaluation Framework 1) Direct Evaluation Paradigm: We adopt the direct evalu-ation paradigm wherein evaluators assess generated summaries according to predefined quality criteria without relying on ref-erence summaries. This approach offers several advantages: it avoids assuming reference summaries represent perfect quality, enables evaluation along dimensions not captured by reference similarity, and provides flexibility to customize evaluation criteria for domain-specific applications [4]. Given that LLMs demonstrate exceptional instruction-following capabilities and can process complex natural lan-guage specifications of evaluation criteria [33], we hypothesize they can emulate human evaluation behavior when provided with appropriately structured prompts [15], [34]. We formalize LLM-based evaluation as qLLM (S, D ) = fLLM (Peval , S, D ),where Peval encodes evaluation instructions and quality dimen-sion definitions. 
+
+2) Multi-Agent Evaluation Framework: Inspired by human evaluation practices that aggregate judgments from multiple annotators to mitigate individual bias [35], we propose a multi-agent evaluation framework employing heterogeneous LLMs as independent evaluation agents. Each agent independently evaluates summaries using the Reasoning Reinforced prompt strategy, producing dimension-specific scores and rationales. When agents produce divergent assessments, we explore three aggregation mechanisms: 
+
+Averaging computes the arithmetic mean of scores across agents for each dimension, treating all agents equally and producing continuous scores. 
+
+Majority Voting identifies the most frequent score among agents for each dimension. In cases of three-way disagreement, the median score is selected. This method enforces discrete scoring and emphasizes consensus [36]. 
+
+Leader-Based Aggregation introduces an additional LLM serving as a meta-evaluator that receives independent eval-uations and rationales, analyzes points of agreement and disagreement, weighs the strength of different rationales, and produces a final assessment [37]. This approach leverages meta-reasoning capabilities to resolve conflicts intelligently. 
+
+D. LLM-ReSum: Self-Reflective Summarization Framework 
+
+Building upon the LLM evaluation framework, we propose 
+
+LLM-ReSum —a novel architecture that integrates evaluation and generation in a closed feedback loop for iterative quality improvement. The framework addresses a fundamental limi-tation of conventional summarization: the disconnect between training objectives and evaluation criteria [31]. By incorpo-rating evaluation directly into the generation process through prompt-based feedback, LLM-ReSum enables zero-shot qual-ity improvement without requiring supervised finetuning or reinforcement learning [32], [38]. The framework operational-izes two key hypotheses. First, explicit evaluation feedback aligned with human quality criteria can guide LLMs toward self-correction [39], [40]. Second, iterative refinement through evaluation-generation cycles can progressively improve output quality when properly constrained to prevent degradation [38]. 
+
+Algorithm 1 LLM-ReSum: Self-Reflective Summarization 
+
+Input: Source document D, Summarization function fsum ,Evaluation function feval , Refinement function frefine ,Quality threshold τ , Maximum iterations Tmax 
+
+Output: Enhanced summary S∗ 
+
+> 1:
+
+S(0) ← fsum (D) {Generate initial summary } 
+
+> 2:
+
+t ← 0 
+
+> 3:
+
+while t < T max do  
+
+> 4:
+
+q(t), r(t) ← feval (D, S (t)) {Evaluate current summary } 
+
+> 5:
+
+if min i q(t) 
+
+> i
+
+≥ τ then  
+
+> 6:
+
+return S(t) {Quality threshold satisfied } 
+
+> 7:
+
+end if  
+
+> 8:
+
+I ← { i | q(t) 
+
+> i
+
+< τ } { Identify deficient dimensions } 
+
+> 9:
+
+F (t) ← gfeedback ({q(t) 
+
+> i
+
+, r (t) 
+
+> i
+
+}i∈I ) {Construct feedback } 
+
+> 10:
+
+S(t+1) ← frefine (D, F (t)) {Generate refined summary } 
+
+> 11:
+
+t ← t + 1  
+
+> 12:
+
+end while  
+
+> 13:
+
+return arg max t′ min i q(t′) 
+
+> i
+
+{Return best summary }
+
+1) Iterative Refinement Process: LLM-ReSum executes a four-stage iterative cycle (Algorithm 1): (1) generate initial summary using standard summarization instructions (Prompt 1), (2) evaluate the summary across multiple quality dimen-sions producing scores and rationales using our reasoning-reinforced evaluation prompt ( Prompt 2) [15], (3) construct actionable feedback for dimensions scoring below threshold 
+
+τ , and (4) generate refined summary conditioned on the source document and evaluation feedback using the refinement prompt (Prompt 3) [40]. The cycle continues until convergence criteria are satisfied or maximum iterations Tmax are exhausted.            
+
+> Prompt 1: Initial Summarization
+> System Instruction
+> You are an expert summarization system specialized in creating concise, accurate, and comprehensive summaries.
+> Task Description
+> Generate a high-quality summary of the document provided below. The summary should capture the essential information while maintaining clarity and accuracy.
+> Requirements
+> •Include all key points and important information
+> •Maintain factual accuracy with the source document
+> •Use clear and concise language
+> •Ensure the summary is reader-friendly
+> Source Document
+> ¡original document¿
+> Output Format
+> Provide only the summary without additional commentary.
+
+4Prompt 2: Summary Evaluation (Reasoning-Reinforced) 
+
+System Instruction 
+
+You are an expert evaluator specializing in assessing sum-marization quality. 
+
+Task Description 
+
+Evaluate the quality of the summary below against the original document across multiple quality dimensions. 
+
+Quality Dimensions  
+
+> •
+
+Clarity : Is the summary reader-friendly? Does it express ideas clearly?  
+
+> •
+
+Accuracy : Does the summary contain the same informa-tion as the original document?  
+
+> •
+
+Coverage : How well does the summary cover the impor-tant information in the original document?  
+
+> •
+
+Overall quality : How good is the summary overall at representing the original document? 
+
+Evaluation Instructions 
+
+On a scale of 1-5, rate the summary on each dimension above. Provide one to two short sentences to explain your rating for each dimension , citing specific evidence from the summary. 
+
+Source Document 
+
+¡original document¿ 
+
+Summary to Evaluate 
+
+¡summary to evaluate¿ 
+
+Output Format 
+
+The output must follow the following Python dictionary format: 
+
+{’clarity’: clarity_score, ’accuracy’: accuracy_score, ’coverage’: coverage_score, ’overall’: overall_score, ’explanation’: {’clarity’: explanation, ’accuracy’: explanation, ’coverage’: explanation, ’overall’: explanation }} 
+
+Prompt 3: Summary Refinement 
+
+System Instruction 
+
+You are an expert summarization system. Your task is to generate an improved summary by addressing quality issues identified in the previous evaluation. 
+
+Task Description 
+
+Revise the summary below to resolve all flagged deficiencies while maintaining factual accuracy and completeness. 
+
+Quality Dimensions  
+
+> •
+
+Clarity : Is the summary reader-friendly? Does it express ideas clearly?  
+
+> •
+
+Accuracy : Does the summary contain the same informa-tion as the original document?  
+
+> •
+
+Coverage : How well does the summary cover the impor-tant information in the original document?  
+
+> •
+
+Overall quality : How good is the summary overall at representing the original document? 
+
+Evaluation Feedback from Previous Summary 
+
+The previous summary received the following assessment (scale 1-5):  
+
+> •
+
+Clarity [Score: ¡score¿ ]: ¡clarity explanation¿  
+
+> •
+
+Accuracy [Score: ¡score¿ ]: ¡accuracy explanation¿  
+
+> •
+
+Coverage [Score: ¡score¿ ]: ¡coverage explanation¿  
+
+> •
+
+Overall quality [Score: ¡score¿ ]: ¡overall explanation¿ 
+
+Instructions  
+
+> •
+
+Address each issue identified in the evaluation feedback above  
+
+> •
+
+Ensure the revised summary scores at least 4/5 on all dimensions  
+
+> •
+
+Verify all information against the source document below  
+
+> •
+
+Maintain conciseness while improving quality 
+
+Source Document 
+
+¡original document¿ 
+
+Previous Summary 
+
+¡summary to evaluate¿ 
+
+Output Format 
+
+Provide only the improved summary without additional com-mentary. 
+
+2) Feedback Construction and Convergence: A critical innovation is the transformation of evaluation scores into actionable improvement guidance. For each dimension scoring below threshold τ , we extract the evaluation rationale and for-mat it as structured natural language feedback. This approach serves dual purposes: it explicitly identifies deficient quality aspects and provides concrete error examples for correction. Unlike generic instructions, dimension-specific feedback with detailed rationales enables targeted revisions aligned with human quality expectations [33]. The refinement prompt (Prompt 3) comprises three compo-nents: (1) base instruction directing quality improvement with explicit dimension definitions, (2) evaluation feedback present-ing dimension-specific scores and explanatory rationales from the evaluation phase, and (3) the source document for fact verification. We establish convergence criteria to balance quality im-provement against iterative degradation risk [38]. The quality 5Fig. 2. Source document length distributions 
+
+threshold is set to τ = 4 on a 5-point Likert scale, where scores of 4 (“Good”) and 5 (“Excellent”) indicate acceptable quality. Refinement is triggered when any dimension scores below τ , ensuring comprehensive quality assurance across all evaluated aspects. We impose maximum iterations Tmax = 3 
+
+to prevent excessive refinement that may introduce semantic drift, over-compression, or hallucinations [41]. If convergence is not achieved within the iteration limit, the system returns the summary with the highest minimum quality score across all dimensions, ensuring the best available output is selected. IV. D ATASETS 
+
+We conduct our meta-evaluation across seven datasets span-ning five diverse domains to comprehensively assess metric reliability across different text types and lengths. Table I presents an overview of these datasets. Six datasets are drawn from existing literature, while we introduce PatentSumEval as a novel benchmark for legal domain summarization evaluation. The datasets exhibit substantial variation in input document length, ranging from short news articles (average 2,084 words in QAGS-XSUM) to lengthy research papers and government reports (average 27,631 words in GovReport), as illustrated in Figure 2 and Figure 3, enabling robust assessment of metric performance across diverse summarization contexts. 
+
+A. Existing Datasets 
+
+SummEval: Contains 100 CNN/DailyMail news articles with summaries from 23 models (16 extractive, 7 abstractive). Five Amazon Mechanical Turk workers and three experts rated summaries on a 5-point Likert scale across coherence, consistency, fluency, and relevance [5]. 
+
+Arxiv: Comprises scientific paper summaries from 12 long-document models including TDT [44] and DYLE [45], ap-plied to documents sampled from the arXivPubMed corpus. Three experts provided sentence-level binary judgments for factual consistency and relevance, aggregated to summary-level scores [26]. 
+
+GovReport: Contains government report summaries from the same 12 models as Arxiv, applied to documents from  
+
+> Fig. 3. Model-generated summary length distributions
+
+the GovReport dataset. Three experts evaluated summaries using sentence-level binary judgments for factual consistency and relevance, averaged to produce summary-level evalua-tions [26]. 
+
+TLDR: Consists of 788 Reddit posts with summaries from 8 reinforcement learning model variants. Each summary received ten evaluations on a 7-point Likert scale across coherence, accuracy, coverage, and overall quality [42]. 
+
+QAGS-XSUM: Contains 239 news article summaries from the XSUM dataset generated by the BART model. Three Amazon Mechanical Turk workers evaluated factual consis-tency through sentence-level binary judgments, aggregated via averaging [43]. 
+
+QAGS-CNN/DM: Comprises 235 news article summaries from the CNN/DailyMail dataset generated by the Bottom-Up model. Three Amazon Mechanical Turk workers assessed factual consistency using sentence-level binary judgments, averaged to summary-level scores [43]. 
+
+B. PatentSumEval Benchmark (Ours) 1) Dataset Construction: Since no publicly available datasets exist for evaluating legal document summarization with human annotations, we constructed PatentSumEval to assess metric performance on domain-specific technical doc-uments. The benchmark comprises 180 summaries generated by six models across 30 patent documents related to commu-nication and streaming technologies, collected from Google Patents 1.
+
+Input Selection. Patent documents contain extensive tech-nical descriptions, but the most critical content includes the ab-stract and claims. The abstract provides an invention overview, while claims detail specific novel aspects. Unlike existing datasets such as BIGPATENT [46] that use only the abstract as reference, we concatenate both abstract and claims as model input to enable generation of summaries that comprehensively cover both the invention’s scope and novelty. 
+
+> 1https://patents.google.com
+
+6TABLE I OVERVIEW OF META -EVALUATION DATASETS WITH HUMAN ANNOTATIONS . T HE DATASETS SPAN FIVE DOMAINS WITH VARYING DOCUMENT LENGTHS AND EVALUATION PROTOCOLS .                  
+
+> Dataset # Models # Docs Domain Human Eval. Length (words) Evaluation Dimensions Source Summary Ling. Acc./Cons. Cov./Rel. Overall
+> SummEval [5] 23 100 News Likert (1-5) 2,160 (601) 343 (105)
+
+# ✓ ✓ ✓ ✗       
+
+> Arxiv [26] 12 17 Scientific Binary †27,193 (6,558) 972 (342)
+
+# ✗ ✓ ✓ ✗       
+
+> GovReport [26] 12 17 Government Binary †27,631 (6,943) 2,658 (363)
+
+# ✗ ✓ ✓ ✗       
+
+> TLDR [42] 8788 Social media Likert (1-7) 3,756 (1,866) 227 (123)
+
+# ✓ ✓ ✓ ✓       
+
+> QAGS-XSUM [43] 1239 News Binary ‡2,084 (514) 105 (22)
+
+# ✗ ✓ ✗ ✗       
+
+> QAGS-CNN/DM [43] 1235 News Binary ‡1,791 (192) 284 (83)
+
+# ✗ ✓ ✗ ✗       
+
+> PatentSumEval ∗630 Legal Likert (1-5) 9,754 (2,727) 647 (209)
+
+# ✓ ✓ ✓ ✓    
+
+> Note: ∗Our proposed dataset. †Sentence-level binary evaluations averaged to summary-level scores. ‡Sentence-level binary consistency judgments aggregated via averaging. Ling. = Linguistic quality (coherence, fluency, clarity); Acc./Cons. = Accuracy/Consistency; Cov./Rel. = Coverage/Relevance. Length values represent the mean (standard deviation) in word count.
+
+# ✓indicates dimension evaluated; ✗indicates not evaluated. 
+
+Model Selection. We generated summaries using six diverse models representing different architectural paradigms: HUPD-T5-base (domain-specific patent model), XLNet, BART, and Pegasus (general-purpose pretrained models), LongT5 (long-context specialist), and GPT-3.5-turbo (instruction-tuned LLM). Each model generated one summary per document, yielding 180 summaries total. 
+
+2) Human Evaluation Protocol: Annotator Recruitment. 
+
+Given the technical complexity of communication and en-gineering patents, we recruited three Master’s students in computer science and engineering fields with sufficient domain expertise to assess summary quality. Each annotator inde-pendently evaluated all 180 summaries. To ensure annotation reliability, we embedded quality control questions throughout the evaluation to identify and filter inconsistent responses. 
+
+Evaluation Platform. We conducted evaluations using the APPEN platform 2, which provides structured interfaces for Likert-scale assessments and facilitates quality control. The complete evaluation form is publicly available 3.
+
+Quality Dimensions. Annotators rated each summary on a 5-point Likert scale (1=Poor, 2=Fair, 3=Adequate, 4=Good, 5=Excellent) across four dimensions:  
+
+> •
+
+Clarity : Whether the summary expresses ideas clearly without ambiguity or readability issues.  
+
+> •
+
+Accuracy : Whether all information in the summary is entailed by the source document without fabrications.  
+
+> •
+
+Coverage : How comprehensively the summary captures the important information from the source.  
+
+> •
+
+Overall Quality : Holistic assessment of how effectively the summary represents the source, balancing conciseness with information preservation. 
+
+3) Error Analysis: To understand model failure modes, we conducted a qualitative analysis examining summaries that 
+
+> 2
+
+https://client.appen.com 
+
+> 3
+
+APPEN evaluation form 
+
+received low human ratings (scores ≤ 2 on any dimension). We identified three recurring error patterns: 
+
+Low Abstractiveness. HUPD-T5-base, XLNet, and BART predominantly employed extractive strategies, copying lengthy phrases or entire sentences verbatim rather than paraphrasing. This extractive behavior explains their high ROUGE scores (which reward n-gram overlap) despite receiving low clarity ratings from human evaluators who expect synthesized, read-able text. HUPD-T5-base exhibited particularly severe issues, concatenating copied fragments without ensuring semantic coherence. 
+
+Incompleteness. Several models, particularly shorter-output models like BART and Pegasus, omitted critical technical details or key claims from their summaries. These summaries achieved high accuracy scores (containing no fabricated infor-mation) but low coverage scores (missing essential content), demonstrating a precision-recall trade-off in summary gener-ation. 
+
+Hallucinations. LongT5 exhibited the most severe factual errors, including term substitution and concept conflation. A representative example: the source document defined “RIBS” as “Radio Interface Based Synchronization”, but LongT5 generated “bribs coordination” in its summary—a nonsensical substitution that fundamentally corrupts the technical mean-ing. Such hallucinations are particularly problematic in legal documents where terminology precision is critical. These error patterns reveal fundamental trade-offs in patent summarization: extractive methods achieve factual accuracy but sacrifice readability and abstractiveness, while abstractive approaches risk introducing hallucinations when paraphrasing technical terminology. The findings motivate the need for evaluation metrics that can reliably detect these diverse error types across different model architectures. 7V. E XPERIMENTS AND RESULTS 
+
+A. Baseline Metrics 
+
+Different datasets employ subsets of these dimensions ac-cording to their evaluation protocols, as detailed in Table I. SummEval assesses coherence, consistency, fluency, and rele-vance; Arxiv and GovReport focus on factual consistency and relevance; TLDR evaluates coherence, accuracy, coverage, and overall quality; QAGS datasets exclusively measure factual consistency; and PatentSumEval examines clarity, accuracy, coverage, and overall quality. We evaluate a comprehensive set of automatic metrics spanning four categories: (1) readability metrics assess lin-guistic complexity and accessibility (FRE, DCR); (2) n-gram overlap metrics quantify surface-level lexical matching (ROUGE, BLEU, METEOR, CHRF); (3) embedding-based metrics leverage contextualized representations for semantic similarity (BERTScore, BARTScore); and (4) task-specific neural metrics employ auxiliary NLP tasks to evaluate fac-tual consistency and informativeness (SummaC, SummaQA, QAEval, QuestEval, BLANC). Table II details each metric. 
+
+B. Implementation Detail 
+
+We investigate both single-agent and multi-agent LLM evaluation architectures using state-of-the-art open-source instruction-tuned models. This configuration enables system-atic comparison of evaluation strategies while maintaining reproducibility. For single-agent evaluation, we employ three independently operating models: Meta-Llama-3.1-8B-Instruct (Llama-3.1-8B [53]), an 8-billion parameter instruction-tuned model from Meta’s Llama 3.1 series; Linkbricks-Horizon-AI-Avengers-V6-32B 4 (Linkbricks-V6-32B), a 32-billion parameter spe-cialized model; and Qwen2-7B-Instruct (Qwen2-7B [54]), a 7-billion parameter instruction-tuned model from Alibaba’s Qwen2 family. For multi-agent evaluation, we implement a collaborative architecture wherein the three single-agent models indepen-dently assess summaries and their outputs are aggregated through one of three strategies. The averaging strategy com-putes the arithmetic mean of scores across agents for each quality dimension, treating all agents equally. The majority voting strategy selects the most frequent score per dimension, with median selection applied in cases of three-way dis-agreements to ensure deterministic outputs. The leader-based aggregation strategy employs an additional meta-evaluator agent (Microsoft-Phi-4 [55]) that receives independent eval-uations and their accompanying rationales, analyzes points of agreement and disagreement, and produces final assessments by weighing the strength of different arguments [37]. To ensure evaluation stability and reproducibility, we con-figure all models with a temperature set to 10 −10 , effectively implementing deterministic sampling. This hyperparameter setting eliminates stochastic variation in model outputs while maintaining the pretrained models’ capabilities. 
+
+> 4https://huggingface.co/Saxo/Linkbricks-Horizon-AI-Avengers-V6-32B
+
+C. Human Evaluation Protocol for LLM-ReSum Validation 1) Evaluation Strategy: We employ a controlled pairwise comparison design where evaluators compare initial sum-maries (IS) generated without feedback against enhanced summaries (ES) produced through complete LLM-ReSum refinement cycles. 
+
+2) Evaluation Dimensions: Human evaluations across our datasets focus on six quality dimensions encompassing both linguistic and content aspects of summarization. The linguis-tic quality dimensions assess surface-level properties, while content quality dimensions evaluate semantic fidelity and informativeness. For linguistic quality , we consider three dimensions. Co-herence measures whether the summary is structured and organized effectively, progressing logically from one sentence to the next to form a cohesive body of information rather than presenting disjointed fragments [56]. Fluency assesses whether the summary is free from formatting issues, capitalization errors, or grammatical mistakes that impede readability [56]. 
+
+Clarity evaluates whether the summary is reader-friendly and expresses ideas clearly without ambiguity [13]. For content quality , we evaluate three critical dimensions. 
+
+Accuracy (also referred to as factual consistency) determines whether the summary contains only information present in the source document; a factually consistent summary includes exclusively statements that are entailed by the source [5], [13]. 
+
+Coverage (or relevance) measures how comprehensively the summary captures the important information from the source document [13]. Overall quality provides a holistic assessment of how effectively the summary represents the source docu-ment as a whole, balancing conciseness with preservation of essential information [13], [18]. 
+
+3) Data Sampling and Summary Generation: We randomly sampled 30 source documents from each of three datasets (CNNDailyMail, ArxivPubMed, and PatentSumEval), yield-ing 90 instances. For each document, we generated ini-tial summaries (IS) via single-pass generation and enhanced summaries (ES) through complete LLM-ReSum refinement. Three graduate students in computer science with strong English proficiency served as evaluators. Following compre-hensive training on quality dimensions (Clarity, Accuracy, Coverage, Overall Quality), task procedures, and calibration exercises, evaluators received document-summary pairs with anonymized, randomized presentation order. For each pair, they selected the superior summary across four dimensions and provided justifications. 
+
+4) Evaluator Recruitment and Training: Three graduate students in computer science with strong English proficiency and prior annotation experience served as evaluators. We con-ducted a comprehensive training session covering: (1) quality dimension definitions with concrete examples, (2) APPEN platform interface navigation, (3) calibration exercises on 10 sample document-summary pairs with subsequent discussion, and (4) resolution of edge cases and ambiguous scenarios. All evaluators demonstrated satisfactory inter-rater agreement 8TABLE II BASELINE AUTOMATIC EVALUATION METRICS CATEGORIZED BY EVALUATION APPROACH .                 
+
+> Category Metric Description Readability Flesch Reading Ease Scores (0–100) based on sentence and word length; higher scores indicate greater readability. Dale-Chall Readability Difficulty assessment based on sentence length and unfamiliar word frequency.
+> N-gram Overlap
+> ROUGE [19] Recall-oriented overlap for unigrams (R-1), bigrams (R-2), and longest common subse-quences (R-L). BLEU [20] Geometric mean of n-gram precision with brevity penalty. METEOR [47] Semantic overlap incorporating exact matches, stemming, synonyms, and word alignment. CHRF [48] Character-level n-gram F-scores for fine-grained similarity.
+> Embedding-Based BERTScore [9] Token-level similarity using contextualized BERT embeddings. BARTScore [49] Generation likelihood scoring via BART language model.
+> Task-Specific
+> SummaC [22] Factual consistency detection via natural language inference (NLI). SummaQA [50] QA-based coverage assessment using answer F1 and confidence scores. QAEval [51] Factual verification via question answering on generated summaries. QuestEval [23] Reference-free bidirectional question generation and answering. BLANC [52] Informativeness via cloze task performance improvement.
+
+(κ > 0.70 ) on calibration tasks before proceeding to the main evaluation. 
+
+5) Evaluation Task Design: Pairwise Comparison Proto-col. For each of 90 document instances, evaluators received the source document and two anonymized summaries (labeled “Summary A” and “Summary B”) through the APPEN plat-form interface. Summary presentation order was randomized to prevent position bias, and evaluators remained blind to generation method throughout the study. 
+
+Quality Assessment. For each quality dimension, eval-uators selected which summary was superior or indicated equal quality, accompanied by written justifications for their decisions. The four evaluation dimensions are:  
+
+> •
+
+Clarity : Reader-friendliness and expression of ideas with-out ambiguity or readability issues.  
+
+> •
+
+Accuracy : Factual consistency with source; absence of hallucinations or unsupported statements.  
+
+> •
+
+Coverage : Comprehensiveness in capturing important source information while avoiding trivial details.  
+
+> •
+
+Overall Quality : Holistic assessment balancing concise-ness, accuracy, and informativeness. 
+
+6) Quality Control Mechanisms: We implemented three quality assurance procedures. First, attention-check items with obvious quality differences (e.g., summaries containing clear hallucinations versus accurate summaries) were randomly embedded at a rate of 10% without evaluator awareness. Second, the APPEN interface enforced minimum justification lengths (50 characters) to prevent superficial engagement and encourage thoughtful assessment. Third, pre-task training as-sessments ensured evaluators comprehended evaluation criteria before main task completion. All three evaluators passed all embedded attention checks. One submission with incomplete justifications was flagged and removed during quality review, yielding 89 valid evaluations per evaluator (267 total judg-ments across 89 documents). 
+
+7) Inter-Annotator Agreement: We computed Krippen-dorff’s alpha across all evaluators, documents, and dimensions to quantify inter-rater reliability. The overall agreement co-efficient was α = 0 .784 (95% CI: [0.731, 0.829]), indicat-ing substantial agreement according to standard interpretation guidelines ( α > 0.667 = substantial agreement; α > 0.800 =strong agreement). This demonstrates that evaluation criteria were well-defined and consistently interpreted across evalu-ators, validating the reliability of preference judgments for LLM-ReSum performance assessment. 
+
+D. Results 1) RQ1: Reliability of Automatic Evaluation Metrics: 
+
+Table III presents a comprehensive meta-evaluation of 14 automatic metrics across seven datasets spanning five domains, revealing substantial variability in metric reliability . Task-specific neural metrics demonstrate the strongest alignment with human judgments on factual consistency, with SummaC-CV achieving the highest correlations on SummEval ( τ =0.65 ) and Arxiv ( τ = 0.70 ). However, this performance does not generalize consistently: SummaC-CV exhibits only moderate correlation on GovReport coverage ( τ = 0 .58 ) and negligible correlation on PatentSumEval. 
+
+Systematic Failures of Lexical Metrics. N-gram over-lap metrics show moderate effectiveness in news domains (ROUGE-L achieving τ = 0.55 on SummEval) yet fail catastrophically on long-document datasets . BLEU produces significant negative correlations on Arxiv accuracy (τ =
+
+−0.61 ) and consistently underperforms across TLDR and QAGS benchmarks. These failures underscore fundamental limitations of lexical matching for abstractive summarization, where semantic equivalence rarely corresponds to surface-form overlap. Readability metrics exhibit similar inconsistency: DCR achieves moderate correlation on SummEval coverage 9TABLE III META -EVALUATION OF AUTOMATIC METRICS ACROSS QUALITY DIMENSIONS . A BBREVIATIONS : A=A CCURACY , C=C OVERAGE , C OH =C OHERENCE ,FLU =F LUENCY , C LAR =C LARITY . S IGNIFICANCE LEVELS : *** p < 0.001 , ** p < 0.01 , * p < 0.05 . C OLORS INDICATE CORRELATION STRENGTH FOR STATISTICALLY SIGNIFICANT RESULTS (p < 0.05 ): STRONG (τ ≥ 0.60 ) , MODERATE (0.40 ≤ τ < 0.60 ) , AND NEGATIVE . LLM-BASED EVALUATORS SIGNIFICANTLY OUTPERFORM CONVENTIONAL METRICS IN LINGUISTIC DIMENSIONS (F LUENCY /C OHERENCE ) AND SPECIALIZED TASKS 
+
+(P ATENT COVERAGE ), WHILE CONVENTIONAL METRICS (E.G., S UMMA C) REMAIN ROBUST FOR STANDARD ACCURACY ASSESSMENT .                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+
+> Metric SummEval Arxiv GovRpt TLDR QAGS-X QAGS-C PatentSumEval
+> ACCoh Flu ACACACCoh AAACClar
+> Readability
+> FRE -.47* -.30 -.30 -.33 .30 .12 .09 .21 -.06*** -.05*** -.04*** -.06 -.11* -.80 -.74 -.60 DCR .17 .60*** .53** .44* -.18 -.06 .27 -.39 .08*** .05*** .05*** 0-.01 -.40 -.32 -.20
+> N-gram Overlap
+> BLEU -.21 -.21 .03 -.27 -.61** -.06 .33 .03 -.02* -.12*** 0-.11* .07 -.80 -.74 -.60 ROUGE-1 .47* .20 0.23 .18 .49* .15 .39 .19*** .29*** .08*** -.08 .23*** .80 .74 .60 ROUGE-2 .50** .27 .07 .29 .30 .36 -.06 .55* .29*** .29*** .11*** .05 .32*** .60 .53 .40 ROUGE-L .55** .32 .12 .31 .39 .33 -.06 .55* .24*** .28*** .09*** -.02 .30*** .60 .53 .40 METEOR .48** .18 -.02 .21 .15 .52* .18 .36 .19*** .27*** .08*** -.05 .23*** .60 .53 .40 CHRF .45* .22 -.02 .24 .27 .39 .15 .46* .22*** .30*** .09*** -.06 .26*** .60 .53 .40
+> Embedding-Based
+> BERTScore .53** .27 .07 .29 .52* .15 -.46* -.46* .29*** .35*** .12*** .02 .31*** .40 .32 .20 BARTScore .42* .15 -.08 .21 .55* .30 .15 .03 .16*** .32*** .05*** -.07 .25*** .80 .74 .60
+> Task-Specific
+> SummaC-ZS .62*** .42* .18 .41* .61** -.12 .52* .52* .28*** .16*** .11*** .33*** .39*** .40 .53 .60 SummaC-CV .65*** .32 .08 .34 .70*** .09 .21 .58** .31*** .15*** .10*** .37*** .48*** 0.11 .20 SummaQA-Prob .50** .50** .27 .53** .33 .27 -.09 -.03 .14*** .22*** .08*** .09 .16*** .60 .53 .40 SummaQA-F1 .58*** .28 .12 .34 .06 -.18 -.18 .12 .15*** .18*** .09*** -.05 .24*** -.20 -.32 -.40 BLANC .62*** .35 .15 .38* .21 .58** .27 .39 .22*** .25*** .08*** .08 .21*** .60 .53 .40 QAEval-EM 00000000-.02 .05*** .06*** 00000QAEval-F1 000000000-.01 .01 00000QAEval-Ans .42* .25 .18 .34 .03 -.09 .30 .24 .05*** .06*** .05*** -.13* -.03 -.20 -.11 0QuestEval .57** .20 .03 .29 .27 -.27 -.18 -.36 .25*** .16*** .10*** .18*** .17*** 0.11 .20 BARTScore-Gen .63*** .33 .13 .43* .39 -.27 -.09 -.33 .38*** .22*** .15*** .15** .57*** 0.11 .20
+> LLM-Based (Llama-3.1-8B)
+> LLM-Acc (macro) .57** .81*** ––-.35 .21 .22 -.08 .24*** .24*** –.47*** .53*** .60 .74 –LLM-Acc (micro) ––––00.55* .30 –––.47*** .58*** –––LLM-Cov (macro) .56** .68*** ––.05 .38 .28 -.11 .15*** .32*** –––.95* 1.0* –LLM-Cov (micro) ––––00.42 .36 ––––––––LLM-Coherence ––.46* –––––––.13*** –––––LLM-Fluency ––.67*** .76*** ––––––––––––LLM-Clarity –––––––––––––––.60
+
+(τ = 0.60 ), while FRE demonstrates significant negative correlations across multiple dimensions. 
+
+Domain-Dependent Behavior of Embedding Approaches. BERTScore achieves moderate correlations on SummEval ( τ = 0 .53 ) and Arxiv ( τ = 0 .52 ) accuracy, but exhibits significant negative correlation on GovReport for both accuracy and coverage ( τ = −0.46 ) . This suggests contextual embeddings struggle with lengthy governmental documents (average 27,631 words) where local semantic similarity may misalign with document-level consistency. 
+
+Emergence of LLM-Based Evaluation Advantages. 
+
+LLM-based evaluators significantly outperform conventional metrics on linguistic quality dimensions . LLM-Fluency achieves exceptional correlation on SummEval ( τ = 0.67 
+
+for coherence, τ = 0.76 for fluency), surpassing the best conventional metric (DCR, τ = 0.53 ) by 24%. For spe-cialized domains, LLM-Coverage demonstrates near-perfect correlation on PatentSumEval ( τ = 1 .0), whereas conventional metrics achieve at most τ = 0 .74 . However, LLM evaluators exhibit inconsistent performance on long documents, with LLM-Accuracy producing negligible correlations on Arxiv (τ = −0.35 ) and GovReport ( τ = 0 .22 ). These findings reveal that no single conventional metric reliably captures human judgments across diverse domains and document lengths. Task-specific metrics excel at factual con-sistency detection in news summarization but fail to generalize to specialized domains or linguistic quality assessment. 
+
+2) RQ2: LLM-Based Evaluation Performance: Table IV demonstrates that multi-agent LLM evaluation frameworks consistently outperform both single-agent approaches and con-ventional metrics. Majority voting achieves the highest human alignment on SummEval, with correlations of τ = 0.84 
+
+for accuracy, τ = 0.76 for coverage, and τ = 0.57 for coherence, representing improvements of ∆ = +0 .19 , +0 .16 ,and +0 .04 respectively over the best conventional metrics. On PatentSumEval, leader-based aggregation achieves near-perfect alignment (τ = 1.00 ) for accuracy, substantially exceeding all conventional approaches. 
+
+Single-Agent Performance Variability. Among single-agent configurations, performance varies significantly by model architecture and dataset characteristics. Qwen2-7B demonstrates exceptional performance on SummEval accuracy (τ = 0 .78 ) and fluency ( τ = 0 .76 ), while Linkbricks-V6-32B excels across multiple dimensions simultaneously, achiev-ing strong correlations for coverage ( τ = 0 .85 ), coherence (τ = 0 .76 ), and fluency ( τ = 0 .72 ). However, all single-agent approaches exhibit substantially degraded performance on long documents, with Llama-3.1-8B producing negative correlation on Arxiv accuracy ( τ = −0.12 ) and near-zero performance on GovReport coverage ( τ = −0.06 ). 
+
+Dimension-Specific Advantages. Multi-agent aggregation strategies yield differential benefits across contexts. Averaging 10 TABLE IV LLM-BASED EVALUATION PERFORMANCE ACROSS SEVEN DATASETS . A BBREVIATIONS : A CC =A CCURACY , C OV =C OVERAGE , C OH =C OHERENCE ,FLU =F LUENCY , C LR =C LARITY . Q-XS/Q-CN=QAGS-XSUM/CNN. S IGNIFICANCE LEVELS : *** p < 0.001 , ** p < 0.01 , * p < 0.05 . C OLORS INDICATE SIGNIFICANT CORRELATIONS (p < 0.05 ): STRONG , MODERATE , AND NEGATIVE . M ULTI -AGENT AGGREGATION (ESPECIALLY MAJORITY 
+
+VOTING ) CONSISTENTLY YIELDS THE HIGHEST AGREEMENT WITH HUMAN JUDGMENTS , PROVIDING SIGNIFICANT GAINS OVER CONVENTIONAL METRICS ON SUMM EVAL AND PATENT SUM EVAL , THOUGH CHALLENGES REMAIN IN LONG -DOCUMENT COVERAGE (G OV REPORT ).                                                                                                                                                       
+
+> Evaluation Method SummEval TLDR Arxiv GovReport PatentSumEval Q-XS Q-CN
+> Acc Cov Coh Flu Acc Cov Coh Acc Cov Acc Cov Acc Cov Clr Acc Acc
+> Single-Agent LLM
+> Llama-3.1-8B .53*** .64*** .47* .69*** .25*** .34*** .14*** -.12 .48* .52* -.06 .60 .95* .60 .46*** .51*** Linkbricks-V6-32B .68*** .85*** .76*** .72*** .35*** .36*** .20*** .34 .15 .66** -.14 .60 .95* .60 .61*** .63*** Qwen2-7B .78*** .65*** .37* .76*** .20*** .22*** .05*** .04 .26 0-.31 .80 .74 .80 .58*** .55***
+> Multi-Agent Aggregation
+> Averaging .68*** .70*** .54** .77*** .30*** .36*** .17*** .17 .42 .56* .02 1.00* .95* .80 .57*** .62*** Majority Voting .84*** .76*** .57** .76*** .29*** .33*** .16*** .40 .53* .34 0.60 .95* .95* .62*** .65***
+> Leader-Based (Phi-4) .82*** .70*** .55** .76*** .32*** .34*** .18*** .23 .29 .57* -.03 1.00* .95* .60 .58*** .59***
+> Best Conventional (from Table III)
+> Best Conv. Metric .65*** .60*** .53** .53** .38*** .35*** .15*** .70*** .58** .52* .58** –––.37*** .48***
+> Improvement ( ∆)+.19 +.16 +.04 +.24 -.06 -.01 +.03 -.30 -.05 +.05 -.58 +1.00 +.95 +.95 +.25 +.17
+
+produces the most consistent improvements on PatentSumEval (τ = 1 .0 for accuracy), while leader-based aggregation using Phi-4 achieves the highest correlation on TLDR accuracy (τ = 0 .32 ). For linguistic quality, LLM evaluators demonstrate substantial advantages, with coherence and fluency corre-lations reaching τ ≈ 0.76 , representing improvements of 
+
+∆ = +0 .24 over conventional metrics. 
+
+Critical Long-Context Limitations. Despite these suc-cesses, critical performance degradation emerges on Arxiv and GovReport datasets . The best multi-agent configuration achieves only τ = 0 .40 on Arxiv accuracy versus τ = 0 .70 
+
+for SummaC-CV ( ∆ = −0.30 ). This pattern intensifies for GovReport coverage, where LLM approaches produce at most 
+
+τ = 0 .02 compared to τ = 0 .58 for BLANC. These failures indicate fundamental limitations in processing documents av-eraging 27,000 words. The results suggest that LLM evaluators excel when docu-ment length remains within context window constraints and evaluation criteria emphasize nuanced linguistic properties rather than exhaustive content verification. 
+
+3) RQ3: Effectiveness of LLM-ReSum Framework: Table V reveals that LLM-ReSum functions as a targeted quality as-surance mechanism whose effectiveness depends critically on initial summary quality. Across all summaries, initial scores average 4.3-4.7 across dimensions, with enhanced summaries showing minimal gains ( ≤ 0.5% ). This ceiling effect validates the framework’s design to trigger refinement selectively based on dimension-specific scores. 
+
+Substantial Recovery for Deficient Outputs. Filtering for low-quality summaries (initial scores < 4.0) exposes the framework’s effectiveness . Accuracy improvements reach 
+
++32 .8% for CNN, +33 .3% for PubMed, and +33 .3% for PatentSumEval, elevating summaries from marginal quality (3.0-3.2) to acceptable standards (4.0-4.25). Coverage demon-strates similarly substantial gains, with Daily Mail achieving 
+
++38 .9% and CNN reaching +27 .3% . These metrics confirm that the framework successfully addresses information omis-sion by explicitly identifying missing content through coverage evaluation. 
+
+Domain-Specific Enhancement Patterns. Clarity improve-ments exhibit pronounced domain-specific patterns . Arxiv summaries show exceptional gains of +50 .0% , suggesting that scientific abstracts benefit substantially from refinement of technical terminology and structural coherence. In contrast, news summaries (CNN, Daily Mail) demonstrate moderate clarity improvements ( +4 .9% to +12 .5% ), indicating that journalistic templates produce initially readable outputs requir-ing primarily content correction. 
+
+Strong Human Validation. Human evaluation provides robust validation of framework effectiveness . Among 90 docu-ments evaluated by 29 annotators (Krippendorff’s α = 0 .784 ), enhanced summaries achieve 89% overall preference. Cov-erage demonstrates the most pronounced preference (97%), confirming that iterative refinement successfully addresses information omission. Accuracy preference reaches 62%, vali-dating effective factual error correction. Notably, clarity shows only 46% preference for enhanced summaries, suggesting that initial generation already produces readable text and that excessive refinement may occasionally introduce unnecessary complexity. These findings establish that LLM-ReSum operates as an effective quality assurance mechanism rather than a universal enhancement tool. The selective activation (triggering refine-ment only when scores fall below τ = 4 ) enables targeted improvement while avoiding degradation of already-acceptable summaries. VI. D ISCUSSION 
+
+A. Revisiting Traditional Automatic Metrics in the GenAI Era 
+
+Our findings from RQ1 reveal a fundamental incongruity: traditional lexical metrics demonstrate severely diminished validity for evaluating LLM-generated summaries across most contexts, yet exhibit domain-specific effectiveness under par-ticular conditions. ROUGE and BLEU produce weak or neg-ative correlations with human judgments across the majority of evaluated datasets, with BLEU yielding negative correla-tion on Arxiv. This systematic inadequacy originates from a representational mismatch: lexical overlap metrics presup-pose that surface-form similarity indicates semantic quality, 11 TABLE V LLM-R ESUM FRAMEWORK QUALITY IMPROVEMENT . L IKERT SCALE SCORES (1=P OOR , 5=E XCELLENT ) FOR INITIAL (IS) AND ENHANCED (ES)                        
+
+> SUMMARIES . C OLOR CODING : S UBSTANTIAL (≥20%), E XCEPTIONAL (≥50%) IMPROVEMENT . IS=I NITIAL SUMMARY , ES=E NHANCED SUMMARY .
+> ∆=PERCENTAGE IMPROVEMENT . H UMAN PREF .=P ERCENTAGE OF EVALUATORS PREFERRING THE ENHANCED SUMMARY (ES) OVER THE INITIAL
+> SUMMARY (IS). L OW -QUALITY SUMMARIES SHOW STATISTICALLY SIGNIFICANT GAINS ,PARTICULARLY IN ACCURACY (+33% FOR PATENT /P UB MED )
+> AND COVERAGE (+39% FOR DAILY MAIL ). H UMAN EVALUATORS STRONGLY PREFER ENHANCED SUMMARIES (89% O VERALL ).
+
+Dataset Clarity Accuracy Coverage Overall Quality Human Pref. (ES vs IS) IS ES (% ∆) IS ES (% ∆) IS ES (% ∆) IS ES (% ∆)
+
+All Summaries 
+
+CNN 4.32 4.32 (+0.1%) 4.49 4.51 (+0.5%) 4.14 4.16 (+0.4%) 4.30 4.31 (+0.2%) –Daily Mail 4.41 4.41 (+0.1%) 4.52 4.52 (±0.0%) 4.22 4.23 (+0.2%) 4.38 4.39 (+0.1%) –Arxiv 4.37 4.37 (+0.1%) 4.72 4.72 (±0.0%) 4.41 4.41 (±0.0%) 4.42 4.42 (±0.0%) –PubMed 4.39 4.39 (±0.0%) 4.59 4.59 (+0.1%) 4.22 4.22 (+0.1%) 4.39 4.39 (+0.1%) –PatentSumEval 4.12 4.12 (±0.0%) 4.09 4.10 (+0.1%) 4.07 4.07 (±0.0%) 4.10 4.10 (±0.0%) –
+
+Low-Quality Summaries (IS ¡ 4.0) 
+
+CNN 4.05 4.25 (+4.9%) 3.20 4.25 (+32.8%) 3.30 4.20 (+27.3%) 3.75 4.25 (+13.3%) –Daily Mail 4.00 4.50 (+12.5%) 3.83 4.17 (+8.7%) 3.00 4.17 (+38.9%) 4.00 4.50 (+12.5%) –Arxiv 3.00 4.50 (+50.0%) 4.00 4.50 (+12.5%) 4.00 4.50 (+12.5%) 4.00 4.50 (+12.5%) –PubMed 4.00 4.33 (+8.3%) 3.00 4.00 (+33.3%) 3.33 4.00 (+20.0%) 3.67 4.33 (+18.2%) –PatentSumEval 4.00 4.33 (+8.3%) 3.00 4.00 (+33.3%) 3.67 4.00 (+9.1%) 4.00 4.00 (±0.0%) –
+
+Human Evaluation (n=90 documents, 29 evaluators, Krippendorff’s α=0.784) 
+
+Prefers ES 46% 62% 97% 89% 89% (Avg) 
+
+whereas contemporary LLM-generated summaries predomi-nantly employ abstractive strategies that express equivalent semantic content through lexically divergent formulations [26], [57]. This paraphrastic variation, which constitutes a hallmark of human-like summarization, systematically causes lexical metrics to underestimate the quality of abstractive outputs. PatentSumEval presents a theoretically instructive exception to this pattern. ROUGE-1 achieves substantial correlation with human quality judgments on patent documents, reflecting domain-specific constraints rather than rehabilitating the met-ric’s general applicability. Legal and patent domains impose stringent terminological precision requirements where lexical substitution may alter legal interpretation or claim scope [58]. Under these specialized conditions, lexical matching consti-tutes a valid quality indicator because precise terminology re-tention represents a substantive quality criterion. The method-ological implication is consequential: evaluation frameworks must adopt context-adaptive strategies rather than universal ap-proaches [5]. While general-purpose summarization warrants abandoning lexical metrics in favor of semantic assessment methods, high-stakes terminology-sensitive domains encom-passing legal, medical, and regulatory applications require lexical precision verification as a necessary safety mechanism. 
+
+B. The Paradigm Shift: LLMs as Evaluators 
+
+RQ2 establishes that LLM-based evaluation constitutes a paradigmatic advancement in automated quality assess-ment, while simultaneously identifying critical operational constraints. Multi-agent architectures demonstrate systematic performance advantages over single-agent configurations, with Majority Voting and Leader-Based aggregation achieving su-perior alignment with human judgments. This performance dif-ferential mirrors established human evaluation methodologies where inter-annotator agreement protocols mitigate individual cognitive biases. Analogous to employing multiple human annotators to attenuate idiosyncratic preferences, multi-agent LLM evaluation leverages ensemble mechanisms to reduce model-specific variance and systematic biases, yielding more robust and generalizable assessments [59]. Our empirical results expose a critical operational boundary: severe performance degradation on extended documents. On GovReport datasets averaging 27,000 words, LLM evaluators produce near-zero or negative correlations with human cover-age assessments, substantially underperforming conventional metrics. While LLMs demonstrate superior semantic reasoning capabilities within tractable context windows, their sequential processing architecture cannot replicate the global seman-tic aggregation capabilities of embedding-based approaches for comprehensive content verification [60]. The practical implication necessitates architectural adaptation: practitioners deploying LLM evaluators for lengthy documents should im-plement hierarchical evaluation frameworks, document seg-mentation strategies, or hybrid architectures that allocate LLM assessment to linguistic quality dimensions while employing conventional metrics for exhaustive coverage verification. 
+
+C. From Generation to Reflection: The Effectiveness of LLM-ReSum 
+
+RQ3 demonstrates that advancing summarization quality increasingly depends on integrating evaluation-driven self-correction mechanisms rather than solely pursuing more so-phisticated generation architectures [40]. The most theoreti-cally significant finding manifests as a targeted enhancement effect: LLM-ReSum produces negligible improvements for ini-tially high-quality summaries exhibiting ceiling performance, yet achieves substantial quality recovery for deficient out-puts, with accuracy improvements reaching 33% and coverage enhancements achieving 39%. This asymmetric improvement pattern illuminates the framework’s functional role as a quality assurance mechanism. Summaries approaching optimal quality 12 offer limited refinement potential, whereas outputs exhibiting factual hallucinations or critical information omissions benefit substantially from the self-evaluation feedback loop, which functions as an error detection and correction gatekeeper [61]. The 89% human preference rate for enhanced summaries provides robust empirical validation that evaluation-derived feedback encodes actionable revision guidance rather than constituting superficial textual reformulation. This demon-strates that LLM-generated evaluation rationales successfully identify specific quality deficiencies and operationalize con-crete improvement strategies. The framework establishes a computationally efficient pathway for domain-specific quality enhancement through test-time inference optimization alone, obviating resource-intensive fine-tuning procedures or rein-forcement learning from human feedback. For deployment contexts requiring quality assurance capabilities without model retraining infrastructure, LLM-ReSum offers a practical and scalable solution. 
+
+D. Implications 1) Theoretical Implications: Context-Adaptive Evalua-tion Frameworks. Our meta-evaluation across seven datasets demonstrates that metric reliability varies systematically with domain, document length, and generation paradigm, establish-ing an empirical foundation for context-sensitive evaluation design. Rather than pursuing universally optimal metrics, future research should develop systematic protocols for charac-terizing the operational contexts in which specific evaluation approaches align with human judgment [5]. This represents a methodological shift from benchmark-driven metric devel-opment toward evidence-based evaluation engineering. Under this paradigm, practitioners empirically validate metric relia-bility within their target application domain before production deployment [11]. 
+
+Compositional Evaluation Architectures. The differential performance of evaluation methods across quality dimen-sions reveals that optimal evaluation requires compositional architectures allocating specialized assessment mechanisms to appropriate dimensions. Specifically, LLM-based evaluators demonstrate superior performance on linguistic quality as-sessment (coherence, fluency, clarity), while embedding-based metrics excel at coverage verification, and lexical matching remains effective for terminology-sensitive domains. Future frameworks should exploit these complementary strengths through hybrid designs by deploying semantic reasoning ca-pabilities of LLMs for linguistic coherence [15], leveraging distributional properties of embeddings for comprehensive coverage assessment [9], and applying lexical precision checks where terminological accuracy is critical [2]. 
+
+Evaluation as Generative Feedback. The LLM-ReSum framework demonstrates that evaluation signals can function as actionable feedback for iterative quality improvement at inference time without model retraining. This establishes a re-search direction beyond correlation-based metric validation by designing evaluation mechanisms that generate interpretable, dimension-specific improvement directives rather than scalar quality scores [38]. Such feedback-oriented architectures trans-form evaluation from passive quality measurement into active generation guidance, integrating assessment as a functional component within generation systems rather than external post-hoc verification [40]. 
+
+2) Practical Implications: Evaluation Infrastructure as Development Priority. Our findings indicate that practition-ers should establish domain-specific evaluation infrastructure before production deployment rather than adopting evaluation strategies validated on standard benchmarks. Organizations should construct validation datasets within their target domain and empirically assess which metrics correlate with domain-specific human quality judgments, treating evaluation reliabil-ity as a deployment prerequisite [62]. Prioritizing evaluation infrastructure in this manner enables early identification of failure modes specific to the target domain and supports principled system iteration based on reliable quality signals. 
+
+Reusable Evaluation Methodologies. The meta-evaluation framework and PatentSumEval construction protocol we in-troduce provide concrete methodological templates applicable to new domains. Practitioners deploying summarization in specialized areas, such as medical [2], financial [63], or aca-demic domains [64], can replicate our validation procedures by sampling domain-representative documents, recruiting ex-pert annotators with domain knowledge, collecting multi-dimensional quality judgments [5], and computing metric-human correlations to identify reliable evaluation approaches. This methodological reusability reduces barriers to establish-ing rigorous evaluation in previously underexplored applica-tion domains. 
+
+Iterative Quality Assurance Architecture. For quality-critical applications where errors carry significant conse-quences, such as legal document processing, medical report generation, or regulatory compliance summaries, the iter-ative refinement paradigm offers a deployable quality as-surance mechanism. Rather than assuming single-pass gen-eration achieves acceptable quality, systems can implement evaluation-guided revision cycles that detect and correct defi-ciencies before output delivery [65]. This architecture provides two operational advantages: systematic error detection through automated evaluation, and interpretable diagnostic rationales that facilitate human oversight and continuous system im-provement. 
+
+E. Limitations 
+
+Our investigation identifies salient boundary conditions that constrain generalizability. For documents exceeding approx-imately 27,000 words, the evaluation component itself may yield unreliable quality assessments, producing a cascading error scenario where erroneous evaluation feedback propagates to misguided refinement operations. This length constraint reflects current architectural limitations in attention mecha-nisms and necessitates alternative methodological approaches such as hierarchical evaluation frameworks or document seg-mentation strategies for reliable extended-length application. Furthermore, employing LLMs to evaluate LLM-generated 13 content introduces potential systematic bias through self-preference effects, wherein models may disproportionately favor outputs exhibiting stylistic conventions or structural patterns characteristic of their training distributions. While our human validation study provides independent empirical verification of framework effectiveness, future research should systematically investigate bias mitigation strategies including evaluator architectural diversification and calibration protocols employing conventional metrics as reference anchors to ensure robust evaluation reliability across heterogeneous content types and generation paradigms. VII. C ONCLUSION 
+
+This study reveals that traditional lexical overlap met-rics systematically fail to align with human judgments for LLM-generated summaries, while multi-agent LLM evaluators demonstrate substantially stronger correlation. We introduced LLM-ReSum, a self-reflective framework achieving significant quality improvements through evaluation-driven iterative re-finement without model finetuning, validated by strong human preference. Additionally, we contributed PatentSumEval for legal domain evaluation. Future work should explore hierar-chical evaluation frameworks for extended documents, hybrid architectures combining LLM and conventional metrics, and bias mitigation strategies to address self-preference effects in LLM-based evaluation. REFERENCES [1] H. Zhang, P. S. Yu, and J. Zhang, “A systematic survey of text summarization: From statistical methods to large language models,” 
+
+ACM Computing Surveys , vol. 57, no. 11, pp. 1–41, 2025. [2] Z. Huang, X. Chen, Y. Wang, J. Huang, and X. Zhao, “A survey on biomedical automatic text summarization with large language models,” 
+
+Information Processing & Management , vol. 62, no. 5, p. 104216, 2025. [3] M. Zhang, G. Zhou, W. Yu, N. Huang, and W. Liu, “A comprehensive survey of abstractive text summarization based on deep learning,” Com-putational intelligence and neuroscience , vol. 2022, no. 1, p. 7132226, 2022. [4] M. Gao, J. Ruan, R. Sun, X. Yin, S. Yang, and X. Wan, “Human-like summarization evaluation with chatgpt,” arXiv preprint arXiv:2304.02554 , 2023. [5] A. R. Fabbri, W. Kry´ sci´ nski, B. McCann, C. Xiong, R. Socher, and D. Radev, “Summeval: Re-evaluating summarization evaluation,” Trans-actions of the Association for Computational Linguistics , vol. 9, pp. 391–409, 2021. [6] J. Ding, H. Chen, S. Kolapudi, L. Pobbathi, and H. Nguyen, “Quality evaluation of summarization models for patent documents,” in 2023 IEEE 23rd International Conference on Software Quality, Reliability, and Security (QRS) . IEEE, 2023, pp. 250–259. [7] R. C. Belwal, S. Rai, and A. Gupta, “Text summarization using topic-based vector space model and semantic measure,” Information Process-ing & Management , vol. 58, no. 3, p. 102536, 2021. [8] B. Mutlu, E. A. Sezer, and M. A. Akcayol, “Candidate sentence selection for extractive text summarization,” Information Processing & Management , vol. 57, no. 6, p. 102359, 2020. [9] T. Zhang*, V. Kishore*, F. Wu*, K. Q. Weinberger, and Y. Artzi, “Bertscore: Evaluating text generation with bert,” in International Con-ference on Learning Representations , 2020. [10] E. Reiter, “A structured review of the validity of bleu,” Computational Linguistics , vol. 44, no. 3, pp. 393–401, 2018. [11] T. Goyal, J. J. Li, and G. Durrett, “News summarization and evaluation in the era of gpt-3,” arXiv preprint arXiv:2209.12356 , 2022. [12] J. Ding, H. Nguyen, and H. Chen, “Evaluation of question-answering based text summarization using llm invited paper,” in 2024 IEEE Inter-national Conference on Artificial Intelligence Testing (AITest) . IEEE, 2024, pp. 142–149. [13] H. Nguyen, H. Chen, L. Pobbathi, and J. Ding, “A comparative study of quality evaluation methods for text summarization,” arXiv preprint arXiv:2407.00747 , 2024. [14] Z. Luo, Q. Xie, and S. Ananiadou, “Chatgpt as a factual inconsistency evaluator for text summarization,” arXiv preprint arXiv:2303.15621 ,2023. [15] Y. Liu, D. Iter, Y. Xu, S. Wang, R. Xu, and C. Zhu, “G-eval: Nlg evaluation using gpt-4 with better human alignment,” in Proceedings of the 2023 conference on empirical methods in natural language processing , 2023, pp. 2511–2522. [16] R. Song, Y. Li, M. Tian, H. Wang, F. Giunchiglia, and H. Xu, “Causal keyword driven reliable text classification with large language model feedback,” Information Processing & Management , vol. 62, no. 2, p. 103964, 2025. [17] M. Akter, E. C ¸ ano, E. Weber, D. Dobler, and I. Habernal, “A comprehen-sive survey on legal summarization: Challenges and future directions,” 
+
+ACM Computing Surveys , vol. 58, no. 7, pp. 1–32, 2025. [18] N. Stiennon, L. Ouyang, J. Wu, D. Ziegler, R. Lowe, C. Voss, A. Rad-ford, D. Amodei, and P. F. Christiano, “Learning to summarize with human feedback,” Advances in neural information processing systems ,vol. 33, pp. 3008–3021, 2020. [19] C.-Y. Lin, “Rouge: A package for automatic evaluation of summaries,” in Text summarization branches out , 2004, pp. 74–81. [20] K. Papineni, S. Roukos, T. Ward, and W.-J. Zhu, “Bleu: a method for automatic evaluation of machine translation,” in Proceedings of the 40th annual meeting of the Association for Computational Linguistics , 2002, pp. 311–318. [21] W. Zhao, M. Peyrard, F. Liu, Y. Gao, C. M. Meyer, and S. Eger, “Moverscore: Text generation evaluating with contextualized embed-dings and earth mover distance,” in Proceedings of the 2019 conference on empirical methods in natural language processing and the 9th international joint conference on natural language processing (EMNLP-IJCNLP) , 2019, pp. 563–578. [22] P. Laban, T. Schnabel, P. N. Bennett, and M. A. Hearst, “Summac: Re-visiting nli-based models for inconsistency detection in summarization,” 
+
+Transactions of the Association for Computational Linguistics , vol. 10, pp. 163–177, 2022. [23] T. Scialom, P.-A. Dray, S. Lamprier, B. Piwowarski, J. Staiano, A. Wang, and P. Gallinari, “Questeval: Summarization asks for fact-based evalu-ation,” in Proceedings of the 2021 conference on empirical methods in natural language processing , 2021, pp. 6594–6604. [24] T. Sun, J. He, X. Qiu, and X.-J. Huang, “Bertscore is unfair: On social bias in language model-based metrics for text generation,” in 
+
+Proceedings of the 2022 conference on empirical methods in natural language processing , 2022, pp. 3726–3739. [25] M. Bhandari, P. N. Gour, A. Ashfaq, P. Liu, and G. Neubig, “Re-evaluating evaluation in text summarization,” in Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP) , 2020, pp. 9347–9359. [26] H. Y. Koh, J. Ju, H. Zhang, M. Liu, and S. Pan, “How far are we from robust long abstractive summarization?” in Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing ,2022, pp. 2682–2698. [27] G. Mahmoudi, “Exploring prompting large language models as explain-able metrics,” in Proceedings of the 4th Workshop on Evaluation and Comparison of NLP Systems , 2023, pp. 219–227. [28] R. Paulus, C. Xiong, and R. Socher, “A deep reinforced model for abstractive summarization,” in International Conference on Learning Representations , 2018. [29] L. Wang, J. Yao, Y. Tao, L. Zhong, W. Liu, and Q. Du, “A reinforced topic-aware convolutional sequence-to-sequence model for abstractive text summarization,” in Proceedings of the 27th International Joint Conference on Artificial Intelligence , 2018, pp. 4453–4460. [30] K. Sta´ nczak, N. Meade, M. Bhatia, H. Zhou, K. B¨ ottinger, J. Barnes, J. Stanley, J. Montgomery, R. Zemel, N. Papernot et al. , “Societal alignment frameworks can improve llm alignment,” arXiv preprint arXiv:2503.00069 , 2025. [31] H. Song, T. Yun, Y. Lee, J. Oh, G. Lee, J. Cai, and H. Su, “Learning to summarize from llm-generated feedback,” in Proceedings of the 2025 Conference of the Nations of the Americas Chapter of the Association for Computational Linguistics: Human Language Technologies (Volume 1: Long Papers) , 2025, pp. 835–857. [32] T. Brown, B. Mann, N. Ryder, M. Subbiah, J. D. Kaplan, P. Dhariwal, A. Neelakantan, P. Shyam, G. Sastry, A. Askell et al. , “Language mod-
+
+14 els are few-shot learners,” Advances in neural information processing systems , vol. 33, pp. 1877–1901, 2020. [33] L. Ouyang, J. Wu, X. Jiang, D. Almeida, C. Wainwright, P. Mishkin, C. Zhang, S. Agarwal, K. Slama, A. Ray et al. , “Training language models to follow instructions with human feedback,” Advances in neural information processing systems , vol. 35, pp. 27 730–27 744, 2022. [34] T. Kocmi and C. Federmann, “Large language models are state-of-the-art evaluators of translation quality,” in Proceedings of the 24th Annual Conference of the European Association for Machine Translation , 2023, pp. 193–203. [35] A. Nenkova, R. Passonneau, and K. McKeown, “The pyramid method: Incorporating human content selection variation in summarization evalu-ation,” ACM Transactions on Speech and Language Processing (TSLP) ,vol. 4, no. 2, pp. 4–es, 2007. [36] P. Wang, L. Li, L. Chen, Z. Cai, D. Zhu, B. Lin, Y. Cao, L. Kong, Q. Liu, T. Liu et al. , “Large language models are not fair evaluators,” in Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , 2024, pp. 9440– 9450. [37] Y. Du, S. Li, A. Torralba, J. B. Tenenbaum, and I. Mordatch, “Improving factuality and reasoning in language models through multiagent debate,” in Forty-first International Conference on Machine Learning , 2023. [38] S. Welleck, X. Lu, P. West, F. Brahman, T. Shen, D. Khashabi, and Y. Choi, “Generating sequences by learning to self-correct,” in The Eleventh International Conference on Learning Representations , 2023. [39] Y. Bai, S. Kadavath, S. Kundu, A. Askell, J. Kernion, A. Jones, A. Chen, A. Goldie, A. Mirhoseini, C. McKinnon et al. , “Constitutional ai: Harmlessness from ai feedback,” arXiv preprint arXiv:2212.08073 ,2022. [40] A. Madaan, N. Tandon, P. Gupta, S. Hallinan, L. Gao, S. Wiegreffe, U. Alon, N. Dziri, S. Prabhumoye, Y. Yang et al. , “Self-refine: Iter-ative refinement with self-feedback,” Advances in neural information processing systems , vol. 36, pp. 46 534–46 594, 2023. [41] J. Maynez, S. Narayan, B. Bohnet, and R. McDonald, “On faithfulness and factuality in abstractive summarization,” in Proceedings of the 58th annual meeting of the association for computational linguistics , 2020, pp. 1906–1919. [42] N. Stiennon, L. Ouyang, J. Wu, D. Ziegler, R. Lowe, C. Voss, A. Rad-ford, D. Amodei, and P. F. Christiano, “Learning to summarize with human feedback,” Advances in neural information processing systems ,vol. 33, pp. 3008–3021, 2020. [43] A. Wang, K. Cho, and M. Lewis, “Asking and answering questions to evaluate the factual consistency of summaries,” in Proceedings of the 58th annual meeting of the association for computational linguistics ,2020, pp. 5008–5020. [44] B. Pang, E. Nijkamp, W. Kry´ sci´ nski, S. Savarese, Y. Zhou, and C. Xiong, “Long document summarization with top-down and bottom-up infer-ence,” in Findings of the Association for Computational Linguistics: EACL 2023 , 2023, pp. 1267–1284. [45] Z. Mao, C. H. Wu, A. Ni, Y. Zhang, R. Zhang, T. Yu, B. Deb, C. Zhu, A. Awadallah, and D. Radev, “Dyle: Dynamic latent extraction for ab-stractive long-input summarization,” in Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , 2022, pp. 1687–1698. [46] E. Sharma, C. Li, and L. Wang, “Bigpatent: A large-scale dataset for abstractive and coherent summarization,” in Proceedings of the 57th annual meeting of the association for computational linguistics , 2019, pp. 2204–2213. [47] S. Banerjee and A. Lavie, “Meteor: An automatic metric for mt evalua-tion with improved correlation with human judgments,” in Proceedings of the acl workshop on intrinsic and extrinsic evaluation measures for machine translation and/or summarization , 2005, pp. 65–72. [48] M. Popovi´ c, “chrf: character n-gram f-score for automatic mt evalu-ation,” in Proceedings of the tenth workshop on statistical machine translation , 2015, pp. 392–395. [49] W. Yuan, G. Neubig, and P. Liu, “Bartscore: Evaluating generated text as text generation,” Advances in neural information processing systems ,vol. 34, pp. 27 263–27 277, 2021. [50] T. Scialom, S. Lamprier, B. Piwowarski, and J. Staiano, “Answers unite! unsupervised metrics for reinforced summarization models,” in 
+
+Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP) , 2019, pp. 3246–3256. [51] D. Deutsch, T. Bedrax-Weiss, and D. Roth, “Towards question-answering as an automatic metric for evaluating the content quality of a summary,” Transactions of the Association for Computational Linguistics , vol. 9, pp. 774–789, 2021. [52] O. Vasilyev, V. Dharnidharka, and J. Bohannon, “Fill in the blanc: Human-free quality estimation of document summaries,” in Proceedings of the First Workshop on Evaluation and Comparison of NLP Systems ,2020, pp. 11–20. [53] A. Grattafiori, A. Dubey, A. Jauhri, A. Pandey, A. Kadian, A. Al-Dahle, A. Letman, A. Mathur, A. Schelten, A. Vaughan et al. , “The llama 3 herd of models,” in Neural Information Processing Systems . Curran Associates, 2024. [54] A. Yang, B. Yang, B. Hui, B. Zheng, B. Yu, C. Zhou, C. Li, C. Li, D. Liu, F. Huang et al. , “Qwen2 technical report,” eprint arXiv: 2407.10671 ,2024. [55] M. Abdin, J. Aneja, H. Behl, S. Bubeck, R. Eldan, S. Gunasekar, M. Harrison, R. J. Hewett, M. Javaheripi, P. Kauffmann et al. , “Phi-4 technical report,” arXiv preprint arXiv:2412.08905 , 2024. [56] H. T. Dang, “Overview of duc 2005,” in Proceedings of the document understanding conference , vol. 2005, 2005, pp. 1–12. [57] M. Wilber, W. Timkey, and M. Van Schijndel, “To point or not to point: Understanding how abstractive summarizers paraphrase text,” in 
+
+Findings of the Association for Computational Linguistics: ACL-IJCNLP 2021 , 2021, pp. 3362–3376. [58] A. Kornilova and V. Eidelman, “Billsum: A corpus for automatic summarization of us legislation,” in Proceedings of the 2nd Workshop on New Frontiers in Summarization , 2019, pp. 48–56. [59] C.-M. Chan, W. Chen, Y. Su, J. Yu, W. Xue, S. Zhang, J. Fu, and Z. Liu, “Chateval: Towards better LLM-based evaluators through multi-agent debate,” in The Twelfth International Conference on Learning Representations , 2024. [60] X. Wu, Y. Wang, S. Jegelka, and A. Jadbabaie, “On the emergence of position bias in transformers,” in Forty-second International Conference on Machine Learning , 2025. [61] Z. Ji, T. Yu, Y. Xu, N. Lee, E. Ishii, and P. Fung, “Towards mitigating llm hallucination via self reflection,” in Findings of the Association for Computational Linguistics: EMNLP 2023 , 2023, pp. 1827–1843. [62] P. Liang, R. Bommasani, T. Lee, D. Tsipras, D. Soylu, M. Yasunaga, Y. Zhang, D. Narayanan, Y. Wu, A. Kumar et al. , “Holistic evaluation of language models,” Transactions on Machine Learning Research , 2023. [63] M. El-Haj, M. Litvak, N. Pittaras, G. Giannakopoulos et al. , “The financial narrative summarisation shared task (fns 2020),” in Proceedings of the 1st Joint Workshop on Financial Narrative Processing and MultiLing Financial Summarisation , 2020, pp. 1–12. [64] N. I. Altmami and M. E. B. Menai, “Automatic summarization of scientific articles: A survey,” Journal of King Saud University-Computer and Information Sciences , vol. 34, no. 4, pp. 1011–1028, 2022. [65] S. Kim, J. Shin, Y. Cho, J. Jang, S. Longpre, H. Lee, S. Yun, S. Shin, S. Kim, J. Thorne, and M. Seo, “Prometheus: Inducing fine-grained evaluation capability in language models,” in The Twelfth International Conference on Learning Representations , 2024. 
+
+15

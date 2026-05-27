@@ -1,0 +1,822 @@
+Title: An Interpretable and Scalable Framework for Evaluating Large Language Models
+
+URL Source: https://arxiv.org/pdf/2605.07046v1
+
+Published Time: Mon, 11 May 2026 00:25:52 GMT
+
+Number of Pages: 30
+
+Markdown Content:
+# An Interpretable and Scalable Framework for Evaluating Large Language Models 
+
+Xinhao Qu 1 Qiang Heng 2 Hao Zeng 3 Xiaoqian Liu 1∗
+
+> 1
+
+Department of Statistics, University of California, Riverside 
+
+> 2
+
+School of Statistics and Data Science, Southeast University 
+
+> 3
+
+Department of Statistics and Data Science, Southern University of Science and Technology 
+
+## Abstract 
+
+Evaluation of large language models (LLMs) is increasingly critical, yet standard benchmarking methods rely on average accuracy, overlooking both the inherent stochasticity of LLM outputs and the heterogeneity of benchmark items. Item Response Theory (IRT) offers a principled framework for modeling latent model abilities and item characteristics, but conventional methods are computationally expensive and numerically unstable, limiting large-scale implementations. To address these challenges, we propose an interpretable and scalable framework for LLM evaluation based on the majorization–minimization principle. Our ap-proach reformulates the problem as a sequence of constrained matrix factorization subproblems, enabling stable and efficient parameter estimation with theoretical guarantees for identifiability and convergence. Experiments on synthetic and real-world datasets, including MATH-500 and six Open LLM Leaderboard benchmarks, demonstrate that our method achieves superior scalability and interpretability. It delivers orders-of-magnitude speedups over competing methods while maintaining comparable or even higher estimation accuracy. Our results align with established scaling laws and offer insights into item difficulty and discrimination, informing more principled benchmark design. 
+
+## 1 Introduction 
+
+Given the rapid evolution of large language model (LLM) systems and their expanding applications [ 17 , 22 , 41 ], rigorous evaluation of LLMs is indispensable. Benchmarks have been the gold standard for developers to demonstrate model capabilities [ 1, 19 ], with performance typically measured by average accuracy between ground-truth labels and model-generated outputs across all benchmark items. However, this conventional approach overlooks two fundamental challenges: the stochastic nature of LLM outputs and the heterogeneity of benchmark items. First, LLM outputs can vary substantially under minor perturbations, such as changes in prompt order, slight typos, or the use of synonyms [ 46 , 44 , 65 ]. Under greedy decoding settings, outputs can be inconsistent even when presented with identical prompts [ 2 ], leading to fragile evaluations and complicating subsequent interpretation. Second, benchmark items exhibit substantial heterogeneity in their evaluative utility, in contrast to the implicit equal-weight assumption underlying average accuracy. Highly discriminative items can better differentiate model capabilities and thus warrant greater weights [ 9 ], whereas items compromised by training data contamination lose their evaluative integrity and should be downweighted [ 39 ]. Furthermore, as benchmarks evolve, some items become obsolete or redundant [61], which reduces evaluation efficiency and warrants exclusion. 
+
+> ∗Corresponding author. Email: xiaoqian.liu@ucr.edu Preprint.
+> arXiv:2605.07046v1 [stat.ML] 7 May 2026
+
+These challenges call for evaluation frameworks that can recover intrinsic model abilities under stochastic generation while capturing heterogeneity across benchmark items. Recently, psychometri-cians have brought Item Response Theory (IRT) into the picture [ 12 , 66 , 58 ], framing LLM evaluation as a latent variable modeling problem analogous to human performance assessment. IRT models each binary evaluation outcome as a sample drawn from a latent distribution, parameterized by both model traits and item features. Estimating these parameters enables a systematic decomposition of model performance, moving beyond average accuracy toward a more interpretable and diagnostically informative evaluation paradigm. However, traditional IRT-based evaluation methods [ 14 , 58 ] that rely on the expectation-maximization (EM) algorithm [ 21 ] suffer from critical limitations, most notably computational inefficiency and 
+
+numerical instability . These methods are often prohibitively slow [ 56 , 36 ], and their performance is extremely sensitive to singular data configurations, such as near-constant responses and collinearity [ 4, 16 ]. Such issues are particularly pronounced in LLM evaluation settings, where training data leakage or extremely difficult items frequently arise [ 39 , 13 ]. As a result, existing IRT approaches exhibit poor scalability and remain largely restricted to relatively small-scale applications , making them ill-suited for the rapidly growing ecosystem of LLMs and benchmark datasets. To address these limitations, we propose an interpretable and scalable computational framework for LLM evaluation based on the majorization-minimization (MM) principle [ 37 , 29 ]. Specifically, we reformulate the original problem as a sequence of constrained matrix factorization subproblems, thereby stabilizing and accelerating the estimation procedure. We further address parameter identifia-bility and establish theoretical guarantees for algorithmic convergence. Our primary contributions are as follows: • A novel MM-based framework : We develop an interpretable and scalable computational framework for LLM evaluation grounded in MM optimization, well-suited to large-scale evaluation datasets and capable of offering reliable and meaningful interpretations. • Theoretical guarantees : We provide theoretical guarantees for parameter identifiability and algorithmic convergence, ensuring reliable recovery of model abilities and item features. • Computational efficiency & scalability : Extensive large-scale experiments demonstrate orders-of-magnitude speedup over competing methods while achieving comparable or even superior estimation accuracy. • Real-world applications & empirical insights : We evaluate on MATH-500 and six bench-marks from the Hugging Face Open LLM Leaderboard. Results on model abilities are consistent with established parametric scaling laws [ 33 , 28 ], and the recovered item fea-tures align with human annotations [ 40 ], capturing fine-grained heterogeneity that average accuracy fails to reflect. Overall, this work presents a novel MM-based computational framework with rigorous theoretical guarantees, enhanced computational efficiency and scalability, and strong empirical interpretability, representing a substantial advancement over conventional IRT-based approaches for LLM evaluation. 
+
+## 2 Preliminary 
+
+We first conceptualize the evaluation process within a latent probabilistic framework. Given a set of 
+
+N LLMs and J benchmark items, let yij ∈ {− 1, 1} denote whether the i-th LLM correctly addressed the j-th benchmark item, yielding a binary response matrix Y ∈ {− 1, 1}N ×J . We assume that an LLM’s output is governed by an intrinsic stochastic process, modeling the probability of a correct response via a logit link function: 
+
+Φ( xij ) ≡ P (yij = 1 | xij ) = 11 + exp ( −xij /σ ) , (1) where xij represents the pre-activation score produced by the i-th model for the response of item j,and σ acts as the scaling parameter. This formulation mirrors standard next-token decoding, where the multi-class softmax over the vocabulary collapses into a logistic distribution when projected onto the binary correctness space, with σ corresponding directly to the temperature [25]. 2To obtain interpretable representations for fine-grained evaluation, we adopt a reparametrization based on the two-parameter IRT model (2PL-IRT) [26, 16], expressing the score matrix as 
+
+X = θa⊤ + 1b ⊤ = ( θ 1)
+
+a⊤
+
+b⊤
+
+
+
+≡ UV ⊤, (2) where θ = ( θ1, · · · , θ N )⊤, a = ( a1, · · · , a J )⊤, b = ( b1, · · · , b J )⊤, and 1 ∈ RN is a vector of ones. Each entry xij is decomposed as xij = aj θi + bj , where aj denotes item discrimination, θi represents model ability, and bj is an item easiness parameter. This formulation reveals a critical coupling: items with larger aj amplify differences in model ability, yielding stronger discriminative power, whereas items with small aj provide limited signal for distinguishing model capabilities. Following standard 2PL-IRT frameworks, we impose aj to be non-negative to ensure a monotonic relationship between model ability and response accuracy, preserving interpretability of the discrimination parameter. The intercept bj captures item easiness, serving as a baseline for the score that is independent of specific model-item interactions. 
+
+## 3 Methodology 
+
+To recover the triplet representation (θ, a, b), a straightforward approach is to minimize a binary cross-entropy loss accounting for all evaluation entries 
+
+ℓ(X) = − X
+
+> (i,j )∈Ω
+
+{γij log Φ( xij ) + (1 − γij ) log(1 − Φ( xij )) }, (3) with X = θa⊤ + 1b ⊤, subject to a ≥ 0. Here, the scaled response variable is defined as γij = 
+
+> 12
+
+(1 + yij ), and Ω ⊆ { (i, j ) | 1 ≤ i ≤ N, 1 ≤ j ≤ J} denotes the set of observed entries. For 
+
+(i, j ) /∈ Ω, we set yij = 0 .
+
+3.1 The majorization-minimization principle 
+
+We employ the MM principle [ 37 , 29 ] to convert the challenging minimization of ℓ(X) into a sequence of simpler surrogate problems. This is achieved through a majorization approximation 
+
+g(X | ˜X) anchored at the current estimate ˜X, satisfying (i) a tangency condition g( ˜X | ˜X) = ℓ( ˜X)
+
+for all ˜X and (ii) a domination condition g(X | ˜X) ≥ ℓ(X) for all X. The two conditions together ensure a monotone decrease of the objective ℓ(X) through iterating 
+
+X(t+1) = arg min  
+
+> X
+
+g(X | X(t)) (4) for iteration step t = 0 , 1, · · · . Notably, exact minimization of the surrogate function is not required to ensure descent of the objective. Therefore, one can inexactly solve (4) and still guarantee a monotonic decrease. Given the log-likelihood log Φ( x) is L-Lipschitz differentiable with L = 1 /4σ2, and that the density function ϕ(x) = Φ ′(x) is symmetric around zero, we invoke Proposition 2.1 in [ 42 ] to derive a quadratic majorization of ℓ(X) at ˜X, expressed as 
+
+g(X | ˜X) = L
+
+2 X − ˜Y 2
+
+> F(Ω)
+
++ c( ˜X), (5) where ˜Y = ˜X+4 σY◦Φ( −Y◦ ˜X) under the logit link (1) with ◦ denoting the Hadamard product, and 
+
+c( ˜X) is a constant depending on ˜X. Here ∥·∥ F(Ω) denotes the observed-entry Frobenius seminorm, defined for a matrix A as ∥A∥F(Ω) =
+
+qP 
+
+> (i,j )∈Ω
+
+a2 
+
+> ij
+
+.
+
+3.2 Constrained block-wise optimization 
+
+By integrating the reparameterization (2) into the quadratic majorization (5) , each MM update reduces to solving a constrained matrix factorization problem 
+
+min  
+
+> U=( θ,1),V=( a,b)
+
+∥UV ⊤ − ˜Y∥2
+
+> F(Ω)
+
+, subject to a ≥ 0. (6) 3Algorithm 1 Constrained Block MM ( cBMM ) 
+
+> 1:
+
+Input: Ω, Y, tolerance tol  
+
+> 2:
+
+Output: θ, a, b 
+
+> 3:
+
+Initialize U = ( u, 1), V = ( v1, v2), set δ = ∞ 
+
+> 4:
+
+while δ > tol do  
+
+> 5:
+
+˜X ← uv ⊤ 
+
+> 1
+
++ 1v ⊤ 
+
+> 2
+> 6:
+
+˜Y ← ˜X + 4 σY ◦ Φ( −Y ◦ ˜X) 
+
+> 7:
+
+Compute R ← ˜Y − 1v ⊤ 
+
+> 2
+
+and v1 ← arg min v1≥0 ∥uv ⊤ 
+
+> 1
+
+− R∥2 
+
+> F(Ω)
+> 8:
+
+Update v2 ← ( ˜Y − uv ⊤ 
+
+> 1
+
+)⊤1/N  
+
+> 9:
+
+Update R ← ˜Y − 1v ⊤ 
+
+> 2
+
+and u ← Rv 1(v⊤ 
+
+> 1
+
+v1)−1 
+
+> 10:
+
+δ ← | ℓ(uv ⊤ 
+
+> 1
+
++ 1v ⊤ 
+
+> 2
+
+) − ℓ( ˜X)|/|ℓ( ˜X)| 
+
+> 11:
+
+end while  
+
+> 12:
+
+return θ = u, a = v1, b = v2
+
+Observing that the objective function in (6) is quadratic in θ, a, and b, we alternately optimize over these variables. Given ˆθ and ˆb from the previous iteration, updating a reduces to a standard entrywise non-negative least squares (NNLS) problem 
+
+min  
+
+> a≥0
+
+∥ˆθa⊤ − ( ˜Y − 1ˆb⊤)∥2
+
+> F(Ω)
+
+,
+
+which we solve using the active set method [ 38 ]. With the updated ˆa, the parameter b admits a closed-form update ˆb = ( ˜Y − ˆθˆa⊤)⊤1/N . Subsequently, given ˆa and ˆb, the update for θ is obtained in closed form as ˆθ = ( ˜Y − 1ˆb⊤)ˆ a/(ˆ a⊤ ˆa). Detailed derivations are omitted for brevity. We refer to the proposed computational framework as constrained block MM ( cBMM ), and summarize the full procedure in Algorithm 1. Per-iteration computational complexity is provided in the Appendices A.4. 
+
+3.3 Identifiability 
+
+As noted in [ 26 ] and [ 58 ], the estimation of θ and a under reparameterization (2) is subject to identifiability issues, such as trivial solutions and symmetries involving sign-flips and scaling, leading to multiple optima with an identical score matrix X. To resolve these ambiguities, specific structural constraints and architectural considerations must be imposed. We begin by providing the formal definition of identifiability. 
+
+Definition 1 (Identifiability) . The latent probabilistic model is identifiable if for any solution 
+
+(θ∗, a∗, b∗), another suite of (θ†, a†, b†) that induces the same distribution matrix, i.e., Φ( X†) = Φ( X∗), must satisfy (θ†, a†, b†) = ( θ∗, a∗, b∗).
+
+Note that strict identifiability based on Definition 1 is not generally guaranteed, as hinted by the ambiguities mentioned previously. We show that, however, the model is identifiable up to an equivalence class, as formalized in Definition 2, with the underlying order structure preserved. 
+
+Definition 2 (Equivalence class) . Solution sets (θ∗, a∗, b∗) and (θ†, a†, b†) are within an equiv-alence class if each corresponding pair, (θ∗, θ†), (a∗, a†), and (b∗, b†), induces the same rank ordering. 
+
+With all definitions in place, we are ready to present the following theorem to characterize identifia-bility of (2). We leave the full proof to the Appendices A.2. 
+
+Theorem 1 (Structural preservation) . The latent probabilistic model (1) is identifiable up to an equivalence class if θ̸ = c, where c is a constant vector, and a ≥ 0 with a̸ = 0.
+
+3.4 Convergence 
+
+We establish convergence guarantees for cBMM under the following assumptions. (H1) Boundedness. The iterates {(θ(t), a(t), b(t))} are contained in a compact set K, with 
+
+∥W∥ ≤ M for all W ∈ K and some constant M > 0.4(H2) Non-degeneracy. There exists a constant c > 0 such that ∥θ(t)∥ ≥ c and ∥a(t)∥ ≥ c for all 
+
+t ≥ 0.Assumption (H1) is standard for iterative optimization algorithms and can be enforced by adding a bounding constraint to the feasible set. Assumption (H2) excludes degenerate solutions with θ = 0
+
+or a = 0, which are already ruled out by the non-triviality condition in Theorem 1. Let W =(θ, a, b) ∈ RN +2 J denote the concatenated parameter vector, and define F (W) ≡ ℓ(θa⊤ + 1b ⊤)
+
+as the objective viewed as a function of W.With assumptions in place, we present the main convergence result in Theorem 2, established under the Kurdyka–Łojasiewicz (KL) framework [ 43 , 3, 7]. The complete proof is provided in the Appendices A.3. 
+
+Theorem 2 (Convergence of cBMM ). Under Assumptions (H1) and (H2) , the sequence 
+
+{(θ(t), a(t), b(t))} generated by Algorithm 1 satisfies: (i) (Summability) 
+
+> ∞
+
+X
+
+> t=0
+
+∥W(t+1) − W(t)∥ < ∞;(ii) (Whole-sequence convergence) W(t) → W∗ = ( θ∗, a∗, b∗) as t → ∞ ;(iii) (Stationarity) W∗ satisfies the KKT conditions: 
+
+∇θ ℓ(X∗) = 0, a∗ ≥ 0, ∇aℓ(X∗) ≥ 0, a∗ ◦ ∇ aℓ(X∗) = 0.
+
+Furthermore, when the KL exponent is 1/2, the convergence is linear , i.e., there exist constants C > 0
+
+and α ∈ (0 , 1) such that ∥W(t) − W∗∥ ≤ Cα t.
+
+## 4 Experiments 
+
+We conduct extensive experiments using both synthetic data and real-world applications. On the one hand, simulation studies on synthetic data are used for sensitivity analysis under varying prob-lem parameters, including the temperature, the missing pattern and rate, and the sparsity level of the discrimination parameter; Detailed results are provided in Appendices A.6, with key findings summarized below. On the other hand, we evaluate cBMM on real-world benchmark suites to assess scalability by comparing its runtime against baseline methods, and to assess interpretability through the recovered model ability, item difficulty and discrimination. 
+
+Baseline methods. We compare cBMM with several baselines. First, we consider conventional IRT methods with two implementations: (i) mirt in R [ 14 ], which employs the EM algorithm for parameter estimation, and (ii) py-irt in Python [ 36 ], which uses stochastic variational inference [35 ] with mini-batch gradient updates. We also include generic optimization approaches for solving (3). Specifically, we consider Limited-memory BFGS with Box constraints ( L-BFGS-B ) [ 10 ], a second-order quasi-Newton method with bounded constraints, and Manopt [ 8], a framework for optimization on manifolds. Implementation details are provided in Appendices A.5. 
+
+Key findings in simulation studies. As shown in Appendices A.6, simulation studies on synthetic data reveal several key findings: (i) cBMM demonstrates robust performance under varying tempera-tures, missing patterns and rates, and sparsity levels of the discrimination parameter a, consistently achieving comparable or even superior estimation accuracy while running significantly faster (up to 200x) than competing methods. (ii) py-irt produces substantially lower estimation accuracy than the other methods, and is therefore excluded from the real-world benchmark application studies. 
+
+Real-world benchmark suites. We consider multiple benchmark suites with varying numbers of LLMs ( N ) and benchmark items ( J) to assess scalability and interpretability. In total, we examine seven benchmark suites. The first, MATH-500 [ 40 ], contains J = 500 items and is evaluated across 
+
+N = 140 LLMs; we adopt the evaluation data collected by [ 58 ], with full model lists and prompt details provided in the Appendices A.8. The remaining six benchmark suites are drawn from the Hugging Face Open LLM Leaderboard [ 24 ], which includes N = 2211 LLMs evaluated between June and December 2024 under the Leaderboard v2 schema. These suites vary in the number of benchmark items ( J): IFEval (541), MuSR (756), GPQA ( 1192 ), MATH (1324), BBH (5761), and 5IFEval MuSR GPQA MATH BBH MMLU-Pro          
+
+> Benchmark suite
+> 0
+> 10
+> 100
+> 1000
+> 10000
+> Runtime (sec)
+> NA NA NA NA
+> mirt L-BFGS-B Manopt cBMM
+> 49x 58x
+> 86x
+> 41x 56x 46x
+> 0x
+> 50x
+> 100x
+> 150x
+> 200x
+> Speedup
+
+Figure 1: Scalability comparison across six large-scale benchmark suites. Runtime (sec) (left axis, points and interval markers) is shown on a logarithmic scale and reports the average runtime (points) as well as the minimum and maximum runtime (interval markers) across 50 replicates for each method. Speedup (right axis, shaded bars) represents the average speedup of cBMM over the fastest baseline. Benchmark suites are ordered by increasing scale of J with fixed N = 2211 . Exact speedup ratios are annotated for each suite. ‘NA’ indicates convergence failure due to ill-conditioned data configurations in mirt .MMLU-Pro (12032) [63, 52, 48, 27, 53, 55]. We use the raw historical evaluation data obtained via the huggingface_hub API as curated by [ 57 ], with further details available in the Appendices A.8. 
+
+4.1 Scalability 
+
+To demonstrate the scalability of cBMM compared to other baseline methods, we evaluate it on six large-scale benchmark suites from the Hugging Face Open LLM Leaderboard. For each suite, we conduct 50 replicates and report the average, minimum and maximum runtimes (in seconds) along with the average speedup ratio of cBMM relative to the fastest baseline. 
+
+Significant speedup and superior scalability. As illustrated in Figure 1, cBMM consistently outper-forms existing baselines in computational efficiency, achieving a 41x-86x reduction in runtime. As the number of benchmark items J increases, cBMM exhibits improved scalability compared to generic optimization baselines. For instance, scaling from the IFEval suite ( J = 541 ) to the MMLU-Pro suite (J = 12032 ) results in an average 508x increase in runtime for Manopt , a 392x increase in runtime for L-BFGS-B , but only a 104x increase for cBMM . Notably, mirt suffers from severe numerical instability and fails to converge (indicated by ‘NA’) on four large benchmark suites (GPQA, MATH, BBH, and MMLU-Pro), highlighting its limitations in large-scale settings. As a complement, our simulation studies in the Appendices A.6 further demonstrate that cBMM can achieve up to a 200x reduction in runtime while maintaining estimation accuracy comparable to, or even exceeding, that of baseline methods. 
+
+4.2 Interpretability of model ability 
+
+To interpret and validate the cBMM -recovered model abilities, we employ the MATH-500 benchmark suite, which encompasses a diverse set of LLMs released between July 2023 and September 2025 with varying model sizes. To facilitate comparison, we categorize these models into three scale tiers: small (0–7B), medium (7–20B), and large (>20B). 
+
+Consistency with parametric scaling laws. As shown in Figure 2, the cBMM -recovered model abil-ities ˆθ exhibit a clear upward trend over release time across all three model scale tiers, consistent with empirical expectations. In addition, the parametric scaling effect, in line with [ 33 ], becomes evident: larger models exhibit stronger reasoning capabilities, as reflected by higher overall placements and peak values within each tier. A notable deviation is observed for the 01-ai/Yi-34B model, which is primarily driven by the disproportionate scaling of training tokens relative to model parameters within the Yi series [ 60 ]. This phenomenon is consistent with the Chinchilla scaling laws [ 28 ], 6Figure 2: cBMM -recovered model abilities ˆθ for LLMs in the MATH-500 benchmark suite. The three subplots (left, middle, right) correspond to three model scale tiers: small (0–7B), medium (7–20B), and large (>20B). All panels span the same release date range, from July 2023 to September 2025. LLMs with the highest ˆθ are highlighted in each subplot, along with the LLM with the lowest ˆθ in the large-size subplot. which highlight the importance of balancing training data and model parameters for optimal model performance. 
+
+4.3 Interpretability of item difficulty 
+
+To interpret and validate the cBMM -recovered item difficulties, we use the human-annotated difficulty levels for each item in the MATH-500 benchmark suite as reference and assess the effectiveness of the estimated parameters ˆb obtained from cBMM .
+
+Consistency with human-annotated difficulty. Figure 3, with subplots corresponding to overall and subject-wise results, displays the distribution of cBMM -recovered difficulty estimates ( −ˆb) across human-annotated difficulty levels (1–5) for the MATH-500 benchmark suite. A generally consistent upward trend is observed across all subplots at the median level, aligning well with the ordinal human-annotated difficulty scale. The ‘Overall’ subplot shows increasing variability in the distribution of (−ˆb) as the difficulty level rises. We also observe several deviations from the overall increasing trend, such as level 1 in ‘Geometry’ and level 3 in ‘Intermediate Algebra’. These discrepancies likely reflect a latent misalignment between model-perceived and human-judged difficulty, particularly for more challenging items. This observation is consistent with concerns raised by [ 23 ] and [ 64 ], which suggest that benchmark datasets may lack sensitivity and specificity due to confounding features that influence LLM-perceived difficulty in ways not readily aligned with human intuition. 
+
+4.4 Interpretability of item discrimination 
+
+Regarding item discrimination, we hypothesize that greater heterogeneity in discrimination estimates leads to lower ranking consistency between the cBMM -recovered model abilities and average accuracies, since average accuracy implicitly assumes equal item discrimination. Specifically, we quantify ranking consistency using the Spearman correlation between the cBMM -recovered ˆθ and average accuracies, a standard metric in IRT-based LLM evaluations [ 12 , 64 ]. To measure heterogeneity in item discrimination, we use the coefficient of variation (CV) of the cBMM -recovered ˆa, defined as the ratio of the standard deviation to the mean. 
+
+Inverse relationship between ranking consistency and discrimination heterogeneity. Figure 4 depicts the relationship between the Spearman correlation of cBMM -recovered ˆθ and average accuracies and the CV of cBMM -recovered ˆa, across seven benchmark suites. To highlight different analysis scopes, we present results for the top 20% of models selected by average accuracy (left panel) and for the full set of LLMs (right panel). A clear inverse relationship is observed, providing empirical support for our hypothesis that greater heterogeneity in item discrimination estimates leads to more pronounced ranking discrepancies. A similar trend has also been reported in [12]. 7Figure 3: Distribution of cBMM -recovered item difficulties ( −ˆb) across human-annotated difficulty levels (1-5) in the MATH-500 benchmark suite, shown for the overall and subject-specific results. 
+
+Figure 4: Spearman correlation between cBMM -recovered model abilities and average accuracies v.s. the coefficient of variation of cBMM -recovered ˆa. The left panel shows results for the top 20% of models selected by average accuracy, while the right panel includes all LLMs. Each scatter point corresponds to a benchmark suite, as annotated in the plot. 
+
+Fine-grained ranking shifts under discrimination heterogeneity Figure 5 illustrates the detailed ranking flow between average accuracy and cBMM -recovered ability across three representative benchmark suites (MATH, MMLU-Pro, and GPQA). We select the top 30 models for MATH, top 50 for MMLU-Pro, and top 90 for GPQA, and visualize ranking transitions for LLMs that appear in both ranking schemes; full rankings are provided in the Supplementary Material. These ranking flows visually demonstrate that ranking discrepancies become increasingly pronounced as item discrimination grows more heterogeneous, offering a fine-grained view of ranking inconsistency. Additionally, several notable patterns emerge from the MATH benchmark: rankings for distilled LLMs from the Qwen series [ 59 ] remain largely consistent across both metrics, whereas substantial upward shifts are observed for Qwen2-Math-72B-Instruct and Qwen2.5-72B when transitioning from average accuracy to cBMM -recovered ability, suggesting that their capabilities may be underestimated by standard accuracy-based evaluations. 
+
+## 5 Conclusion 
+
+This paper proposes an interpretable and scalable computational framework for evaluating LLMs, providing fine-grained assessments of model abilities and enabling large-scale real-world applications. 8Distilled Qwen series Qwen2.5-72B Qwen2.5-72B Qwen2-Math-72B-Instruct Qwen2-Math-72B-Instruct Figure 5: Ranking flow between average accuracy (left column in each panel) and cBMM -recovered ability (right column in each panel). The three subplots correspond to three benchmark suites: MATH, MMLU-Pro and GPQA, ordered by increasing coefficient of variation of the recovered ˆa. Only LLMs that consistently appear in the top tiers under both ranking schemes are shown; full rankings are provided in the Supplementary Material. Wider bars indicate tied rankings. Building on classical IRT and leveraging the MM principle, we reformulate the evaluation problem as a sequence of constrained matrix factorization problems and introduce the cBMM algorithm to solve it efficiently. We further establish theoretical guarantees for parameter identifiability and algorithmic convergence. Through extensive experiments on both synthetic data and large-scale real-world benchmarks, we demonstrate that cBMM achieves orders-of-magnitude computational speedups and improved scalability while maintaining competitive estimation accuracy relative to existing methods. Moreover, its evaluation results are consistent with established parametric scaling laws [ 33 , 28 ] and human annotations, while revealing heterogeneity in model and item behavior that is not captured by average-accuracy-based evaluation. 
+
+Limitation and future work. Future work is motivated by a few current limitations. First, we treat model capability as a single dimensional trait, whereas general benchmarks, such as BBH and MMLU-Pro, may reveal multi-faceted model abilities. This motivates a natural extension to multidimensional IRT frameworks. We note that a corresponding implementation is already available in our GitHub repository, although additional theoretical challenges remain, particularly regarding identifiability under rotational invariance. Second, the logistic link in (1) can be extended to accommodate ordinal responses, such as those derived from LLM-as-a-Judge evaluations [ 51 ]. Third, deriving statistical error bounds for the recovered parameters would provide a principled quantification of uncertainty and strengthen the theoretical guarantees of the method. 
+
+Impact statement. Our findings from large-scale evaluation tasks have important implications for fairer LLM capability ranking and more principled benchmark design. First, by accounting for LLM stochasticity and item heterogeneity, the recovered parameters capture the interaction between model abilities and item characteristics, leading to more reliable capability ranking of LLMs. Second, sparse discrimination estimates can identify benchmark items that are non-informative for distinguishing LLM abilities, providing a data-driven signal of redundancy and guiding more efficient benchmark construction. Moreover, the recovered item difficulty parameters offer data-driven assessments that complement, and potentially augment, human annotations, enabling more automated and scalable benchmark analysis for LLM evaluation. 9References 
+
+[1] Josh Achiam, Steven Adler, Sandhini Agarwal, Lama Ahmad, Ilge Akkaya, Florencia Leoni Aleman, Diogo Almeida, Janko Altenschmidt, Sam Altman, Shyamal Anadkat, et al. GPT-4 technical report. arXiv preprint arXiv:2303.08774 , 2024. [2] Berk Atıl, Sarp Aykent, Alexa Chittams, Lisheng Fu, Rebecca J. Passonneau, Evan Radcliffe, Guru Rajan Rajagopal, Adam Sloan, Tomasz Tudrej, Ferhan Ture, et al. Non-determinism of ‘deterministic’ LLM system settings in hosted environments. In Proceedings of the 5th Workshop on Evaluation and Comparison of NLP Systems , pages 135–148, Mumbai, India, December 2025. Association for Computational Linguistics. [3] Hédy Attouch, Jérôme Bolte, and Benar Fux Svaiter. Convergence of descent methods for semi-algebraic and tame problems: Proximal algorithms, forward–backward splitting, and regularized Gauss–Seidel methods. Mathematical Programming , 137(1):91–129, 2013. [4] Frank B. Baker and Seock-Ho Kim, editors. Item Response Theory: Parameter Estimation Techniques . CRC Press, 2nd edition, 2004. [5] Mislav Balunovi´ c, Jasper Dekoninck, Ivo Petrov, Nikola Jovanovi´ c, and Martin Vechev. MathArena: Evaluating LLMs on uncontaminated math competitions. arXiv preprint arXiv:2505.23281 , 2026. [6] Sonia A. Bhaskar and Adel Javanmard. 1-bit matrix completion under exact low-rank constraint. In 2015 49th Annual Conference on Information Sciences and Systems (CISS) , pages 1–6, 2015. [7] Jérôme Bolte, Shoham Sabach, and Marc Teboulle. Proximal alternating linearized minimization for nonconvex and nonsmooth problems. Mathematical Programming , 146(1):459–494, 2014. [8] Nicolas Boumal, Bamdev Mishra, P.-A. Absil, and Rodolphe Sepulchre. Manopt, a Matlab toolbox for optimization on manifolds. Journal of Machine Learning Research , 15(42):1455– 1459, 2014. [9] Ryan Burnell, Wout Schellaert, John Burden, Tomer D. Ullman, Fernando Martinez-Plumed, Joshua B. Tenenbaum, Danaja Rutar, Lucy G. Cheke, Jascha Sohl-Dickstein, Melanie Mitchell, et al. Rethink reporting of evaluation results in AI. Science , 380(6641):136–138, 2023. [10] Richard H. Byrd, Peihuang Lu, Jorge Nocedal, and Ciyou Zhu. A limited memory algorithm for bound constrained optimization. SIAM Journal on Scientific Computing , 16(5):1190–1208, 1995. [11] Tony Cai and Wen-Xin Zhou. A max-norm constrained minimization approach to 1-bit matrix completion. Journal of Machine Learning Research , 14(78):3619–3647, 2013. [12] Jane Castleman, Nimra Nadeem, Tanvi Namjoshi, and Lydia Liu. Rethinking math benchmarks: Implications for AI in education. In Proceedings of the Innovation and Responsibility in AI-Supported Education Workshop , volume 273 of Proceedings of Machine Learning Research ,pages 66–82. PMLR, 03 Mar 2025. [13] Jianzhe Chai, Yu Zhe, and Jun Sakuma. When benchmarks leak: Inference-time decontamina-tion for LLMs. arXiv preprint arXiv:2601.19334 , 2026. [14] R. Philip Chalmers. mirt: A multidimensional item response theory package for the R environ-ment. Journal of Statistical Software , 48(6):1–29, 2012. [15] Ting Chen, Simon Kornblith, Mohammad Norouzi, and Geoffrey Hinton. A simple framework for contrastive learning of visual representations. arXiv preprint arXiv:2002.05709 , 2020. [16] Yunxiao Chen, Xiaoou Li, Jingchen Liu, and Zhiliang Ying. Item response theory—a statistical framework for educational and psychological measurement. Statistical Science , 40(2):167 – 194, 2025. 10 [17] Zhiyu Zoey Chen, Jing Ma, Xinlu Zhang, Nan Hao, An Yan, Armineh Nourbakhsh, Xianjun Yang, Julian McAuley, Linda Petzold, and William Yang Wang. A survey on large language mod-els for critical societal domains: Finance, healthcare, and law. arXiv preprint arXiv:2405.01769 ,2024. [18] Neil Chowdhury, James Aung, Chan Jun Shern, Oliver Jaffe, Dane Sherburn, Giulio Starace, Evan Mays, Rachel Dias, Marwan Aljubeh, Mia Glaese, et al. Introducing SWE-bench verified, 2024. [19] Gheorghe Comanici, Eric Bieber, Mike Schaekermann, Ice Pasupat, Noveen Sachdeva, Inderjit Dhillon, Marcel Blistein, Ori Ram, Dan Zhang, Evan Rosen, et al. Gemini 2.5: Pushing the frontier with advanced reasoning, multimodality, long context, and next generation agentic capabilities. arXiv preprint arXiv:2507.06261 , 2025. [20] Mark A. Davenport, Yaniv Plan, Ewout van den Berg, and Mary Wootters. 1-bit matrix completion. Information and Inference: A Journal of the IMA , 3(3):189–223, 07 2014. [21] A. P. Dempster, N. M. Laird, and D. B. Rubin. Maximum likelihood from incomplete data via the EM algorithm. Journal of the Royal Statistical Society: Series B (Methodological) ,39(1):1–22, 9 1977. [22] Yifei Dong, Fengyi Wu, Kunlin Zhang, Yilong Dai, Sanjian Zhang, Wanghao Ye, Sihan Chen, and Zhi-Qi Cheng. Large language model agents in finance: A survey bridging research, practice, and real-world deployment. In Findings of the Association for Computational Lin-guistics: EMNLP 2025 , pages 17889–17907, Suzhou, China, November 2025. Association for Computational Linguistics. [23] Maria Eriksson, Erasmo Purificato, Arman Noroozian, João Vinagre, Guillaume Chaslot, Emilia Gomez, and David Fernandez-Llorca. Can we trust AI benchmarks? an interdisciplinary review of current issues in AI evaluation. Proceedings of the AAAI/ACM Conference on AI, Ethics, and Society , 8(1):850–864, Oct. 2025. [24] Clémentine Fourrier, Nathan Habib, Alina Lozovskaya, Konrad Szafer, and Thomas Wolf. Open LLM Leaderboard v2. https://huggingface.co/spaces/open-llm-leaderboard/ open_llm_leaderboard , 2024. [25] Chuan Guo, Geoff Pleiss, Yu Sun, and Kilian Q. Weinberger. On calibration of modern neural networks. In Proceedings of the 34th International Conference on Machine Learning , volume 70 of Proceedings of Machine Learning Research , pages 1321–1330. PMLR, 06–11 Aug 2017. [26] Ronald K. Hambleton and Hariharan Swaminathan. Item Response Theory: Principles and Applications . Springer Dordrecht, Dordrecht, 1 edition, 1985. [27] Dan Hendrycks, Collin Burns, Saurav Kadavath, Akul Arora, Steven Basart, Eric Tang, Dawn Song, and Jacob Steinhardt. Measuring mathematical problem solving with the MATH dataset. In Thirty-fifth Conference on Neural Information Processing Systems Datasets and Benchmarks Track (Round 2) , 2021. [28] Jordan Hoffmann, Sebastian Borgeaud, Arthur Mensch, Elena Buchatskaya, Trevor Cai, Eliza Rutherford, Diego de Las Casas, Lisa Anne Hendricks, Johannes Welbl, Aidan Clark, et al. Training compute-optimal large language models. arXiv preprint arXiv:2203.15556 , 2022. [29] David R Hunter and Kenneth Lange. A tutorial on MM algorithms. The American Statistician ,58(1):30–37, 2004. [30] David Ili´ c and Gilles E. Gignac. Evidence of interrelated cognitive-like capabilities in large language models: Indications of artificial general intelligence or achievement? Intelligence ,106:101858, 2024. [31] Carlos E Jimenez, John Yang, Alexander Wettig, Shunyu Yao, Kexin Pei, Ofir Press, and Karthik R Narasimhan. SWE-bench: Can language models resolve real-world Github issues? In The Twelfth International Conference on Learning Representations , 2024. 11 [32] Saurav Kadavath, Tom Conerly, Amanda Askell, Tom Henighan, Dawn Drain, Ethan Perez, Nicholas Schiefer, Zac Hatfield-Dodds, Nova DasSarma, Eli Tran-Johnson, et al. Language models (mostly) know what they know. arXiv preprint arXiv:2207.05221 , 2022. [33] Jared Kaplan, Sam McCandlish, Tom Henighan, Tom B. Brown, Benjamin Chess, Rewon Child, Scott Gray, Alec Radford, Jeffrey Wu, and Dario Amodei. Scaling laws for neural language models. arXiv preprint arXiv:2001.08361 , 2020. [34] Jonathan Kim, Anna Podlasek, Kie Shidara, Feng Liu, Ahmed Alaa, and Danilo Bernardo. Lim-itations of large language models in clinical problem-solving arising from inflexible reasoning. 
+
+Scientific Reports , 15(1):39426, 2025. [35] Diederik P Kingma and Max Welling. Auto-encoding variational bayes. arXiv preprint arXiv:1312.6114 , 2013. [36] John Patrick Lalor and Pedro Rodriguez. py-irt: A scalable item response theory library for Python. INFORMS Journal on Computing , 35(1):5–13, 2023. [37] Kenneth Lange, David R. Hunter, and Ilsoon Yang. Optimization transfer using surrogate objective functions. Journal of Computational and Graphical Statistics , 9(1):1–20, 2000. [38] Charles L. Lawson and Richard J. Hanson. Solving Least Squares Problems . Society for Industrial and Applied Mathematics, 1995. [39] Yucheng Li. Estimating contamination via perplexity: Quantifying memorisation in language model evaluation. arXiv preprint arXiv:2309.10677 , 2023. [40] Hunter Lightman, Vineet Kosaraju, Yuri Burda, Harrison Edwards, Bowen Baker, Teddy Lee, Jan Leike, John Schulman, Ilya Sutskever, and Karl Cobbe. Let’s verify step by step. In The Twelfth International Conference on Learning Representations , 2024. [41] Anqi Lin, Junpu Ye, Chang Qi, Lingxuan Zhu, Weiming Mou, Wenyi Gan, Dongqiang Zeng, Bufu Tang, Mingjia Xiao, Guangdi Chu, et al. Bridging artificial intelligence and biological sciences: A comprehensive review of large language models in bioinformatics. Briefings in Bioinformatics , 26, 07 2025. [42] Xiaoqian Liu, Xu Han, Eric C. Chi, and Boaz Nadler. A majorization-minimization Gauss-Newton method for 1-bit matrix completion. Journal of Computational and Graphical Statistics ,34(3):1017–1029, 2025. [43] Stanisław Łojasiewicz. Une propriété topologique des sous-ensembles analytiques réels. Les Équations aux Dérivées Partielles , 117:87–89, 1963. [44] Yao Lu, Max Bartolo, Alastair Moore, Sebastian Riedel, and Pontus Stenetorp. Fantastically ordered prompts and where to find them: Overcoming few-shot prompt order sensitivity. In 
+
+Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , pages 8086–8098, Dublin, Ireland, May 2022. Association for Computational Linguistics. [45] Grégoire Mialon, Clémentine Fourrier, Thomas Wolf, Yann LeCun, and Thomas Scialom. GAIA: a benchmark for general AI assistants. In B. Kim, Y. Yue, S. Chaudhuri, K. Fragkiadaki, M. Khan, and Y. Sun, editors, International Conference on Learning Representations , volume 2024, pages 9025–9049, 2024. [46] Yixin Nie, Adina Williams, Emily Dinan, Mohit Bansal, Jason Weston, and Douwe Kiela. Adversarial NLI: A new benchmark for natural language understanding. In Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics , pages 4885–4901, Online, July 2020. Association for Computational Linguistics. [47] Alec Radford, Jong Wook Kim, Chris Hallacy, Aditya Ramesh, Gabriel Goh, Sandhini Agarwal, Girish Sastry, Amanda Askell, Pamela Mishkin, Jack Clark, et al. Learning transferable visual models from natural language supervision. In Proceedings of the 38th International Conference on Machine Learning , volume 139 of Proceedings of Machine Learning Research , pages 8748–8763. PMLR, 18–24 Jul 2021. 12 [48] David Rein, Betty Li Hou, Asa Cooper Stickland, Jackson Petty, Richard Yuanzhe Pang, Julien Dirani, Julian Michael, and Samuel R. Bowman. GPQA: A graduate-level google-proof Q &Abenchmark. arXiv preprint arXiv:2311.12022 , 2023. [49] Paul Röttger, Hannah Kirk, Bertie Vidgen, Giuseppe Attanasio, Federico Bianchi, and Dirk Hovy. XSTest: A test suite for identifying exaggerated safety behaviours in large language models. In Proceedings of the 2024 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies (Volume 1: Long Papers) , pages 5377–5400, Mexico City, Mexico, 2024. Association for Computational Linguistics. [50] Erfan Shayegani, Md Abdullah Al Mamun, Yu Fu, Pedram Zaree, Yue Dong, and Nael Abu-Ghazaleh. Survey of vulnerabilities in large language models revealed by adversarial attacks. 
+
+arXiv preprint arXiv:2310.10844 , 2023. [51] Huanxin Sheng, Xinyi Liu, Hangfeng He, Jieyu Zhao, and Jian Kang. Analyzing uncertainty of LLM-as-a-Judge: Interval evaluations with conformal prediction. In Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing , pages 11286–11328, Suzhou, China, November 2025. Association for Computational Linguistics. [52] Zayne Sprague, Xi Ye, Kaj Bostrom, Swarat Chaudhuri, and Greg Durrett. MuSR: Testing the limits of chain-of-thought with multistep soft reasoning. arXiv preprint arXiv:2310.16049 ,2024. [53] Mirac Suzgun, Nathan Scales, Nathanael Schärli, Sebastian Gehrmann, Yi Tay, Hyung Won Chung, Aakanksha Chowdhery, Quoc Le, Ed Chi, Denny Zhou, et al. Challenging BIG-bench tasks and whether chain-of-thought can solve them. In Findings of the Association for Computational Linguistics: ACL 2023 , pages 13003–13051, Toronto, Canada, July 2023. Association for Computational Linguistics. [54] Xiting Wang, Liming Jiang, Jose Hernandez-Orallo, David Stillwell, Luning Sun, Fang Luo, and Xing Xie. Evaluating general-purpose AI with psychometrics. arXiv preprint arXiv:2310.16379 ,2023. [55] Yubo Wang, Xueguang Ma, Ge Zhang, Yuansheng Ni, Abhranil Chandra, Shiguang Guo, Weiming Ren, Aaran Arulraj, Xuan He, Ziyan Jiang, et al. MMLU-Pro: A more robust and challenging multi-task language understanding benchmark. arXiv preprint arXiv:2406.01574 ,2024. [56] Mike Wu, Richard L. Davis, Benjamin W. Domingue, Chris Piech, and Noah Goodman. Varia-tional item response theory: Fast, accurate, and expressive. arXiv preprint arXiv:2002.00276 ,2020. [57] Skyler Wu, Yash Nair, and Emmanuel J. Candès. Efficient evaluation of LLM performance with statistical guarantees. arXiv preprint arXiv:2601.20251 , 2026. [58] Zhiyu Xu, Jia Liu, Yixin Wang, and Yuqi Gu. Latency-response theory model: Evaluating large language models via response accuracy and chain-of-thought length. arXiv preprint arXiv:2512.07019 , 2025. [59] An Yang, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu, Chengyuan Li, Dayiheng Liu, Fei Huang, Haoran Wei, et al. Qwen2.5 technical report. arXiv preprint arXiv:2412.15115 , 2025. [60] Alex Young, Bei Chen, Chao Li, Chengen Huang, Ge Zhang, Guanwei Zhang, Guoyin Wang, Heng Li, Jiangcheng Zhu, Jianqun Chen, et al. Yi: Open foundation models by 01.AI. arXiv preprint arXiv:2403.04652 , 2025. [61] Dingli Yu, Simran Kaur, Arushi Gupta, Jonah Brown-Cohen, Anirudh Goyal, and Sanjeev Arora. SKILL-MIX: A flexible and expandable family of evaluations for AI models. In The Twelfth International Conference on Learning Representations , 2024. 13 [62] Zicheng Zhang, Xiangyu Zhao, Xinyu Fang, Chunyi Li, Xiaohong Liu, Xiongkuo Min, Haodong Duan, Kai Chen, and Guangtao Zhai. Redundancy principles for MLLMs benchmarks. In Pro-ceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , pages 12492–12504, Vienna, Austria, 2025. Association for Computational Linguistics. [63] Jeffrey Zhou, Tianjian Lu, Swaroop Mishra, Siddhartha Brahma, Sujoy Basu, Yi Luan, Denny Zhou, and Le Hou. Instruction-following evaluation for large language models. arXiv preprint arXiv:2311.07911 , 2023. [64] Lexin Zhou, Lorenzo Pacchiardi, Fernando Martínez-Plumed, Katherine M. Collins, Yael Moros-Daval, Seraphina Zhang, Qinlin Zhao, Yitian Huang, Luning Sun, Jonathan E. Prunty, et al. General scales unlock AI evaluation with explanatory and predictive power. Nature ,652:58–67, Apr 2026. [65] Kaijie Zhu, Qinlin Zhao, Hao Chen, Jindong Wang, and Xing Xie. PromptBench: A unified library for evaluation of large language models. Journal of Machine Learning Research ,25(254):1–22, 2024. [66] Yan Zhuang, Qi Liu, Zachary Pardos, Patrick C. Kyllonen, Jiyun Zu, Zhenya Huang, Shijin Wang, and Enhong Chen. Position: AI evaluation should learn from how we test humans. In Proceedings of the 42nd International Conference on Machine Learning , volume 267 of 
+
+Proceedings of Machine Learning Research , pages 82483–82508. PMLR, 13–19 Jul 2025. 14 A Appendices 
+
+A.1 Related work 1-bit matrix completion. The optimization problem underlying LLM evaluation based on IRT can be viewed as a constrained 1-bit matrix completion problem with a user-specified rank. The 1-bit matrix completion problem has been well studied in the literature [ 11 , 20 , 6, 42 ], yet its computation remains challenging. cBMM builds on the MMGN framework [ 42 ], a recently proposed efficient algorithm for 1-bit matrix completion based on the MM principle. cBMM is specifically designed for the constrained formulation arising in LLM evaluation, and reformulates the original problem as a sequence of constrained matrix factorization subproblems. This leads to closed-form updates and a simple implementation based on standard linear algebra operations. As a result, cBMM is substantially faster than both IRT-based approaches and generic optimization methods, including quasi-Newton and manifold optimization algorithms. 
+
+IRT-based LLM evaluation. Conventional LLM evaluation relies on accuracy-based benchmarking in an aggregated manner [ 18 , 45 ], ignoring both the stochastic nature of LLM outputs and the heterogeneity of benchmark items [ 39 , 13 ]. Recently, methods from psychometrics, particularly Item Response Theory (IRT), have been adapted for LLM evaluation [54, 30, 66, 12], using a latent probabilistic framework to model LLM ability and item characteristics. Existing studies typically build on the two-parameter IRT model, whose conventional implementations often suffer from numerical instability and computational inefficiency [ 14 , 58 ], thereby limiting their applicability to small-scale settings. cBMM addresses these challenges by introducing a scalable and interpretable computational framework based on MM optimization. By ensuring both computational efficiency and stable parameter recovery, cBMM is well-suited for large-scale LLM evaluations. 
+
+A.2 Proof of Theorem 1 
+
+Suppose a triplet (θ, a, b) satisfies θ̸ = c for some constant vector c, and that a is nonnegative with at least one nonzero entry (without loss of generality, assume a1 > 0). Consider a given score matrix 
+
+X = θa⊤ + 1b ⊤. First, suppose that there exists a column X,j that is neither a scalar multiple of the first column X,1 nor the vector of ones. Without loss of generality, suppose that this column is 
+
+X,2. We argue that for any i, j, k ,
+
+xi1 − xj1
+
+xj1 − xk1
+
+= xi2 − xj2
+
+xj2 − xk2
+
+.
+
+That is, the scaled differences among entries must be consistent. This is because the expression reduces to (θi−θj )a1   
+
+> (θj−θk)a1
+
+= (θi−θj )a2   
+
+> (θj−θk)a2
+
+. We can now identify θ up to a scaling constant by first computing 
+
+α ≡ a1 
+
+> a2
+
+= xi1−xj1 
+
+> xi2−xj2
+
+where xi1 and xj1 are distinct, which is guaranteed under the assumptions. We then solve 
+
+X,1 − b11 = α(X,2 − b21)
+
+to find b1 and b2. This further allows us to obtain a1θ through a1θ = X,1 − b11. Since a1 > 0, the rank ordering of θ is uniquely determined. Now consider any two non-identical rows i and j of X. We have Xi, − Xj, = ( θi − θj )a. Hence, a
+
+can be identified up to a scaling constant through 
+
+ak
+
+a1
+
+= xik − xjk 
+
+xi1 − xj1
+
+.
+
+In particular, the rank ordering of a is determined. Finally, because θa⊤ is uniquely determined, b is also uniquely determined. Now consider the case that every column aside from X,1 is either a scalar multiple of X,1 or the vector of ones. First note that any column i which is a scalar multiple of the vector of ones identifies a column where ai is zero, and the corresponding entry of b is given by the value in that column. For any column that is a scalar multiple of X,1, the previous arguments still hold to uniquely identify the rank ordering for a and θ, except that b is no longer uniquely determined, but rather follows the same ratios as the corresponding columns. Nonetheless, the rank ordering of (θ, a, b) is uniquely determined. 15 A.3 Proof of Theorem 2 
+
+We begin by establishing a sufficient descent condition, which is the key step for applying the Kurdyka–Łojasiewicz (KL) framework [43, 3, 7]. 
+
+Lemma 1 (Sufficient Descent) . Under Assumptions (H1) and (H2) , there exists a constant ρ > 0
+
+such that for all t ≥ 0,
+
+F (W(t)) − F (W(t+1) ) ≥ ρ∥W(t+1) − W(t)∥2.
+
+Proof. Fix iteration t. Let ˜X(t) = θ(t)(a(t))⊤ + 1(b(t))⊤ and ˜Y(t) = ˜X(t) + 4 σY ◦ Φ( −Y ◦ ˜X(t))
+
+as defined in Algorithm 1. Define the surrogate function at step t as G(W | W(t)) ≡ g(θa⊤ + 1b ⊤ |
+
+˜X(t)).We analyze each block update in Algorithm 1. 
+
+Step 1 (Update a, line 7). With θ(t) and b(t) fixed, the sub-objective reduces to P 
+
+> j
+
+∥θ(t)aj − R1,·j ∥2,which is strongly convex in a with modulus μa = ∥θ(t)∥2 ≥ c2 by Assumption (H2). By the strong convexity optimality inequality, 
+
+G(a(t) | W(t)) − G(a(t+1) | W(t)) ≥ c2∥a(t+1) − a(t)∥2. (A.1) 
+
+Step 2 (Update b, line 8). With θ(t) and a(t+1) fixed, the sub-objective is strongly convex in b with modulus μb = N . Hence, 
+
+G(b(t) | W(t)) − G(b(t+1) | W(t)) ≥ N ∥b(t+1) − b(t)∥2. (A.2) 
+
+Step 3 (Update θ, line 9). With a(t+1) and b(t+1) fixed, the sub-objective is strongly convex in θ
+
+with modulus μθ = ∥a(t+1) ∥2 ≥ c2 by Assumption (H2). Hence, 
+
+G(θ(t) | W(t)) − G(θ(t+1) | W(t)) ≥ c2∥θ(t+1) − θ(t)∥2. (A.3) Summing (A.1)–(A.3) and letting ρ0 = min( c2, N ) > 0,
+
+G(W(t) | W(t)) − G(W(t+1) | W(t)) ≥ ρ0∥W(t+1) − W(t)∥2.
+
+Applying the tangency condition G(W(t) | W(t)) = F (W(t)) and the domination condition 
+
+G(W(t+1) | W(t)) ≥ F (W(t+1) ) yields the result with ρ = ρ0.
+
+Lemma 2 (Relative Error Condition) . Under Assumptions (H1) and (H2) , there exists a constant 
+
+λ > 0 such that for all t ≥ 0, there exists s(t+1) ∈ ∂F (W(t+1) ) satisfying 
+
+∥s(t+1) ∥ ≤ λ∥W(t+1) − W(t)∥.
+
+Proof. We bound each component of the subgradient separately. For θ(t+1) and b(t+1) , the corresponding block updates (lines 8–9 of Algorithm 1) are unconstrained least squares problems with exact closed-form solutions, so their first-order optimality conditions give 
+
+∇θ G(W(t+1) | W(t)) = 0 and ∇bG(W(t+1) | W(t)) = 0. By the L-Lipschitz differentiability of 
+
+ℓ and the double-linear bound ∥X(t+1) − X(t)∥F ≤ M ∥W(t+1) − W(t)∥ under Assumption (H1), 
+
+∥∇ θ F (W(t+1) )∥ ≤ LM 2∥W(t+1) − W(t)∥,
+
+and similarly for ∇bF (W(t+1) ).For a(t+1) , the NNLS update (line 7) satisfies the KKT conditions: there exists μ ≥ 0 with 
+
+∇aG(W(t+1) | W(t)) = μ and μ ◦ a(t+1) = 0. Setting s(t+1)  
+
+> a
+
+= ∇aF (W(t+1) ) − μ ∈
+
+∂aF (W(t+1) ) and applying the same Lipschitz argument yields ∥s(t+1)  
+
+> a
+
+∥ ≤ LM 2∥W(t+1) − W(t)∥.Combining all three components and setting λ = 3 LM 2 completes the proof. With these two lemmas in place, we now restate the main convergence theorem and proceed to its full proof. 16 Theorem (Convergence of cBMM ). Under Assumptions (H1) and (H2) , the sequence 
+
+{(θ(t), a(t), b(t))} generated by Algorithm 1 satisfies: (i) (Summability) 
+
+> ∞
+
+X
+
+> t=0
+
+∥W(t+1) − W(t)∥ < ∞;(ii) (Whole-sequence convergence) W(t) → W∗ = ( θ∗, a∗, b∗) as t → ∞ ;(iii) (Stationarity) W∗ satisfies the KKT conditions: 
+
+∇θ ℓ(X∗) = 0, a∗ ≥ 0, ∇aℓ(X∗) ≥ 0, a∗ ◦ ∇ aℓ(X∗) = 0.
+
+Furthermore, when the KL exponent is 1/2, the convergence is linear , i.e., there exist constants C > 0
+
+and α ∈ (0 , 1) such that ∥W(t) − W∗∥ ≤ Cα t.Proof. Step 1: Monotone decrease. By Lemma 1, {F (W(t))} is monotonically non-increasing. Since ℓ(X) ≥ 0 for all X, the sequence converges to a finite limit F ∗ ≥ 0.
+
+Step 2: KL property. The function F (W) = ℓ(θa⊤ + 1b ⊤) is a composition of the logistic loss with a bilinear map. Since the logistic loss is sub-analytic and the bilinear map is polynomial, F is sub-analytic and hence belongs to an o-minimal structure [ 3]. Therefore F satisfies the KL property at every critical point, with KL exponent being 1/2.
+
+Step 3: Summability via KL inequality. By Assumption (H1), there exists a subsequence W(tk ) →
+
+W∗ with F (W∗) = F ∗. By the KL property, there exist η > 0, a neighborhood U of W∗, and a concave function φ : [0 , η ) → R+ with φ(0) = 0 and φ′ > 0, such that for all W ∈ U with 
+
+F ∗ < F (W) < F ∗ + η,
+
+φ′(F (W) − F ∗)∥s∥ ≥ 1, ∀s ∈ ∂F (W).
+
+For sufficiently large t, let ∆t = φ(F (W(t)) − F ∗) − φ(F (W(t+1) ) − F ∗). By concavity of φ,Lemma 1, the KL inequality, and Lemma 2, 
+
+∆t ≥ φ′(F (W(t)) − F ∗) · ρ∥W(t+1) − W(t)∥2 ≥ ρλ · ∥W(t+1) − W(t)∥2
+
+∥W(t) − W(t−1) ∥ .
+
+Applying the AM-GM inequality a2/b ≥ 2a−b and summing over t = T, . . . , T ′ yields a telescoping bound:  
+
+> T′
+
+X
+
+> t=T
+
+∥W(t+1) − W(t)∥ ≤ λ
+
+2ρ φ(F (W(T )) − F ∗) + 12 ∥W(T ) − W(T −1) ∥ < ∞.
+
+Letting T ′ → ∞ establishes (i). 
+
+Step 4: Whole-sequence convergence and stationarity. Part (i) implies {W(t)} is a Cauchy sequence, so W(t) → W∗, establishing (ii). By Lemma 2, ∥s(t+1) ∥ → 0. Since ∂F has a closed graph, passing to the limit gives 0 ∈ ∂F (W∗), which is equivalent to the KKT conditions in (iii). The linear convergence rate follows from the KL exponent of 1/2 [7]. 
+
+A.4 Per-iteration computational complexity 
+
+The computation bottleneck of Algorithm 1 lies in evaluating a matrix of the form (uv ⊤ 
+
+> 1
+
+)Ω, where 
+
+(·)Ω is the masking operator that preserves entries (i, j ) ∈ Ω and sets all others to zero. Note that the active set method [38] used to solve 
+
+arg min  
+
+> v1≥0
+
+∥uv ⊤ 
+
+> 1
+
+− R∥2
+
+> F(Ω)
+
+in line 7 also requires computing a matrix of the form (uv ⊤ 
+
+> 1
+
+)Ω at each of its iterations. Naively computing uv ⊤ 
+
+> 1
+
+and then masking out entries in Ωc costs O(N J ) flops. However, this complexity can be reduced to O(|Ω|) by directly evaluating only the observed entries, which is a substantial improvement when |Ω| ≪ N J . We detail this construction below. 17 Let A ≡ (uv ⊤ 
+
+> 1
+
+)Ω and let Ωi denote the set of indices j such that (i, j ) ∈ Ω. Since we only need to compute entries j ∈ Ωi for the i-th row of A, we denote this nonzero subset as A(i, Ωi) and observe that 
+
+A(i, Ωi) = uiv1,Ωi ,
+
+where v1,Ωi is the sub-vector of v1 containing only the entries indexed by Ωi. Consequently, computing the i-th row of A incurs a cost of O(|Ωi|) flops. Summing over all N rows yields a total computational complexity of O(|Ω|) flops per-iteration. 
+
+A.5 Algorithmic details EM algorithm for mirt . We implement by setting itemtype as 2PL in the mirt function of R [ 14 ]. Furthermore, in the M-step, we specify L-BFGS-B optimizer [ 10 ] embedded in the R function to ensure non-negativity constraint. Subsequently, Expected A Posteriori (EAP) method is employed to derive the final estimates of θ post-convergence. 
+
+Post-hoc proximal gradient for Manopt . The optimization is carried out via conjugate gradient over the product space (θ, a, b) ∈ RN × RJ 
+
+> +
+
+× RJ , and incorporates a post-hoc proximal gradient step to enforce the constraint a ≥ 0. Specifically, if denoting (ˆθ, ˆa, ˆb) as the optimum from vanilla 
+
+Manopt , it projects 
+
+
+
+˜b(i+1) = ˜b(i) − η∇˜b(i) ℓ( ˜X(i))˜a(i+1) = proj R+
+
+
+
+˜a(i) − η(∇˜a(i) ℓ( ˜X(i)) + λ)
+
+
+
+with initial (˜ a(1) , ˜b(1) ) = (ˆ a, ˆb), where proj R+ (x) = max(0 , x ) is the proximal operator to non-negative orthant. η, λ control the step size and sparsity level. The final output then becomes 
+
+(ˆθ, ˜a, ˜b).
+
+Hyperparameters. In mirt , the latent model trait follows a prior distribution of θi
+
+> i.i.d.
+
+∼ N(0 , 1) ,with initial values for item parameters log aj
+
+> i.i.d.
+
+∼ N(0 , 1) and bj
+
+> i.i.d.
+
+∼ N(0 , 1) . The same prior for θ
+
+is carried over during EAP. Similarly, for cBMM , L-BFGS-B and Manopt , the related parameters θi,
+
+log aj , and bj are initialized using the same distributions. All algorithms are set to a maximum of 1,000 iterations/epochs with a convergence tolerance of 10 −4. For py-irt , we adhere to default configurations as in the package except the epoch limit. Computations are executed on Intel Xeon E5-2683 v4 processors, where each replicate is assigned to one dedicated CPU core with 64 GB of allocated RAM. 
+
+A.6 Simulated studies for sensitivity analysis 
+
+We reexamine the computational scalability of different methods using synthetic examples, by varying the evaluation scale, defined by the number of models N and benchmark items J. Additionally, to demonstrate the robustness of cBMM , we conduct sensitivity analysis by varying several factors during synthetic data generation, including the temperature σ, the missing rate within Y, ρ = 1 − | Ω|/N J 
+
+under different missingness patterns, and the redundancy level in benchmark items, as reflected by the sparsity level of a, defined as s = 1 − ∥ a∥0/J . Here, aj = 0 indicates that the j-th item lacks discriminative power for distinguishing model performance and is therefore considered redundant. 
+
+Data generation process. The default data generation process follows 50 replicates for each design. The response yij is generated under logit link (1) based on the underlying score xij reparameterized by (2), with θi
+
+> i.i.d.
+
+∼ N(0 , 1) for i = 1 , ..., N , aj
+
+> i.i.d.
+
+∼ uniform (0 .5, 1) and bj
+
+> i.i.d.
+
+∼ N(0 , 0.5) for j = 1 , ..., J ,which follows the same data generation procedure in [ 58 ]. Unless otherwise specified, default parameters are set to σ = 1 , ρ = 0 , s = 0 , N = 1000 , and J = 1000 .
+
+Performance metrics. We evaluate the performance of the compared methods using the following metrics. (i) The Spearman correlation coefficient between the estimate and the ground truth for θ
+
+and a. (ii) The Root Mean Square Error (RMSE) of the estimate for b. (iii) The relative error of the score matrix, defined as ∥X − ˆX∥2
+
+> F
+
+/∥X∥2
+
+> F
+
+. (iv) The Hellinger distance between the estimated and 18 true distributions, Φ( ˆX) and Φ( X), which is defined as [20, 11] 
+
+1
+
+N J 
+
+X
+
+> i,j
+
+d2
+
+> H
+
+(Φ(ˆ xij ), Φ( xij )) ,
+
+where d2
+
+> H
+
+(p, q ) = ( √p − √q)2 + ( √1 − p − √1 − q)2. The Hellinger distance is a standard metric between two distributions. It is non-negative and equals zero when the two distributions are identical, which provides a different perspective on estimation accuracy compared to the relative error. (v) Runtime in seconds. 
+
+A.6.1 Evaluation size 
+
+To account for variations in the scale of models and benchmark items across different leaderboards [ 24 , 5], we reexamine the computational scalability of different methods by synthetic examples. We evaluate two scenarios: fixed N and fixed J. In both cases, we vary the other dimension over 
+
+{200 , 500 , 1000 , 2000 , 5000 }.Figure A.1 and A.2 present results under fixed N and fixed J settings, respectively. Notably, we observe that py-irt exhibits substantially worse estimation performance than the other methods. This is evidenced by lower Spearman correlations between the estimated item discrimination parameters ˆa
+
+and their ground truth values, higher RMSE for the estimated item easiness parameters ˆb, and higher relative errors in the recovered score matrix ˆX, along with substantially longer runtimes under the same iteration budget. We therefore include py-irt for completeness only and do not regard it as a primary baseline for comparison. We also observe algorithmic instability in mirt . When J ∈ { 2000 , 5000 }, the mirt solver produces ‘NA’ results due to singularities in response patterns, a common issue in the psychometrics literature [ 4, 14 ]. This may occur, for instance, when items exhibit near-constant responses with minimal variance across respondents. Furthermore, when two items induce nearly identical response patterns, singularities can also arise when implementing mirt . Other factors, such as extreme temperatures, specific missing patterns, or item redundancy, further exacerbate these numerical instabilities, as demonstrated in Section A.6.2, A.6.3 and A.6.4. Overall, this highlights the limitations of mirt in large-scale and complex settings. Regarding the recovery of the score matrix X, both evaluation scale settings exhibit a consistent decrease in relative error as the number of models or benchmark questions increases. However, the recovery behaviors of θ, a, and b differ across the two scenarios. Fixing N while increasing J
+
+leads to more accurate recovery of model abilities θ, but generally provides limited improvement in estimating item features a and b, since only the evaluation coverage of each model is expanded through additional benchmark items. Conversely, fixing J while increasing N improves estimation of the item parameters, whereas the accuracy of model ability estimates remains relatively stable because the underlying benchmark set is unchanged. These findings are consistent with established observations in psychometric IRT literature [26, 4, 16]. Combined with the runtime analysis, cBMM produces results that are highly consistent with empirical expectations while substantially reducing computational overhead, highlighting its strong scalability and practical applicability. 
+
+A.6.2 Temperature 
+
+The temperature σ acts as a pivotal scaling parameter for signal processing, with demonstrated efficacy in confidence calibration [ 25 , 32 ] and contrastive multi-modal alignment [ 15 , 47 ]. We therefore investigate the sensitivity of evaluation outcomes under different values of σ.Figure A.3 illustrates performances of different methods across varying settings of σ where 
+
+log 10 (σ) ∈ {− 0.75 , −0.5, −0.25 , 0, 0.25 , 0.5, 0.75 }. We again observe algorithmic instability in 
+
+mirt : when log 10 (σ) ∈ { 0.5, 0.75 }, it produces ‘NA’ results due to singularities in response patterns, whereas cBMM remains numerically stable. Furthermore, cBMM demonstrates enhanced robustness across varying temperature levels. As evidenced in Figure A.3, in terms of RMSE for b, relative error and Hellinger distance for X, all methods exhibit performance degradation when the temperature is either too low or too high compared with moderate setting, which echoes the discussion in [ 20 ]regarding ill-posed recovery problem under extreme temperatures. Nevertheless, cBMM maintains 19 Figure A.1: Scalability comparison under varying numbers of items J. The number of models is fixed at N = 1000 , while J increases from 200 to 5000. Each boxplot summarizes 50 independent replicates. Runtimes exceeding 1,000 seconds are truncated for better visualization. ‘NA’ indicates convergence failure due to ill-conditioned data configurations in mirt .consistently low variability across different values of σ, highlighting its robustness relative to com-peting methods. In contrast, the performance of mirt and py-irt follows a pronounced U-shaped pattern, with substantial fluctuations in the recovery of b and X. Moreover, py-irt suffers from severe degradation in item discrimination estimation as temperature increases. These results further highlight the limitations of these methods in LLM evaluation tasks. Compared with the two generic solvers L-BFGS-B and Manopt , cBMM exhibits comparable recovery performance while reducing runtime by one to two orders of magnitude (up to 200x speedup), de-pending on the temperature. This advantage is consistent across all temperature settings, underscoring the superior computational efficiency of cBMM .
+
+A.6.3 Missingness 
+
+In this section, we analyze multiple missingness patterns: Missing Completely At Random (MCAR), Missing At Random (MAR) and Missing Not At Random (MNAR), with missing rates ( ρ =1 − | Ω|/(N J )). These patterns are designed to mimic real-world scenarios such as interfacing latency, generalization failures of LLMs on domain-specific items [ 34 ], or benchmark items triggering the safety protocols of participant models due to implicit unsafe flags [50]. 
+
+Missing Completely At Random. Interfacing latency, exceeded rate limits, or safety refusals often incur empty responses [ 49 , 58 ], resulting in missing values in the response matrix Y. Assuming an MCAR pattern that aligns with the external nature of these aforementioned failures, we vary the missing rate ρ from 0 to 0.8. As illustrated in Figure A.4, py-irt consistently underperforms across nearly all recovered param-eters, and is included as a baseline only for completeness. The other methods achieve comparable 20 Figure A.2: Scalability comparison under varying numbers of LLMs N . The number of benchmark items is fixed at J = 1000 , while N increases from 200 to 5000. Each boxplot summarizes 50 independent replicates. Runtimes exceeding 1,000 seconds are truncated for better visualization. estimation accuracy across all metrics, and, as expected, their performance deteriorates as the missing rate increases. Notably, cBMM emerges as the most computationally efficient approach across all missing rates, achieving up to a 50x speedup over other methods. 
+
+Missing At Random. We design structural missing patterns based on the spatial positions of rows and columns to reflect potential generalization failures of LLMs on specific items. Specifically, we define a spatial metric Sp ij as the average of the normalized row and column indices: 
+
+Sp ij = ri + cj
+
+2 , where ri = i − 1
+
+N − 1 , c j = j − 1
+
+J − 1 .
+
+The probability of entry (i, j ) being missing is then determined by the logistic function 
+
+Φ( α + β · Sp ij ) = 11 + exp( −α − β · Sp ij )
+
+following equation (1), where β = 2 and α is calibrated to achieve a target overall missing rate ρ.This construction induces a graded missingness pattern, where the probability of missing entries increases with larger row or column indices. The results are summarized in Figure A.5. We observe a pattern consistent with Figure A.4, where 
+
+cBMM achieves comparable ranking recovery performance for θ and a, as well as comparable estima-tion accuracy for b and X, while maintaining superior computational efficiency. 
+
+Missing Not At Random. To simulate a MNAR pattern, we implement a masking mechanism for -1 entries (incorrect responses) in Y. Specifically, we introduce a gate variable Gj for each column j,where Gj
+
+> i.i.d.
+
+∼ Bernoulli (ρc), and ρc represents the column-wise missing rate. If Gj = 0 , no entries in column j are missing, while if Gj = 1 , all -1 entries within that column are masked. This setting 21 Figure A.3: Sensitivity analysis under varying temperature σ. Each boxplot summarizes 50 inde-pendent replicates. Runtimes exceeding 1,000 seconds are truncated for better visualization. ‘NA’ indicates convergence failure due to ill-conditioned data configurations in mirt .mimics scenarios where LLMs fail to generalize on domain-specific items or where benchmark items trigger safety mechanisms in participant models. The results are summarized in Figure A.6. Notably, mirt consistently returns ‘NA’, even under less severe missingness patterns, due to numerical singularities induced by complex missing structures. In contrast, cBMM maintains high rank coherence of the recovered parameters and high estimation accuracy of latent scores, while achieving the shortest runtime among all methods. 
+
+A.6.4 Benchmark redundancy 
+
+As benchmarks evolve, we expect to see increasing item redundancy across participant models [ 62 ], which may stem from information leakage in training data over time [ 13 ]. Such benchmark items provide limited discriminative power and should be phased out in future evaluations. Arepresentative example is the evolution from SWE-bench [ 31 ] to SWE-bench Verified [ 18 ], where a more discriminative subset of benchmark items was identified through extensive human annotation and verification. In contrast, we approach this problem from a data-driven perspective by identifying sparse discrimination parameters a, thereby reducing reliance on manual curation and human labor. We use the sparsity level of a to reflect the redundancy level in the benchmark and consider s =1 − ∥ a∥0/J ∈ { 0.05 , 0.1, 0.2, 0.3, 0.4, 0.5} to validate method performance under varying levels of item redundancy, where the zero mask is assigned completely at random. The results are summarized in Figure A.7. py-irt again exhibits significantly inferior recovery performance across all metrics. mirt reports ‘NA’ at s ∈ { 0.4, 0.5}, as the singularity issue becomes more severe when benchmark items are increasingly redundant. In contrast, cBMM demonstrates consistently accurate parameter recovery while maintaining superior computational efficiency. 22 Figure A.4: Sensitivity analysis under varying missing rate ρ with an MCAR missingness pattern. Each boxplot summarizes 50 independent replicates. Runtimes exceeding 1,000 seconds are truncated for better visualization. We further dissect the result by focusing on zero and non-zero patterns. In line with traditional hypothesis testing frameworks, we interpret the recovery of non-zero parameters as rejecting the null signal. Intuitively, aj = 0 indicates that the j-th item has no discriminative power for distinguishing LLM abilities and should be identified and removed in subsequent iterations. We additionally consider two metrics to evaluate the accuracy of this discovery: Recall (a) = T P T P + F N , Precision (a) = T P T P + F P ,
+
+where T P = |{ j : ˆ aj̸ = 0 , a j̸ = 0 }| , F N = |{ j : ˆ aj = 0 , a j̸ = 0 }| and F P = |{ j : ˆ aj̸ =0, a j = 0 }| . Interestingly, all methods tend to over-reject the null: while this leads to a recall of 1, it fails to control the false discovery rate. This issue is particularly pronounced for py-irt , which fails to provide meaningful sparse recovery or redundancy identification. These results suggest that developing principled error-control mechanisms is an important direction for future work. 
+
+A.7 Recovery stability 
+
+To validate the robustness of cBMM to initialization, we conduct experiments under various random initialization strategies following [ 12 ] on six real-world benchmark suites from the Open LLM Leaderboard. We run 50 replicates for each configuration to analyze the inter- and intra-run Spearman correlations. Specifically, for all i ∈ { 1, . . . , N } and j ∈ { 1, . . . , J }, we initialize θi
+
+> i.i.d.
+
+∼ N(0 , 1) ,
+
+log aj
+
+> i.i.d.
+
+∼ N(0 , σ 2
+
+> a
+
+), and bj
+
+> i.i.d.
+
+∼ N(0 , σ 2
+
+> a
+
+), where σ2 
+
+> a
+
+∈ { 1, 2, 3, 4, 5}. We find that the recovered model and item parameters exhibit consistently high correlations across different seeds and initial-ization settings, as shown in Table A.1, A.2, A.3, suggesting that cBMM yields stable and reliable parameter recovery. 23 Figure A.5: Sensitivity analysis under varying missing rate ρ with an MAR missingness pattern. Each boxplot summarizes 50 independent replicates. Runtimes exceeding 1,000 seconds are truncated for better visualization. 
+
+A.8 Real-world benchmark details MATH-500. We include the following list of LLM candidates in Table A.4 for the MATH-500 benchmark suite. Inference parameters as in [ 58 ] are set as follows: temperature is 0.5, top-p is 0.95, and repetition penalty is 1.05, with a maximum output length of 10,240 tokens. The adopted prompt templates are shown in Table A.5, where {problem} represents the specific question for each item. 
+
+Hugging Face Open LLM Leaderboard. We refer to [ 57 ] when formulating response matrix from Hugging Face’s Open LLM Leaderboard. Specifically, we utilized the raw historical data M1
+
+from https://github.com/skbwu/efficiently-evaluating-llms , comprising item-level ac-curacy metadata for six major benchmarks: IFEval, BBH, MATH, GPQA, MuSR, and MMLU-Pro. The dataset was retrieved through the huggingface_hub API by iterating through a cohort of 2211 recent evaluation repositories, spanning the period from June to December 2024, under the Leaderboard v2 schema. 
+
+Ranking flow details. Full ranking information based on average accuracy and recovered ability across the seven benchmarks is provided in the Supplementary Material ( .csv ). 24 Figure A.6: Sensitivity analysis for missing rate ρ under MNAR pattern. Each boxplot summarizes 50 independent replicates. Runtimes exceeding 1,000 seconds are truncated for better visualization. ‘NA’ indicates convergence failure due to ill-conditioned data configurations in mirt .25 Figure A.7: Sparsity recovery analysis for benchmark redundancy detection. Each boxplot sum-marizes 50 independent replicates. Runtimes exceeding 1,000 seconds are truncated for better visualization. ‘NA’ indicates convergence failure due to ill-conditioned data configurations in mirt .26 Table A.1: Stability check for cBMM -recovered ˆθ. Each block corresponds to a specific benchmark suite. Cells report the mean and standard deviation (in parenthesis) of Spearman correlation coeffi-cients across 50 replicates. 
+
+ˆθ IFEval BBH 
+
+σ2 
+
+> a
+
+1 2 3 4 5 1 2 3 4 51 1(2.55e-17) 1(5.70e-17) 2 0.99 (9.58e-7) 1 0.99 (1.35e-7) 1(5.09e-17) 3 0.99 (2.07e-6) 1 1 0.99 (1.42e-7) 0.99 (3.02e-8) 1(5.09e-17) 4 0.99 (2.50e-6) 1 1 1 0.99 (1.47e-7) 0.99 (4.47e-8) 0.99 (1.71e-8) 1(5.70e-17) 5 0.99 (2.65e-6) 1 1 1 1 0.99 (1.49e-7) 0.99 (5.84e-8) 0.99 (3.30e-8) 0.99 (1.52e-8) 1(7.20e-17) MATH GPQA 
+
+σ2 
+
+> a
+
+1 2 3 4 5 1 2 3 4 51 1(0.00e+0) 1(2.55e-17) 2 0.99 (1.75e-8) 1(0.00e+0) 0.99 (1.90e-6) 1(3.60e-17) 3 0.99 (1.68e-8) 0.99 (1.91e-9) 1(2.55e-17) 0.99 (2.56e-6) 0.99 (4.86e-7) 1(3.60e-17) 4 0.99 (1.67e-8) 0.99 (2.57e-9) 0.99 (9.11e-10) 1(2.55e-17) 0.99 (2.83e-6) 0.99 (7.55e-7) 0.99 (9.82e-7) 1(4.41e-17) 5 0.99 (1.64e-8) 0.99 (3.12e-9) 0.99 (1.41e-9) 0.99 (8.90e-10) 1(2.55e-17) 0.99 (2.88e-6) 0.99 (8.36e-7) 0.99 (8.06e-7) 0.99 (2.44e-7) 1(4.41e-17) MuSR MMLU-Pro 
+
+σ2 
+
+> a
+
+1 2 3 4 5 1 2 3 4 51 1(7.20e-17) 1(0.00e+0) 2 0.99 (2.27e-5) 1(6.24e-17) 0.99 (9.95e-8) 1(7.85e-17) 3 0.92 (3.58e-1) 0.92 (3.58e-1) 1(6.24e-17) 0.99 (1.03e-7) 0.99 (1.26e-8) 1(7.85e-17) 4 0.92 (3.59e-1) 0.92 (3.58e-1) 0.99 (2.86e-6) 1(6.24e-17) 0.99 (1.10e-7) 0.99 (1.52e-8) 0.99 (6.28e-9) 1(7.85e-17) 5 0.92 (3.59e-1) 0.92 (3.58e-1) 0.99 (3.47e-6) 0.99 (2.42e-7) 1(7.20e-17) 0.99 (1.11e-7) 0.99 (1.77e-8) 0.99 (9.97e-9) 0.99 (3.66e-9) 1(7.85e-17) 
+
+27 Table A.2: Stability check for cBMM -recovered ˆa. Each block corresponds to a specific benchmark suite. Cells report the mean and standard deviation (in parenthesis) of Spearman correlation coeffi-cients across 50 replicates. 
+
+ˆa IFEval BBH 
+
+σ2 
+
+> a
+
+1 2 3 4 5 1 2 3 4 51 1(2.55e-17) 1(1.14e-16) 2 0.99 (9.58e-7) 1 0.99 (2.43e-5) 1(1.14e-16) 3 0.99 (2.07e-6) 1 1 0.99 (2.85e-5) 0.99 (6.16e-7) 1(1.14e-16) 4 0.99 (2.50e-6) 1 1 1 0.99 (2.61e-5) 0.99 (1.15e-6) 0.99 (3.18e-7) 1(1.14e-16) 5 0.99 (2.65e-6) 1 1 1 1 0.99 (2.18e-5) 0.99 (2.28e-6) 0.99 (1.30e-6) 0.99 (3.83e-7) 1(1.14e-16) MATH GPQA 
+
+σ2 
+
+> a
+
+1 2 3 4 5 1 2 3 4 51 1(1.14e-16) 1(0.00e+0) 2 0.99 (3.63e-5) 1(1.14e-16) 0.99 (9.34e-5) 1(0.00e+0) 3 0.99 (4.70e-5) 0.99 (8.51e-6) 1(1.14e-16) 0.99 (7.47e-5) 0.99 (8.78e-5) 1(0.00e+0) 4 0.99 (4.95e-5) 0.99 (1.04e-5) 0.99 (1.13e-6) 1(1.14e-16) 0.99 (1.17e-4) 0.99 (1.26e-4) 0.99 (9.80e-5) 1(0.00e+0) 5 0.99 (5.09e-5) 0.99 (1.08e-5) 0.99 (2.83e-6) 0.99 (8.30e-7) 1(1.14e-16) 0.99 (1.18e-4) 0.99 (1.16e-4) 0.99 (1.01e-4) 0.99 (3.15e-5) 1(0.00e+0) MuSR MMLU-Pro 
+
+σ2 
+
+> a
+
+1 2 3 4 5 1 2 3 4 51 1(5.70e-17) 1(7.85e-17) 2 0.99 (8.42e-4) 1(7.64e-17) 0.99 (1.44e-5) 1(5.55e-17) 3 0.92 (3.86e-1) 0.92 (3.86e-1) 1(6.74e-17) 0.99 (1.73e-5) 0.99 (3.19e-6) 1(5.55e-17) 4 0.92 (3.87e-1) 0.92 (3.87e-1) 0.99 (2.26e-4) 1(7.20e-17) 0.99 (1.67e-5) 0.99 (1.40e-5) 0.99 (3.76e-6) 1(0.00e+0) 5 0.92 (3.87e-1) 0.92 (3.87e-1) 0.99 (3.20e-4) 0.99 (1.65e-4) 1(7.20e-17) 0.99 (2.00e-5) 0.99 (2.57e-5) 0.99 (1.07e-5) 0.99 (1.76e-6) 1(0.00e+0) 
+
+28 Table A.3: Stability check for cBMM -recovered ˆb. Each block corresponds to a specific benchmark suite. Cells report the mean and standard deviation (in parenthesis) of Spearman correlation coeffi-cients across 50 replicates. 
+
+ˆb IFEval BBH 
+
+σ2 
+
+> a
+
+1 2 3 4 5 1 2 3 4 51 1(2.55e-17) 1(0.00e+0) 2 0.99 (9.58e-7) 1 0.99 (8.77e-7) 1(0.00e+0) 3 0.99 (2.07e-6) 1 1 0.99 (9.51e-7) 0.99 (1.00e-7) 1(8.82e-17) 4 0.99 (2.50e-6) 1 1 1 0.99 (1.03e-6) 0.99 (3.07e-7) 0.99 (6.15e-8) 1(1.02e-16) 5 0.99 (2.65e-6) 1 1 1 1 0.99 (1.12e-6) 0.99 (5.10e-7) 0.99 (1.86e-7) 0.99 (4.91e-8) 1(5.09e-17) MATH GPQA 
+
+σ2 
+
+> a
+
+1 2 3 4 5 1 2 3 4 51 1(0.00e+0) 1(2.55e-17) 2 0.99 (9.23e-5) 1(0.00e+0) 0.99 (1.90e-6) 1(2.55e-17) 3 0.99 (1.38e-4) 0.99 (8.82e-5) 1(0.00e+0) 0.99 (2.21e-6) 0.99 (1.12e-6) 1(3.60e-17) 4 0.99 (1.50e-4) 0.99 (1.16e-4) 0.99 (3.94e-5) 1(0.00e+0) 0.99 (2.72e-6) 0.99 (1.78e-6) 0.99 (1.60e-6) 1(5.70e-17) 5 0.99 (1.51e-4) 0.99 (1.19e-4) 0.99 (4.28e-5) 0.99 (4.71e-6) 1(8.82e-17) 0.99 (3.46e-6) 0.99 (2.40e-6) 0.99 (1.63e-6) 0.99 (3.26e-7) 1(6.74e-17) MuSR MMLU-Pro 
+
+σ2 
+
+> a
+
+1 2 3 4 5 1 2 3 4 51 1(0.00e+0) 1(5.55e-17) 2 0.99 (2.28e-6) 1(0.00e+0) 0.99 (1.95e-6) 1(7.85e-17) 3 0.99 (2.11e-3) 0.99 (2.10e-3) 1(0.00e+0) 0.99 (2.78e-6) 0.99 (2.33e-7) 1(7.85e-17) 4 0.99 (2.11e-3) 0.99 (2.11e-3) 0.99 (5.24e-7) 1(0.00e+0) 0.99 (3.05e-6) 0.99 (3.77e-7) 0.99 (5.36e-8) 1(5.55e-17) 5 0.99 (2.11e-3) 0.99 (2.11e-3) 0.99 (5.96e-7) 0.99 (1.42e-7) 1(0.00e+0) 0.99 (3.20e-6) 0.99 (4.40e-7) 0.99 (1.21e-7) 0.99 (2.04e-8) 1(0.00e+0) 
+
+29 Table A.4: List of LLM candidates in the MATH-500 suite 
+
+• 01-ai/Yi-34B • baidu/ERNIE-4.5-21B-A3B-PT • baidu/ERNIE-4.5-21B-A3B-Thinking • deepseek-ai/DeepSeek-R1-0528-Qwen3-8B • deepseek-ai/DeepSeek-R1-Distill-Llama-8B • deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B • deepseek-ai/DeepSeek-R1-Distill-Qwen-14B • deepseek-ai/DeepSeek-R1-Distill-Qwen-32B • deepseek-ai/DeepSeek-R1-Distill-Qwen-7B • dphn/dolphin-2.9.1-yi-1.5-34b • dphn/Dolphin-Mistral-24B-Venice-Edition • google/gemma-2-27b-it • google/gemma-2b-it • google/gemma-3-1b-pt • HuggingFaceTB/SmolLM3-3B • huihui-ai/Huihui-gpt-oss-20b-BF16-abliterated • huihui-ai/Huihui-Qwen3-8B-abliterated-v2 • ibm-granite/granite-3.3-2b-instruct • internlm/internlm2-chat-20b • LGAI-EXAONE/EXAONE-4.0.1-32B • LLM360/K2-Think • meta-llama/Llama-2-7b-chat-hf • meta-llama/Llama-2-7b-hf • meta-llama/Llama-3.1-8B-Instruct • meta-llama/Llama-3.2-1B-Instruct • meta-llama/Llama-3.2-3B-Instruct • meta-llama/Meta-Llama-3-8B-Instruct • microsoft/Phi-3.5-mini-instruct • microsoft/Phi-4-mini-instruct • microsoft/Phi-4-mini-reasoning • microsoft/Phi-4-mini-reasoning-plus • mistralai/Mistral-7B-Instruct-v0.1 • mistralai/Mistral-7B-Instruct-v0.2 • mistralai/Mistral-7B-Instruct-v0.3 • mistralai/Mistral-Small-Instruct-2409 • moonshotai/Moonlight-16B-A3B • moonshotai/Moonlight-16B-A3B-Instruct • nvidia/AceReason-Nemotron-1.1-7B • nvidia/AceReason-Nemotron-14B • nvidia/Llama-3.1-Nemotron-8B-UltraLong-4M-Instruct • nvidia/Nemotron-Research-Reasoning-Qwen-1.5B • nvidia/NVIDIA-Nemotron-Nano-12B-v2 • nvidia/NVIDIA-Nemotron-Nano-9B-v2 • nvidia/OpenReasoning-Nemotron-1.5B • nvidia/OpenReasoning-Nemotron-7B • openai/gpt-oss-20b • openbmb/MiniCPM4.1-8B • Qwen/Qwen1.5-32B • Qwen/Qwen2.5-0.5B-Instruct • Qwen/Qwen2.5-1.5B-Instruct • Qwen/Qwen2.5-14B-Instruct • Qwen/Qwen2.5-32B-Instruct • Qwen/Qwen2.5-3B-Instruct • Qwen/Qwen2.5-7B-Instruct • Qwen/Qwen2-7B-Instruct • Qwen/Qwen3-0.6B • Qwen/Qwen3-1.7B • Qwen/Qwen3-4B-Thinking-2507 • Qwen/Qwen3-8B • Qwen/QwQ-32B • Qwen/Qwen3-14B • Qwen/Qwen3-30B-A3B • Qwen/Qwen3-30B-A3B-Instruct-2507 • Qwen/Qwen3-30B-A3B-Thinking-2507 • Qwen/Qwen3-32B • Qwen/Qwen3-4B • Qwen/Qwen3-4B-Instruct-2507 • swiss-ai/Apertus-8B-Instruct-2509 • zai-org/GLM-4-32B-0414 • zai-org/GLM-4-9B-0414 
+
+Table A.5: Prompt templates used in MATH-500 evaluation. 
+
+Zero-shot One-shot 
+
+Solve the following math problem. Be clear and concise. Prob-lem: “{problem}” Provide a step-by-step solution . Start each step with a number followed by a period (e.g., ‘1.’, ‘2.’, etc.). Use basic LaTeX for mathematical expressions, such as for fractions, exponents, and variables. Avoid complex formatting. At the very end of your entire response, and only at the very end, state the final answer. This final answer must be enclosed in a single LaTeX box, like so: Answer . Solve the following math problem. Please think step-by-step 
+
+to obtain the solution. Use basic LaTeX for mathematical ex-pressions, such as for fractions, exponents, and variables. Avoid complex formatting. At the very end of your entire response, and only at the very end, state the final answer. This final answer must be enclosed in a single LaTeX box, like so: Answer . Here is an example of how to format your response and think about solving the problem: Example Problem: What is the sum of the two values of x for which (x + 3) 2 = 121 ?Example Solution: Expanding the left side, we have x2 + 6 x +9 = 121 ⇒ x2 + 6 x − 112 = 0 . For a quadratic with the equation ax 2 + bx + c = 0 , the sum of the roots is −b/a .Applying this formula to the problem, we have that the sum of the two roots is −6/1 = −6 .Solution: −6
+
+New Problem: {problem}. 
+
+30

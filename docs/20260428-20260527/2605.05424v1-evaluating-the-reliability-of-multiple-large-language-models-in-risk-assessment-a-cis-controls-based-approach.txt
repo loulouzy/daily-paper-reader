@@ -1,0 +1,702 @@
+Title: Evaluating the Reliability of Multiple Large Language Models in Risk Assessment: A CIS Controls Based Approach
+
+URL Source: https://arxiv.org/pdf/2605.05424v1
+
+Published Time: Fri, 08 May 2026 00:12:40 GMT
+
+Number of Pages: 35
+
+Markdown Content:
+# Evaluating the Reliability of Multiple Large Language Models in Risk Assessment: A CIS Controls-Based Approach 
+
+# Gustavo Roberto Pinto 1, Arthur do Prado Labaki 1†,Rodrigo Sanches Miani 1* †
+
+1* Faculty of Computing, Federal University of Uberlˆ andia, Av. Jo˜ ao Naves de ´Avila, 2121, Uberlˆ andia, 38408-100, Minas Gerais, Brazil. *Corresponding author(s). E-mail(s): miani@ufu.br; Contributing authors: gus@ufu.br; arthur.labaki@ufu.br; 
+
+†These authors contributed equally to this work. 
+
+Abstract 
+
+Proper implementation of technical and administrative controls reinforces an organization’s cybersecurity posture and business resilience, reduces risks, and enhances governance, ultimately elevating business maturity. The dynamics of the technological landscape and emerging threats negatively affect the most diverse companies, regardless of their size. This, associated with a global gap in the cybersecurity workforce, imposes enormous challenges and the need for a profound change in how companies respond to threats. Generative Artificial Intelligence from large language models has become an influential tool across various companies, emerging as a viable option to help address those challenges while partially addressing the shortage of skilled labor. Although large language models can help in this scenario, there may be risks, such as generating unreliable or ’hallucinated’ content, which could lead people and companies to make bad decisions. Our study proposes integrating human experts into the validation pro-cess as a crucial step toward ensuring the proper implementation of technical and administrative controls. Furthermore, we sought to identify how large language models perform in assessing cybersecurity risk scenarios compared to human experts, highlighting the importance of integrating humans and machines in the cybersecurity risk assessment process. Using a questionnaire with risk scenarios, we analyzed responses from 50 human experts. We compared their responses with those of five popular large language models to determine whether it is possible to use only large language models for cybersecurity risk assessment. The results 
+
+1 
+
+> arXiv:2605.05424v1 [cs.CR] 6 May 2026 reveal that the large language models consistently underestimated cybersecu-rity risks compared to human experts, reinforcing the need for human oversight and suggesting that LLMs should be used as complementary tools rather than standalone assessors.
+> Keywords: Artificial intelligence, Computer security, Human factors, Risk analysis
+
+# 1 Introduction 
+
+Organizations today face an increasingly complex threat landscape where the proper implementation of technical and administrative controls directly impacts cybersecurity posture, business resilience, and overall governance. However, the rapid evolution of the technology landscape and the rise of sophisticated threats—such as ransomware attacks, supply chain compromises, zero-day vulnerabilities, and advanced persistent threats (APTs)—exacerbated by geopolitical tensions, have put immense pressure on security teams, regardless of company size. The 20th edition of the Global Risk Report for 2025, produced exclusively by the World Economic Forum [1], lists the main risks for the next 2 and 10 years. Cyber Espionage and Warfare appear as the fifth most severe risk for the next two years, while Adverse Outcomes of AI Technologies appear as the sixth most significant risk for the next 10 years. Compounding these challenges with a worldwide shortage of qualified cybersecurity professionals prompts organizations to explore innovative methods for strengthening their defenses [2]. The Cybersecurity Workforce Study, produced by (ISC)2 in 2024, estimates a gap of around 4.7 million cybersecurity professionals, an increase of 19%. In response, generative artificial intelligence—particularly large language mod-els—has emerged as a promising tool [3]. By automating specific tasks and accelerating risk assessments, AI can help partially address the workforce gap. However, this potential comes with pitfalls: large language models sometimes generate unreliable or ”hallucinated” outputs, leading to misguided decisions if not properly scrutinized. A human expert-in-the-loop approach becomes critical to mitigate such risks, enabling skilled practitioners to validate and refine the AI’s recommendations. Although recent studies explore the use of generative AI across various cybersecu-rity domains, there remains a lack of research evaluating large language models’ ability to perform cybersecurity risk assessments independently [4–9]. This paper addresses that gap by comparing the performance of an LLM to human participants across structured scenarios, aiming to assess its potential to approximate expert judgment. We investigate how five LLMs (ChatGPT 5, DeepSeek V3.1, Llama 4 Scout, Claude Opus 4.1, and Gemini 2.5 PRO) assign risk levels to cybersecurity scenarios aligned with recognized frameworks, such as the CIS CONTROLS [10]. By comparing Large Language Model (LLM) risk ratings to those assigned by human cybersecu-rity professionals and measuring how much they diverge across multiple controls, we aim to clarify the extent to which LLMs can be effectively used in conjunction with human expertise for cybersecurity risk assessment. Therefore, this work investigates 2the performance of multiple LLMs, compares it to the performance of human cyberse-curity professionals, and analyzes the results, aiming to answer the following research questions (RQs): 1. To what extent can LLMs be trusted to conduct cybersecurity risk assessments without the involvement of human experts? 2. How LLMs used in this study compare to human cybersecurity professionals in assessing risk across standardized scenarios 
+
+• Senior and Specialist Professionals: How does the LLMs performance align with or differ from that of senior and specialist cybersecurity profes-sionals who possess advanced expertise and experience? 
+
+• Other Professionals (Non-Senior/Specialist): How do LLMs compare to professionals at other levels (e.g., junior, mid-level, interns) regarding risk assessment accuracy and consistency? 
+
+3. Do different LLMs produce significantly different risk ratings for the same cybersecurity scenarios? This study offers three main contributions to the field of cybersecurity risk assessment. First, we provide an extensive comparative analysis between human cybersecurity professionals and multiple state-of-the-art large language models in the context of structured risk-assessment scenarios aligned with CIS Controls, offer-ing empirical evidence on how LLMs interpret and rate cybersecurity risks. Second, we demonstrate that LLMs systematically underestimate risk severity across differ-ent scenario categories and professional seniority levels, revealing concrete limitations that challenge their use as standalone decision-makers in cybersecurity governance. Finally, we propose and validate a human-expert-in-the-loop approach as an essen-tial mechanism to mitigate hallucinations and unreliable outputs, positioning LLMs as complementary tools that can support—but not replace—expert judgment in risk-assessment workflows. Collectively, these contributions address a critical gap in the literature and provide practical insights for organizations considering the integration of LLMs into cybersecurity processes. The remainder of this article is organized as follows. Section 2 (Background) introduces key concepts referenced and discussed throughout the paper. Section 3 (Literature Review) presents the main works related to the topic and reviews relevant studies that have informed the development of this research. Section 4 (Methodology) outlines the structured approach adopted in the study. Section 5 (Results and Discus-sion) presents the data and analyzes the findings. Finally, Section 6 (Conclusion and Future Work) summarizes the main conclusions and outlines future work. 
+
+# 2 Background 
+
+This section explores two closely connected topics: Generative Artificial Intelligence (Generative AI) and Large Language Models (LLMs), alongside Security Controls and Frameworks. The first subsection examines the development, functionalities, and 3applications of Generative AI and LLMs, emphasizing their influence across indus-tries while addressing their advantages and ethical challenges. The second subsection focuses on the significance of security controls and frameworks, underscoring their critical role in protecting organizations from cyber threats. 
+
+# 2.1 Generative AI and Large Language Models 
+
+Generative Artificial Intelligence (Generative AI) and Large Language Models (LLMs), such as OpenAI’s ChatGPT, Google’s Gemini, Meta’s Llama, and Anthropic’s Claude, have gained prominence in recent years for their ability to assist professionals across various fields and tasks. These models leverage vast neural networks and deep learning techniques to process and generate text, code, and even images naturally, mimicking complex human cognitive functions such as problem-solving, creativity, and decision-making [11, 12]. Generative AI encompasses various artificial intelligence methods that create orig-inal, meaningful content by learning from extensive datasets. A notable milestone in this field was the development of Generative Adversarial Networks (GANs), which introduced a groundbreaking adversarial training approach. GANs utilize two com-peting neural networks—a generator and a discriminator—to produce highly realistic synthetic images, audio, and videos [13]. Despite this achievement, the introduction of the Transformer architecture in 2017 significantly reshaped Generative AI by enabling the emergence of sophisticated Large Language Models. The Transformers’ attention mechanism and self-attention allowed these models to process and understand exten-sive textual contexts, producing coherent, contextually accurate text outputs, thus dramatically expanding the capabilities and applications of Generative AI beyond visual content generation [12, 14]. Large Language Models represent a powerful application of Generative AI, specif-ically focused on language processing and generation. These models are trained on massive, diverse datasets, including books, research articles, websites, and structured knowledge bases, enabling them to learn and generalize linguistic patterns effectively. Such robust training empowers LLMs to execute complex tasks, including text trans-lation, summarization, sentiment analysis, and even source code generation in various programming languages [3, 11]. Furthermore, the creative potential of Large Language Models has significantly impacted content generation. These models can effectively write narratives, draft scripts, generate compelling advertising copy, and even assist with on-demand brain-storming for innovative ideas, streamlining and enhancing creative processes across industries from entertainment to marketing. This transformative potential highlights their role as technological tools and as essential components in creative fields [12, 15]. However, Generative AI and Large Language Models pose several critical challenges alongside their evident advantages, such as ethical concerns, including the potential to generate misinformation, reinforce existing biases, or unintentionally propagate stereotypes inherent in their training data. These models inherit biases from the vast volumes of data they are trained on, necessitating rigorous evaluation protocols and ethical guidelines to mitigate potential harm and ensure the responsible deployment of AI technologies [5, 15]. 4Large Language Models have emerged as powerful tools in cybersecurity, signif-icantly influencing defensive and offensive capabilities. On the defensive side, they assist in analyzing massive volumes of security logs and network traffic data, effi-ciently identifying anomalies, predicting attack patterns, and automating routine security operations. Recent approaches demonstrate that combining LLMs with tradi-tional static code analysis significantly improves vulnerability detection, underscoring the promising role of neuro-symbolic AI methodologies in enhancing cybersecurity resilience [6]. On the other hand, the potential misuse of LLMs by cybercriminals has raised significant alarms within the security community, as adversaries can exploit the technology to craft highly persuasive phishing emails or automate the discovery and exploitation of software vulnerabilities on a large scale [7]. These opportunities and threats underline the critical importance of careful eval-uation and strategic planning when deploying LLMs in sensitive fields such as cybersecurity. The establishment of comprehensive frameworks for evaluating AI capa-bilities and ongoing research into the practical and ethical implications of Generative AI are essential steps toward balanced and responsible technology integration [5, 7]. 
+
+# 2.2 Security Controls and Frameworks 
+
+Security controls and frameworks are crucial in protecting organizations against increasingly sophisticated cyber threats. These structured tools provide a consistent foundation for identifying, mitigating, and managing risks across various sectors. In addition to offering clear guidelines, frameworks help align organizational practices with global security best practices [16]. One widely recognized framework is the Center for Internet Security (CIS) Critical Security Controls, which provides a practical, prioritized approach to securing an organization’s assets. The CIS consists of specific controls categorized into priority levels, allowing businesses to scale their security measures based on size, resources, and operational complexity [10]. Implementing CIS controls helps mitigate the most common threats and is a starting point for organizations seeking to structure their security strategy. Another key pillar is the NIST Cybersecurity Framework (CSF), developed by the National Institute of Standards and Technology. This framework provides a flex-ible and adaptable approach based on five core functions: Identify, Protect, Detect, Respond, and Recover. These functions form a continuous improvement cycle, enabling organizations to proactively address cyber threats and optimize their security pro-cesses. Due to its broad applicability and governmental support, the NIST CSF is widely adopted by both private companies and public institutions [17]. The ISO/IEC 27001, published by the International Organization for Standardiza-tion, outlines the requirements for implementing an Information Security Management System (ISMS). This framework is particularly valued for its focus on cybersecurity governance, covering everything from access control policies to regular audits. ISO 27001 certification has become a global standard, demonstrating an organization’s commitment to information protection and building trust with customers and partners [18]. 5Beyond being operational tools, these frameworks have strategic significance for cybersecurity. They serve as references for regulatory compliance and foster cross-sector collaboration by sharing best practices and lessons learned. By adopting security frameworks, organizations can consistently enhance their security posture, thereby strengthening the global cybersecurity network [8]. 
+
+# 3 Related Work 
+
+Research on the intersection of cybersecurity and artificial intelligence spans abroad spectrum of approaches, ranging from LLM-based benchmarks and special-ized evaluation frameworks to practical tools and methodologies for organizational risk management. To situate our contribution within this landscape, we structured this section into two complementary parts. First, we review studies that explore the use of Large Language Models (LLMs) and other AI-driven techniques for cyber-security tasks, including benchmarks, specialized models, and evaluation methods that assess LLM capabilities across technical domains. Second, we examine research focused on cybersecurity risk analysis, encompassing both traditional frameworks and tools—often geared toward SMEs—and more recent AI-supported approaches. This organization allows us to contrast AI-centric methods with governance-, risk-, and compliance-oriented solutions, highlighting the gap our work addresses. Unlike prior studies, which typically evaluate model performance on factual knowl-edge, Q&A benchmarks, or specialized detection tasks, our work adopts a structure closer to Governance, Risk, and Compliance (GRC) audits. We use simulated scenar-ios with structured question-and-answer sets grounded in CIS Controls and compare numerical risk assessments (0–10) produced by two groups: (a) 50 human cybersecu-rity professionals, categorized by experience, and (b) multiple state-of-the-art LLMs. This design enables the analysis of statistical correlation, the identification of sys-tematic risk underestimation by LLMs, and the evaluation of the feasibility of hybrid human–AI approaches. By focusing on risk scoring rather than purely diagnostic, factual, or classification tasks, our study provides a distinct perspective within the broader research landscape. 
+
+# 3.1 Use of Large Language Models (LLMs) in Cybersecurity 
+
+The authors of [19] propose SECURE, a comprehensive benchmark for evaluating LLMs in cybersecurity tasks, with particular emphasis on industrial control sys-tems (ICS). The benchmark spans six task sets involving vulnerability interpretation, exploitation reasoning, interpreter abuse, and technical advisory generation, drawing on sources such as CWE, CVE, MITRE ATT&CK, and CISA. The evaluation of seven LLMs—including GPT-4, Gemini, and Llama—revealed substantial performance gaps, underscoring the importance of domain-specific and realistic benchmarks. In [20], the authors introduce MEQA, a meta-evaluation framework designed to assess the quality of Q&A benchmarks applied to LLMs in cybersecurity contexts. MEQA defines eight criteria and 44 subcriteria, covering aspects such as validity, reli-ability, evaluator design, robustness, and reproducibility. By applying this framework 6with both human evaluators and LLMs, the study highlights methodological weak-nesses in existing benchmarks, including limited representativeness and low statistical stability. The work in [21] presents CyberMetric, a benchmark for assessing the factual and technical knowledge of LLMs across nine cybersecurity domains using multiple-choice questions validated by experts. Through Retrieval-Augmented Generation (RAG), CyberMetric offers a consistent structure for comparing model and human performance under closed-book conditions focused on technical knowledge. A different perspective is presented in [22], where the authors propose the Cyber-security Evaluation Tool (CET), a maturity assessment instrument tailored for SMEs and grounded in the NIST framework. CET includes a questionnaire with 35 critical controls, reporting mechanisms, and recommended actions, enabling small organizations to interpret and apply cybersecurity guidance despite limited expertise. 
+
+# 3.2 Risk Analysis in Cybersecurity 
+
+In [23], the authors propose CyberGen, a methodology that combines LLMs and knowledge graphs (KGs) to generate validated cybersecurity educational content automatically. Using zero-shot, few-shot, and ontology-driven prompting strategies, CyberGen produces approximately 4,000 expert-verified Q&A pairs in the CyberQ dataset, supporting scalable training and instructional design in cybersecurity. The authors of [24] introduce SecurityBERT, a lightweight model optimized for cyber-threat detection in IoT and IIoT environments. Based on a BERT architecture enhanced with a privacy-preserving feature learning encoding (PPFLE) approach, the model achieved 98.2% accuracy on the Edge-IIoT dataset and millisecond-level inference times, making it suitable for resource-constrained environments. In [25], the authors present CyberPal.AI, a family of cybersecurity-focused LLMs trained on the SecKnowledge dataset, which comprises over 400,000 instructions gener-ated via expert curation and synthetic techniques. The accompanying SecKnowledge-Eval benchmark, comprising 15 evaluation sets, demonstrates the models’ robust performance across complex reasoning tasks in threat detection, explanation, and analysis. The qualitative study reported in [3] investigates barriers faced by small and medium-sized enterprises (SMEs) in adopting cybersecurity practices. Through inter-views with European SMEs, the authors identify misconceptions about attack likelihood, informal organizational structures, unclear accountability, and skepticism toward specialized providers. The results highlight the importance of aligning technical recommendations with cultural and operational realities. The authors of [16] propose a COBIT-based self-assessment tool designed to guide SMEs toward ISO/IEC 27001 compliance. Structured around 14 security domains and evaluated using maturity levels, the tool is validated through three case studies demonstrating its feasibility for organizations with minimal cybersecurity expertise. In [26], the authors introduce Yacraf, a quantitative cybersecurity risk assessment model combining threat modeling, attack trees, and a structured metamodel. Compat-ible with FAIR methodology, Yacraf provides stronger visual and analytical support for decision-making and is validated through real-world corporate deployments. 7Finally, [27] proposes a risk-assessment approach specifically tailored to SMEs, grounded in Protection Motivation Theory (PMT) and Self-Determination Theory (SDT). The GEIGER score derived from the model offers intuitive risk interpretation and personalized countermeasures while preserving user privacy. 
+
+# 3.3 Comparative Analysis of Related Work 
+
+Overall, the related work highlights a broad spectrum of initiatives that leverage LLMs and other AI-driven methods for cybersecurity, ranging from benchmarking efforts for model evaluation—such as SECURE [19], MEQA [20], CyberMetric [21], and SecKnowledge-Eval [25]—to practical tools and organizational frameworks designed for SMEs, including CET [22], COBIT-to-ISO self-assessment approaches [16], and GEIGER-based risk scoring models [27]. Research also examines specialized models such as SecurityBERT [24] and CyberPal.AI [25], as well as innovative methodolo-gies like CyberGen [23], and Yacraf [26], which address tasks ranging from threat detection and structured risk analysis to the generation of educational content. Collec-tively, these studies underscore the growing role of LLMs and structured frameworks in advancing cybersecurity while also exposing persistent challenges, including model limitations, the influence of human factors, and the need for scalable, domain-specific solutions. In this context, the present research distinguishes itself by evaluating risk assessments grounded in CIS Controls, systematically comparing LLM-generated rat-ings with those of human experts, and examining the viability of hybrid approaches that integrate human judgment with AI-driven support. Table 1 presents a comparative summary of the main studies discussed above. The analyzed works vary widely in scope, from benchmarks and specialized AI models to practical assessment tools for SMEs and structured risk-analysis frameworks. This synthesis helps contextualize the novelty of the present work, particularly its con-tribution in evaluating LLM-based risk assessments derived from CIS Controls and systematically comparing them with human expert judgments. 
+
+Table 1 : Comparison between related works and the proposed study                              
+
+> Ref. Category Domain Output/Task LLM vs hum. Risk Bases/Refs.
+> [19] SECURE Benchmark ICS Multi-task (reasoning)
+> Yes No CWE, CVE, MITRE ATT&CK, CISA [20] MEQA Meta-evaluation LLM benchmarks Criteria (8+44)
+> Yes No —[21] CyberMetric Benchmark Tech. knowledge MCQ (closed-book)
+> Yes No RAG, human validation [22] CET (SMEs) Tool SMEs / NIST Questionnaire + recommen-dations No Yes NIST CSF [23] CyberGen/-CyberQ Method / Dataset Education Q&A generation No No KG / Ontology [24] Security-BERT Model IoT / IIoT Threat detection No No —
+> Continued on next page
+
+8Ref. Category Domain Output/Task LLM vs hum. Risk Bases/Refs.                      
+
+> [25] CyberPal.AI LLMs Threats / analysis Instructions + tasks No No MITRE, CVE, CAPEC, Sigma, SIEM [3] Qualitative study (SMEs) Study SMEs / adoption Factors and barriers N/A No —[16] COBIT →ISO Tool SMEs / governance Maturity by domains No Partial COBIT 4.1, ISO/IEC 27001 [26] Yacraf Framework Quantitative risk Attack tree + calculation No Yes FAIR-like / metamodel [27] GEIGER (SMEs) Method / Tool SMEs Risk score + actions No Yes PMT, SDT, CERT, GEIGER This work Comparative study GRC / audit Risk score (0–10)
+> Yes Yes CIS Controls
+
+# 4 Methodology 
+
+Our main goal is to evaluate the effectiveness of a Large Language Model in assessing cybersecurity risks and compare its performance with that of human professionals at different levels of expertise. To achieve this, we designed a structured methodology divided into four main phases, as illustrated in Figure 1. These phases follow a sequen-tial approach to ensure a systematic and rigorous evaluation of the risk assessment process. Next, we describe each phase in detail. A) Data Creation: This phase involves the development of contextualized input data to guide the risk assessment process. We defined a general context, specifying a cybersecurity scenario in which an information security analyst must assess the security risk of a partner company. Based on this, we created a set of structured questions and corresponding responses to simulate real-world assessments, which we called Input Creation. 
+
+• Input Creation: In this stage, we developed a set of questions based on the CIS Framework, ensuring that a corresponding question repre-sented each control. We analyzed various real-world assessments to enhance the realism and quality of the responses. Drawing on these insights, we crafted responses aligned with a simulated scenario representing a mid-sized technology company. B) LLM Test: In this step, the input data were tested using the selected language models. We fed the models structured responses to assess their ability to assess cybersecurity risks. Different input variations were tested, including extreme and mixed cases, to evaluate the model’s consistency in risk assessment. C) Human Test: We conducted a complementary human evaluation by recruiting participants with diverse backgrounds in cybersecurity and IT. These partici-pants assessed security risks using the same contextual scenario used in the LLM evaluation. We prepared a structured questionnaire to collect their assessments and demographic and professional background information. D) Results Analysis: Finally, we conducted a statistical analysis of the responses from both the LLMs and the human participants. Our study examined the 9Fig. 1 : Flowchart for cybersecurity risk assessment using LLMs and human evaluation. distribution of risk classifications, the correlation between human and AI eval-uations, and applied statistical significance tests to identify potential trends or discrepancies in risk perception. 
+
+# 4.1 Data Creation 
+
+When working with LLMs for text generation, it is essential to develop a general context that establishes the current environment and outlines what needs to be done, while exposing as many details as possible [11]. This general context allows the LLM to understand its real purpose, reducing the chances of misinterpretation. Additionally, context is essential for helping individuals understand a specific subject [12]. Thus, the developed general context is: 
+
+”You are an information security analyst working for a medium-sized company. This company handles sensitive customer information, from personally identifiable data to strategic records. Currently, the company is concerned about the information security posture adopted by its partners. These partners play an essential role in the supply chain, providing services that support critical business processes and functions. They require access to network resources, including internal and external applications, data, and IT services. To assess the risks associated with these partners, the company uses the CIS (Critical 
+
+10 Security Controls) framework, which enables the identification of potential risks before service delivery begins. Currently, one of the partners is being evaluated regarding the cybersecurity risks associated with their infrastructure, processes, systems, applications, and other aspects. The necessary data for this evaluation are presented below, including cus-tomized questions aligned with the CIS standards and the partner’s answers. Your objective, as an information security analyst, is to determine the security risk associated with each partner based on your expertise, assigning a rating on a scale from 0 (low risk) to 10 (high risk), to define the level of risk each partner represents to the company.” 
+
+Input Creation 
+
+The input creation process was based on the details described in the general context. It consisted of two main elements: the questions posed by the security analyst and the responses provided by the evaluated partner. These inputs were carefully designed to simulate a realistic cybersecurity risk assessment scenario, ensuring consistency and authenticity in the evaluation process. We used the CIS v8 framework as a reference for developing the questions. We selected a security topic for each of the 18 controls that best represented the essential practices associated with that control. Based on these topics, we formulated clear, objective questions that reflect the type of inquiry a security analyst might direct to the evaluated partner. These questions were designed to comprehensively capture the key aspects of each control, ensuring that the information gathered would be relevant and valuable for the risk assessment. The responses were designed to reflect how business partners typically answer secu-rity assessments. To achieve this, we analyzed previously conducted security reports and evaluations to identify patterns in expected responses. We observed that part-ners generally have a positive outlook on their security practices, while acknowledging certain limitations and challenges. Additionally, their responses tend to be detailed, often including more information than explicitly requested, which helps minimize interpretive ambiguity. The final set of inputs was structured to include the formulated questions and the simulated responses. The responses followed a realistic pattern, predominantly posi-tive but incorporating relevant negative aspects to ensure balance. This pattern was defined based on the analysis of real-world assessments, reflecting how business part-ners typically respond to such evaluations. This approach allows us to assess whether the language model can accurately identify and weigh risks, just as a human analyst would. The complete input can be visualized below: 1. Theme: Hardware Asset Inventory Question: Does the company have a detailed inventory of corporate assets? Answer: The company maintains a comprehensive and detailed inventory of assets. This inventory covers the vast majority of the organization’s assets, with approximately 98 2. Theme: Software Asset Inventory and Control Question: Does the company have a detailed inventory of software assets, systems, and applications? Answer: 
+
+11 The organization has a well-established and effectively maintained software inven-tory. Currently, approximately 85% of the organization’s software is inventoried, ensuring comprehensive control over software assets. This inventory is regularly updated through manual processes, ensuring that new installations and updates are reflected in the system. 3. Theme: Information Management Question: Is there a formal data manage-ment process in place? Answer: A formal data management process is in place within the organization. Data is classified by sensitivity. The data management process is audited every six months, and access permissions are regularly reviewed. 4. Theme: Secure Configuration Process (hardening, security baselines, etc.) Ques-tion: Is there a secure configuration process for all systems? Answer: A secure configuration process is in place for all systems, based on the CIS (Center for Internet Security) framework. Configurations are standardized across the organization and are reviewed and updated quarterly. 5. Theme: User Account Inventories Question: Is there an inventory of all user accounts across the systems listed in the application catalog? Answer: An inventory of all system user accounts in the application catalog is maintained. This inventory is frequently and automatically updated. Accounts are centrally managed, and unused accounts are promptly deactivated. 6. Theme: Access Provisioning in Systems and Applications Question: Is there a formal process for granting access? Answer: A formal access-granting pro-cess is in place. In this process, requests are approved based on the principle of least privilege, and access is periodically reviewed to ensure it is still necessary. Additionally, granted accesses are role- or function-based. 7. Theme: Vulnerability Management Question: Is there a vulnerability man-agement process in place for all assets (endpoints, servers, network devices, applications, systems, etc.)? Answer: A vulnerability management process exists for all assets, including endpoints, servers, network devices, applications, and sys-tems. Vulnerabilities are identified and prioritized for remediation. Vulnerability scans are conducted monthly, and management reports are regularly reviewed. 8. Theme: Log and Activity Record Management Question: Is there a formal audit log management process in place? Answer: A formal audit log management process is in place, with automatic log collection from all systems and secure stor-age in centralized and encrypted repositories. Dedicated teams regularly review logs using automated tools to detect suspicious activities. According to the pol-icy, audit logs are retained for 12 months in a secure environment, with access restricted to authorized users. 9. Theme: Use of Browsers and Email Clients Question: Are all browsers and email clients fully supported, and are only authorized versions implemented? 
+
+Answer: All browsers and email clients in use are fully supported, with regular updates and ongoing vendor support. Security settings for browsers and email clients are centrally enforced and monitored to ensure compliance. The list of supported versions is reviewed and updated quarterly to ensure the latest and most secure versions are in use. 12 10. Theme: Antimalware Question: Is antimalware software deployed on all endpoints? Answer: Antimalware software is deployed on all organizational endpoints, with regular malware scans conducted. The effectiveness of the anti-malware software is tested quarterly. The anti-exploit feature is enabled, and endpoints are centrally managed through a dedicated security platform. 11. Theme: Data and Information Recovery Question: Is there a data recovery process in place? Answer: A data recovery process is in place, with backups performed regularly and stored securely. Critical data can be restored within 8 hours in the event of a loss. Recovery logs are maintained and periodically reviewed to ensure the integrity of the process. 12. Theme: Keeping Network Infrastructure Updated Question: Is the network infrastructure regularly updated? Answer: The network infrastructure is reg-ularly updated, with firmware and software patches promptly applied. All configuration changes to network devices are tracked and documented. The network infrastructure is audited for compliance semiannually. 13. Theme: Centralization of Information Security Events Question: Are all infor-mation security and related events centralized? Answer: All security event alerts are centralized on a dedicated platform, enabling real-time monitoring of the entire infrastructure. All critical events are sent to this central system, where they are analyzed and addressed by specialized teams. 14. Theme: Awareness Program Question: Is there currently a program to raise awareness or train employees on cybersecurity topics? Answer: An active secu-rity awareness program is in place, and all employees must complete security awareness training. Training is conducted annually. 15. Theme: Third-Party, Partner, and Supplier Management Question: How is third-party, partner, and supplier management currently conducted regarding the mapping and analysis of information security risks? Answer: An inventory of all service providers is maintained and regularly updated. Service providers are periodically reviewed for security compliance, and their security practices are evaluated annually. 16. Theme: Secure Software Development Question: Are secure software devel-opment practices implemented? Answer: A Secure Application Development Process is established, with security practices embedded in all stages of the devel-opment lifecycle. Development teams follow secure coding standards and conduct regular security reviews, such as vulnerability testing and code audits. Security updates and patches are applied continuously to ensure application protection. 17. Theme: Incident Response Question: Is there an incident response process in place? Answer: An Incident Response Process is in place, with a designated team responsible for handling incidents. Incident handling training is conducted regularly, and all incidents are documented and reviewed. 18. Theme: Penetration Testing and Attack Simulations Question: Are penetration tests, security tests, or attack simulations conducted? Answer: A Penetration Testing Program is in place, with regular tests conducted on critical systems and network infrastructure. Specialized teams carry out these tests to identify and exploit vulnerabilities, ensuring corrective actions are promptly taken. 13 Fig. 2 : Flowchart illustrating the difference between the preliminary test and the real test. 
+
+# 4.2 LLMs Test 
+
+Before applying the language model to the primary dataset developed for this study, we conducted a preliminary analysis to verify whether the selected LLMs could gener-ate coherent and contextually grounded responses in the context of risk assessments. To this end, we used the same questions from the main dataset but created an experi-mental set of simplified responses, as illustrated in Figure 2. We designed four distinct scenarios, with each question receiving four variations of responses: 1. All answers as ”Yes” for every question. 2. All answers as ”No” for every question. 3. Mixed answers, but predominantly ”Yes”. 14 4. Mixed answers, but predominantly ”No”. This test allowed us to evaluate how the LLMs interpreted extreme and moderate scenarios and to verify whether they could recognize patterns and provide justified assessments rather than superficial or arbitrary responses. The results demonstrated that all models accurately interpreted response variations and assigned coherent risk classifications without resorting to extreme or inconsistent evaluations. Consequently, this confirmed that all five models (ChatGPT 5, DeepSeek V3.1, Llama 4 Scout, Claude Opus 4.1, and Gemini 2.5 PRO) were suitable for application in this study. Following this preliminary phase, we conducted the main evaluation using the original dataset, explicitly designed to enable comparisons between the LLMs and human cybersecurity experts. The model analyzed each provided response, assigning a risk level and detailed justifications for every evaluation. Additionally, the models were asked to give an overall risk classification for the entire scenario. To ensure consistency, we repeated the tests across different conversations and accounts, verifying the stability of the results. In all executions, the LLMs demonstrated consistency in their classifications and justifications, highlighting their analytical capability within the context of cybersecurity risk assessment. To minimize potential variations in responses and ensure greater statistical robust-ness, each evaluation was performed five times in independent conversations for each model. Accordingly, the values used in the final analysis are the average of the five tests conducted per model, providing a more balanced and reliable view of the LLMs’ performance. 
+
+# 4.3 Human Test 
+
+We recruited 50 participants through our social media networks and contacted individ-uals from universities, research institutions, and technology companies to volunteer. All participants were informed, through the online form used for data collection, that their anonymized responses would be used solely for academic research purposes. By voluntarily completing and submitting the form, participants provided their informed consent for the use of their anonymized data in this study. According to Brazilian regulations for research involving human subjects—specifically the Resolution CNS nº 510/2016, which governs ethical oversight for studies in the humanities and social sciences—research activities that gather anonymous opinion data without any possi-bility of identifying participants are exempt from review by an Institutional Review Board (IRB)/ethics committee. Therefore, no ethics committee approval was required for this study. Similar to the LLMs Test, this Human Test phase involved recruiting people to complete a form in the same context provided to the LLM, and to classify the input according to the level of risk it posed to the company. To achieve this, we developed a Google Forms survey containing questions about the participants’ field of expertise, profile type, years of experience, professional level, risk level classifications for each input, and an optional field to justify the assigned risk. 15 The participants ranged from individuals who had recently entered the field (whether in security or IT in general) to professionals with over 10 years of proven expe-rience and internationally recognized certifications. Additionally, to ensure impartial responses in the survey, volunteers were asked to complete the questionnaire with-out external assistance. Finally, we conducted a statistical analysis to confirm that all obtained responses were valid and consistent. 
+
+# 4.4 Results 
+
+The survey data and LLM responses were analyzed using descriptive statistics to identify response patterns, focusing on the mean, dispersion, and distribution of risk classifications assigned by participants and the five distinct LLMs. To deepen the understanding of differences between groups, we segmented the participants based on their professional level and compared them across two main groups: 
+
+• Group 0: All Participants 
+
+• Group 1: Highly specialized professionals (Senior and Specialists) 
+
+• Group 2: Less specialized professionals (Entry-level and Intermediate) In parallel, we compared the classifications assigned by the LLMs with the aver-ages of human experts to identify discrepancies and possible trends in the models’ evaluations. Additionally, we compared the LLMs to determine which performed bet-ter in the context of information security risk assessment. This comparison provides valuable insights into the relative strengths and weaknesses of each LLM, highlighting which approaches may be more effective for practical cybersecurity applications. To verify the significance of the observed differences, we applied statistical tests to determine whether the differences between groups were statistically significant. Fur-thermore, we analyzed the linear correlation between participants’ responses and the models’ evaluations to determine whether both followed a similar pattern in risk per-ception. We also examined the distribution of assigned scores to understand the range and frequency of values provided by humans and by the LLMs. This approach helps identify differences and determine whether they occur systematically or randomly. To ensure the validity of the results, we adopted several measures to minimize biases and ensure sample representativeness. The participant selection included pro-fessionals from different levels and fields within Information Security, providing a diverse range of perspectives. In addition, the questionnaire was administered anony-mously and without external influence, reducing biases in individual judgments. Finally, the robustness of the analysis was reinforced by rigorous statistical techniques, which enabled a reliable interpretation of the results and contributed to a better understanding of differences in risk perception between humans and AIs. 
+
+# 5 Results and discussions 
+
+Next, we present the results of the data analysis conducted throughout our study, along with our responses to the proposed research questions. The results are organized as follows: in Subsection 5.1, we describe the characteristics of the 50 participants, 16 including their professional level, years of experience, primary area of activity, and professional profile. We discuss and address research questions RQ1 and RQ2 in Sub-sections 5.2 and 5.3, respectively. Finally, we present our discussion and the study’s limitations in Subsection 5.4. 
+
+# 5.1 Demographics 
+
+We engaged 50 participants for our survey through social networks, private discussion groups, and direct contact with individuals from universities, research institutions, and companies. The survey was designed using Google Forms and included questions about participants’ years of experience, professional level, professional profile, and area of expertise. To ensure unbiased responses, volunteers—ranging from beginners to experts—were asked to complete the questionnaire without external assistance. To better understand the characteristics of our survey participants, we conducted a statistical analysis of their demographic and professional attributes. The dataset includes information on years of experience, professional level, job profile, and area of expertise. This analysis provides insights into the distribution of knowledge among respondents, highlighting variations in experience levels and industry representation. Tables 2, 3, 4, and 5 summarize the distribution of participants across the main demographic and professional categories. These breakdowns offer a clearer understanding of the sample composition. 
+
+Table 2: Distribution by Years of Experience                 
+
+> Years of Experience Total %
+> 10 or more years 25 50% 4 years 816% 5 or more years 612% 3 years 48% 2 years 48% Up to 1 year 24% 1 year 12%
+
+Table 3 : Area of Expertise of Participants                     
+
+> Area of Expertise Total %
+> Technology (Infrastructure) 11 22% Information Security (Defensive) 11 22% Technology (Software) 918% Information Security (Risk Management) 510% Technology (Data) 48% Others 36% Information Security (Governance) 36% Technology (Governance) 24% Information Security (Offensive) 24%
+
+17 Table 4 : Professional Profile of Participants         
+
+> Professional Profile Total %
+> Technical 22 44% Both (Technical and Managerial) 17 34% Managerial 11 22%
+
+Table 5 : Professional Level of Par-ticipants               
+
+> Professional Level Total %
+> Senior 19 38% Expert 13 26% Mid-level 10 20% Others 48% Intern 36% Junior 12%
+
+We grouped participants into four categories, each defined by specific attributes intended to help us understand their risk appetite across the 18 survey scenarios. The categories are as follows: 1. Years of experience: Years of experience of these professionals in the area of knowledge of Technology or Information Security; 2. Area of expertise: Which sub-area of knowledge of Technology or Information Security are they currently working in; 3. Professional profile: Professionals are more focused on the technical, managerial, or a mix of both; 4. Professional level: The position they occupy, based on the skills, knowledge, or expertise they currently have, which gives them authority and decision-making capacity, described as positions. The survey, which centers on assigning risk levels to cybersecurity situations, draws on the expertise of 50 professionals, more than half of whom have over 10 years of experience or hold Senior or Expert positions. Additionally, the diverse backgrounds of the participants—spanning Information Security, Software, Data, Infrastructure, and Governance—and their varied roles, whether technical, managerial, or a blend of both, contribute to a comprehensive understanding of how different backgrounds approach risk evaluation. This blend of seasoned expertise and multidisciplinary insights pro-vides a robust foundation for learning and enhancing the assessment of cybersecurity risks. 18 5.2 RQ 1: To what extent can Large Language Models be trusted to conduct cybersecurity risk assessments without the involvement of human experts? 
+
+In this study, participants and the five models explored here were assigned a risk rat-ing (0-10) for 18 scenarios based on each of the Center for Internet Security (CIS) controls. By comparing average scores and examining how the ratings of these five models correlate with those of human experts, we gain insight into the overall risk appetite between humans and the LLM models. We then highlight systematic differ-ences—such as the five models’ tendency to score lower than human experts—and examine whether the models’ relative risk ratings match the patterns observed among human respondents. This RQ1 aims to evaluate whether a large language model, such as the five models explored here (ChatGPT 5, DeepSeek V3.1, Llama 4 Scout, Claude Opus 4.1, and Gemini 2.5 PRO), can be relied upon to assess cybersecurity risks without human involvement. To do so, we compare its performance with all surveyed human experts across a set of standardized scenarios. First, we analyzed the data by comparing the risk assigned by the five models with that assigned by all other human experts. For each scenario question, we calculated the average risk assigned by the models, the average risk assigned by the human experts, and the standard deviation of the responses. Table 6 shows the average risk assigned to each question by the five models (ChatGPT 5, DeepSeek V3.1, Llama 4 Scout, Claude Opus 4.1, and Gemini 2.5 PRO) vs all human experts surveyed. Figure 3 presents the scatter plots of each question per model. Our results indicate that the overall average risk assigned by the human experts is higher than that designated by the five models for all questions. The average risk assigned by the models for the 18 questions is 1.94 , while the average risk assigned by the human experts to the same 18 questions is 3.60 . Human experts assign a higher risk with a standard deviation of 2.44 . In the overall average across the five models and human experts, models estimate a risk that is 1.66 lower than human experts. Second, we wanted to know the correlation coefficient between the five models and human experts. In practical terms, is there a direct correlation between the risk ratings assigned by models and the human experts? That is, do the risk ratings move in the same direction? To understand this better, we use Pearson’s correlation coefficient to measure the strength of the linear relationship between two variables. If there is a strong linear relationship, the correlation coefficient is close to 1 or −1; 0 indicates no linear relationship. The mean Pearson correlation coefficient for the five models of 0.81 shows that although models are lower on average, it still moves in the same direction as human ratings to a moderate to moderately strong positive correlation degree (if humans score a particular scenario higher, the five models tends to do so too, but not as high in absolute terms), as shown in Table 7. Third, we conducted statistical tests to evaluate the significance of the differences using a paired-samples t-test for the five models and human experts [28]. The paired-samples t-test, also known as the dependent-samples t-test, is a statistical test for determining whether the mean difference between two observational data sets equals 19 Table 6 : Average risk ratings assigned by LLM models and human experts for each scenario question                                                                                                                                             
+
+> QChatGPT DeepSeek Llama Claude Gemini Humans Avg SD
+> Q1 1.60 0.60 1.80 1.00 0.90 3.70 2.45 Q2 5.30 3.40 3.60 3.20 5.80 5.50 2.34 Q3 2.60 1.60 1.80 2.00 1.60 3.40 2.40 Q4 2.20 0.60 1.60 1.00 1.00 3.70 2.66 Q5 2.00 0.60 1.40 1.00 0.50 2.90 2.33 Q6 2.90 1.20 1.60 1.60 0.80 3.10 2.25 Q7 4.60 2.40 1.80 2.00 2.10 4.50 2.74 Q8 2.30 0.60 1.20 1.00 1.00 3.00 2.12 Q9 2.30 1.00 1.80 1.20 1.00 3.60 2.59 Q10 2.30 0.80 1.40 1.00 1.00 3.50 2.70 Q11 3.60 1.80 2.20 2.60 2.20 3.80 2.44 Q12 2.60 1.60 1.60 1.80 1.50 3.40 2.40 Q13 2.20 0.80 1.20 1.00 1.00 3.00 2.06 Q14 4.00 3.80 2.40 3.80 3.60 3.80 2.61 Q15 3.80 2.60 3.40 2.80 3.10 4.00 2.30 Q16 2.70 1.20 1.60 1.20 1.20 3.30 2.53 Q17 2.80 1.60 1.60 1.60 1.20 3.30 2.44 Q18 2.80 0.80 1.60 1.40 1.00 3.30 2.48
+> Total 2.92 1.50 1.87 1.73 1.69 3.60 2.44
+
+Table 7 : Pearson correlation coefficients between human experts and LLM mod-els            
+
+> LLMs Average ChatGPT DeepSeek Llama Claude Gemini
+> Humans 0.814 0.817 0.706 0.801 0.630 0.858
+
+zero. Each object or entity is measured twice in this test, resulting in two sets of observations. The paired-samples t-test employs two contradictory research hypothe-ses, the null and alternative hypotheses, as do most statistical procedures. The null hypothesis states that there is no difference in the means of the two paired datasets. According to this perspective, all visible distinctions result from random variation. It is possible that the actual mean difference between the two samples is not equal to zero, contrary to the alternative hypothesis. Since all p-values obtained from the paired t-tests are extremely small (all p < 
+
+0.001 ), we can confidently reject the null hypothesis in every case. This result indicates that, despite the positive correlations between the five models’ predictions and human ratings, there are statistically significant differences in the average risk ratings assigned by each model compared to those of human experts. In other words, while the models may follow similar trends, their absolute risk assessments systematically diverge from those provided by humans. Finally, the histograms show the distribution of risk ratings assigned by the five models versus those given by human participants (Figure 4). While human experts 20 1 3 6 9 12 15 18 
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+Question (Q1–Q18) 
+
+> Risk score
+
+ChatGPT 
+
+1 3 6 9 12 15 18 
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+Question (Q1–Q18) 
+
+> Risk score
+
+DeepSeek 
+
+1 3 6 9 12 15 18 
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+Question (Q1–Q18) 
+
+> Risk score
+
+Llama 
+
+1 3 6 9 12 15 18 
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+Question (Q1–Q18) 
+
+> Risk score
+
+Claude 
+
+1 3 6 9 12 15 18 
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+Question (Q1–Q18) 
+
+> Risk score
+
+Gemini 
+
+1 3 6 9 12 15 18 
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+Question (Q1–Q18) 
+
+> Risk score
+
+Humans Avg 
+
+Fig. 3 : Scatter plots of risk scores assigned to each question (Q1–Q18) by LLMs and Human Experts. 
+
+Table 8: Paired t-test results comparing human experts with LLM models               
+
+> Model t Stat p-value (two-tail)
+> LLMs Average 12.94 3.14 ×10 −10
+> GPT 4.91 1.32 ×10 −4
+> DeepSeek 12.71 4.16 ×10 −10
+> Llama 17.59 2.41 ×10 −12
+> Claude 11.69 1.49 ×10 −9
+> Gemini 9.59 2.83 ×10 −8
+
+predominantly rated the scenarios as medium-to-high risk (scores 3-5), LLMs concen-trated their assessments in the lower range (1–3), with only occasional higher values. This indicates that, although LLMs follow similar trends to humans, they consistently underestimate the overall risk level, reinforcing the t-test results. The findings discussed above support the conclusion that the five models system-atically underestimate cybersecurity risk compared to the perception of all human 21 0 1 2 3 4 5 6         
+
+> 0
+> 5
+> 10
+> 15
+> Risk score
+> Frequency
+> LLMs
+> ChatGPT DeepSeek Llama
+> Claude Gemini
+> (a) Distribution of risk scores – LLMs 01234560510 15 Risk score Frequency
+> Humans
+> Humans (b) Distribution of risk scores – Humans
+
+Fig. 4 : Comparison of distributions of risk scores assigned by LLMs and Human Experts (Q1–Q18). participants. In addition, the standard deviation of 2.44 across human participants indicates a significant distribution of opinions. While some participants may rate a scenario as very low risk, others may rate it as higher risk. This variation suggests that the group of human participants does not have a rigid consensus on the scenar-ios, reflecting a wide range of perspectives or interpretations when judging risk, which will be more detailed in the following sections. 
+
+# 5.3 RQ 2. How does the Large Language Model (LLM) used in this study compare to human cybersecurity professionals in assessing risk across standardized scenarios 
+
+This research question aims to investigate the extent to which a large language model can replicate or approximate cybersecurity professionals’ judgments when performing structured risk assessments—one of the attributes used in this study to group human participants into categories. Professional Level is one category comprising two large groups of people, with Senior and Expert participants accounting for 64% 
+
+of the sample and all other levels accounting for the remaining 36% . Given the diversity of expertise within the cybersecurity workforce, this question is further divided into two sub-questions that reflect different levels of professional experience, RQ2.1 (5.3.1) and RQ2.2 (5.3.2): 22 5.3.1 How does the five models performance compare to that of senior and specialist professionals, who are expected to have deeper technical knowledge and more refined risk perception? 
+
+First, we analyzed the data by comparing the risk assigned by the five models with that assigned by human experts. This time, only the group of participants with Senior and Specialist professional levels. For each scenario question, we calculated the average risk assigned by the five models, the average risk assigned by the Senior and Specialist Professionals, and the standard deviation of their responses. The results in Table 9 show each participant’s average risk assigned to each question: Five models vs. All Senior and Specialist Professionals. Figure 5 presents the scatter plots for each model. 
+
+Table 9 : Average risk ratings assigned by LLM Models vs Senior and Specialist Human Experts for each scenario question.                                                                                                                                             
+
+> QChatGPT DeepSeek Llama Claude Gemini Human Mean SD
+> Q1 1.60 0.60 1.80 1.00 0.90 3.66 1.94 Q2 5.30 3.40 3.60 3.20 5.80 6.22 2.05 Q3 2.60 1.60 1.80 2.00 1.60 3.63 2.44 Q4 2.20 0.60 1.60 1.00 1.00 3.97 2.53 Q5 2.00 0.60 1.40 1.00 0.50 2.84 2.08 Q6 2.90 1.20 1.60 1.60 0.80 3.47 2.35 Q7 4.60 2.40 1.80 2.00 2.10 5.16 2.74 Q8 2.30 0.60 1.20 1.00 1.00 3.25 2.32 Q9 2.30 1.00 1.80 1.20 1.00 4.00 2.61 Q10 2.30 0.80 1.40 1.00 1.00 3.88 2.87 Q11 3.60 1.80 2.20 2.60 2.20 4.09 2.34 Q12 2.60 1.60 1.60 1.80 1.50 3.53 2.35 Q13 2.20 0.80 1.20 1.00 1.00 3.13 2.04 Q14 4.00 3.80 2.40 3.80 3.60 4.16 2.80 Q15 3.80 2.60 3.40 2.80 3.10 4.38 2.23 Q16 2.70 1.20 1.60 1.20 1.20 3.28 2.46 Q17 2.80 1.60 1.60 1.60 1.20 3.50 2.48 Q18 2.80 0.80 1.60 1.40 1.00 3.59 2.61
+> Total 2.92 1.50 1.87 1.73 1.69 3.87 2.41
+
+Our results show that the overall average risk attributed by this group of Senior and Specialist Human Experts is higher than that attributed by the five models across all questions, and higher than that attributed by all participants. In addition to the average risk of 3.87 , a smaller standard deviation of 2.41 is observed compared to the group containing all participants, indicating better consensus within this group. Second, we aimed to determine the correlation between the risk ratings assigned by the five models (ChatGPT 5, DeepSeek V3.1, Llama 4 Scout, Claude Opus 4.1, and Gemini 2.5 PRO) and those provided by human experts. Specifically, we sought to assess whether there is a direct relationship, i.e., whether the risk ratings tend to move in the same direction. To examine this, we employed Pearson’s correlation coefficient to measure the strength of the linear relationship between the two sets of ratings. A 23 1 3 6 9 12 15 18                               
+
+> 0
+> 1
+> 2
+> 3
+> 4
+> 5
+> 6
+> Question (Q1–Q18)
+> Risk score
+> ChatGPT
+> 136912 15 18
+> 0
+> 1
+> 2
+> 3
+> 4
+> 5
+> 6
+> Question (Q1–Q18)
+> Risk score
+> DeepSeek
+> 136912 15 18
+> 0
+> 1
+> 2
+> 3
+> 4
+> 5
+> 6
+> Question (Q1–Q18)
+> Risk score
+> Llama
+> 136912 15 18
+> 0
+> 1
+> 2
+> 3
+> 4
+> 5
+> 6
+> Question (Q1–Q18)
+> Risk score
+> Claude
+> 136912 15 18
+> 0
+> 1
+> 2
+> 3
+> 4
+> 5
+> 6
+> Question (Q1–Q18)
+> Risk score
+> Gemini
+> 136912 15 18
+> 0
+> 1
+> 2
+> 3
+> 4
+> 5
+> 6
+> Question (Q1–Q18)
+> Risk score
+> Humans Avg
+
+Fig. 5 : Scatter plots of risk scores assigned to each question (Q1–Q18) by LLMs with Senior & Specialist Human Experts. coefficient close to 1 or −1 indicates a strong linear relationship, while a value near 0 suggests no linear correlation. The mean Pearson correlation of 0.819 shows that although the five models is lower on average, it still moves in the same direction as human ratings to a moderate to moderately strong positive correlation degree (if humans score a particular scenario higher. The five models tends to do so too—but not as high in absolute terms), as shown in Table 10. 
+
+Table 10 : Pearson correlation coefficients between Seniors and Specialist humans experts and LLM models            
+
+> LLMs Average ChatGPT DeepSeek Llama Claude Gemini
+> Humans 0.819 0.853 0.716 0.775 0.639 0.847
+
+Third, we conducted statistical tests to evaluate the significance of the differences using paired-samples t-tests for the five models and human experts. It shows again a 24 very small p-value of (all p < 0.001 ), so we can confidently reject the null hypothesis and assume the alternative hypothesis: there is a significant difference in the average risk rating assigned between the two groups. 
+
+Table 11 : Paired t-test results compar-ing LLM models with Senior & Specialist human experts (Q1–Q18).                
+
+> Model t Stat p-value (two-tail)
+> LLMs Average 15.74 1.44 ×10 −11
+> GPT 7.96 3.90 ×10 −7
+> DeepSeek 14.65 4.50 ×10 −11
+> Llama 17.03 4.06 ×10 −12
+> Claude 12.97 3.01 ×10 −10
+> Gemini 12.03 9.64 ×10 −10
+
+The paired t-tests (Table 11) show that all LLMs differ significantly from Senior & Specialist Human Experts (p < 0.001 ). While the models broadly follow similar trends, their mean ratings are consistently lower, confirming that LLMs systematically underestimate risk compared to expert assessments. Finally, we analyzed histograms to compare the distribution of risk ratings assigned by the five models with those provided by human participants. The histogram of Senior & Specialist Human Experts’ ratings (Figure 6) shows a clear concentration of scores in the medium-to-high risk range (between 3 and 6), indicating a consistent perception of elevated risk across most scenarios and very few ratings below 3. In contrast with the LLM histograms—typically skewed toward lower-risk values—the experts’ distribution shows a higher central tendency (mean ≈ 3.87) and reduced variability at extreme values. These differences highlight the tendency of human experts to adopt a more cautious stance when assessing potential risks, reinforcing the statistical gap observed between automated model outputs and professional judgment. In contrast, the five models’ distributions remain heavily concentrated in the lowest bins, with only a handful of ratings above 3. These results highlight how the five models continue to underestimate risk relative to the broader, more varied assessments made by human respondents. Our findings support the conclusion that the five models continue to underesti-mate cybersecurity risk relative to human participants’ perceptions systematically. This difference is even more pronounced when compared explicitly with the Senior and Specialist group, which consistently assigned higher risk scores than models and demonstrated better agreement among themselves, as reflected in the lower standard deviation in their responses. 25 0 1 2 3 4 5 6         
+
+> 0
+> 5
+> 10
+> 15
+> Risk score
+> Frequency
+> LLMs
+> ChatGPT DeepSeek Llama
+> Claude Gemini
+> (a) Distribution of risk scores – LLMs 01234560510 Risk score Frequency
+> Humans
+> Humans (b) Distribution of risk scores – Humans
+
+Fig. 6 : Comparison of distributions of risk scores assigned by LLMs and Human Experts (Q1–Q18). 
+
+5.3.2 RQ2.2: How does the LLMs performance compare to other professionals, including junior, mid-level, and non-specialist participants? 
+
+First, we analyzed the data by comparing the risk assigned by the five models with that assigned by Human Experts, this time only the group of other professional levels (Non-Senior/Specialist). For each scenario question, we calculated the average risk assigned by the five models, the average risk assigned by the different professional levels, and the standard deviation of their responses. Table 12 shows the average risk assigned to each question by each participant across the five models vs. other professional levels surveyed. Figure 7 presents the scatter plots for each model. It is possible to see that the overall average risk attributed by this group of professionals is higher than that attributed by the five models for all questions, but lower than that of Senior and Specialist participants. In addition to the average risk of 3.12 , a smaller standard deviation of 2.41 is observed compared to the group containing all participants and the same group containing Senior and Specialist, which shows the best consensus among these two groups of participants. Second, we wanted to know the correlation coefficient between the five models and human experts. In practical terms, there is a direct correlation between the risk ratings assigned by the five models and those designated by human experts. That is, do the risk ratings move in the same direction? To better understand this, we use Pearson’s correlation coefficient to measure the strength of the linear relationship between two 26 Table 12 : Average risk ratings assigned by LLM Models vs other professional levels (Non-Senior/Specialist) human experts for each scenario question.                                                                                                                                             
+
+> QChatGPT DeepSeek Llama Claude Gemini Human Mean SD
+> Q1 1.60 0.60 1.80 1.00 0.90 3.83 3.22 Q2 5.30 3.40 3.60 3.20 5.80 4.33 2.38 Q3 2.60 1.60 1.80 2.00 1.60 3.11 2.35 Q4 2.20 0.60 1.60 1.00 1.00 3.22 2.88 Q5 2.00 0.60 1.40 1.00 0.50 2.89 2.78 Q6 2.90 1.20 1.60 1.60 0.80 2.56 1.98 Q7 4.60 2.40 1.80 2.00 2.10 3.39 2.40 Q8 2.30 0.60 1.20 1.00 1.00 2.67 1.68 Q9 2.30 1.00 1.80 1.20 1.00 2.89 2.45 Q10 2.30 0.80 1.40 1.00 1.00 2.94 2.34 Q11 3.60 1.80 2.20 2.60 2.20 3.17 2.55 Q12 2.60 1.60 1.60 1.80 1.50 3.06 2.51 Q13 2.20 0.80 1.20 1.00 1.00 2.72 2.11 Q14 4.00 3.80 2.40 3.80 3.60 3.11 2.14 Q15 3.80 2.60 3.40 2.80 3.10 3.28 2.30 Q16 2.70 1.20 1.60 1.20 1.20 3.22 2.71 Q17 2.80 1.60 1.60 1.60 1.20 3.06 2.39 Q18 2.80 0.80 1.60 1.40 1.00 2.78 2.21
+> Total 2.92 1.50 1.87 1.73 1.69 3.12 2.41
+
+variables. If there is a strong linear relationship, the correlation coefficient is close to 1 or −1; 0 indicates no linear relationship. The mean Pearson correlation of 0.60 shows that while both continue to attribute risk in the same direction, the relationship is weak to modestly positive. Furthermore, the five models continue to rank risk below this group of humans and all others, as noted earlier. (if humans score a particular scenario higher, the five models tend to do so, too—but not as high in absolute terms), as shown in Table 13. 
+
+Table 13 : Pearson correlation coefficients between other professional levels (Non-Senior/Specialist) humans experts and LLM models            
+
+> LLMs Average ChatGPT DeepSeek Llama Claude Gemini
+> Humans 0.603 0.515 0.497 0.688 0.429 0.698
+
+Third, we conducted statistical tests (see 14) to evaluate the significance of dif-ferences using paired-samples t-tests for the five models and human experts. For this group of humans, the data again yield an extremely small p-value (all p < 0.001 ), so we can confidently reject the null hypothesis and assume the alternative hypothesis. There is a significant difference in the average risk ratings between the two groups. Finally, the histograms (Figure 8) show the distribution of risk ratings assigned by the five models versus those given by human participants. This histogram shows the 27 1 3 6 9 12 15 18 
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+Question (Q1–Q18) 
+
+> Risk score
+
+ChatGPT 
+
+1 3 6 9 12 15 18 
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+Question (Q1–Q18) 
+
+> Risk score
+
+DeepSeek 
+
+1 3 6 9 12 15 18 
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+Question (Q1–Q18) 
+
+> Risk score
+
+Llama 
+
+1 3 6 9 12 15 18 
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+Question (Q1–Q18) 
+
+> Risk score
+
+Claude 
+
+1 3 6 9 12 15 18 
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+Question (Q1–Q18) 
+
+> Risk score
+
+Gemini 
+
+1 3 6 9 12 15 18 
+
+0
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+Question (Q1–Q18) 
+
+> Risk score
+
+Humans Avg 
+
+Fig. 7 : Scatter plots of risk scores assigned to each question (Q1–Q18) by LLMs with other professional levels (Non-Senior/Specialist) human experts. 
+
+Table 14 : Paired t-test results com-paring other professional levels (Non-Senior/Specialist) humans experts with LLM models               
+
+> Model t Stat p-value (two-tail)
+> LLMs Average 6.86 2.76 ×10 −6
+> GPT 1.02 3.19 ×10 −1
+> DeepSeek 8.11 3.00 ×10 −7
+> Llama 11.01 3.66 ×10 −9
+> Claude 7.62 6.93 ×10 −7
+> Gemini 5.72 2.48 ×10 −5
+
+distribution of risk ratings assigned by the five models compared with those provided by this group of participants. Generally, this group of human participants tends to rate around 2.6 to 3.1 , with fewer ratings above 3.7 , indicating a moderate overall 28 view of risk. These charts highlight how models continue to underestimate risk relative to human respondents’ broader, more varied assessments. 
+
+0 1 2 3 4 5 6
+
+0
+
+5
+
+10 
+
+15 
+
+Risk score 
+
+> Frequency
+> LLMs
+
+ChatGPT DeepSeek Llama 
+
+Claude Gemini 
+
+(a) Distribution of risk scores – LLMs 0 1 2 3 4 5 60510 Risk score Frequency 
+
+> Humans
+
+Humans (b) Distribution of risk scores – Humans 
+
+Fig. 8 : Comparison of distributions of risk scores assigned by LLMs and Human Experts (Q1–Q18). 
+
+# 5.4 Discussion and limitations 
+
+To enhance clarity and facilitate interpretation, Table 15 presents a comparative sum-mary of the main findings from our study. It contrasts the risk assessments produced by the five language models with those of the different groups of human participants, including average risk scores, correlation levels, and statistical significance measures. This summary provides a consolidated view of the key divergences and patterns observed throughout the analysis. 
+
+Table 15 : Summary of comparative risk assessment results: The Five Mod-els vs Human Experts                 
+
+> Group LLMs Avg Humans Mean rp
+> All Participants 1.94 3.60 0.814 3.14 ×10 −10
+> Senior & Specialists 1.94 3.87 0.819 1.43 ×10 −11
+> Other Levels 1.94 3.12 0.603 2.76 ×10 −6
+
+29 The comparative results across all three groups indicate that the five mod-els consistently underestimate cybersecurity risks relative to human assessments. This discrepancy was more pronounced among highly experienced professionals (Senior/Specialist), suggesting that domain expertise significantly influences risk per-ception. The moderate to strong Pearson correlations indicate that the five models align with human trends to some degree, but not to the same extent. Key lessons learned include: 
+
+• LLMs follow general human trends, but fail to match expert-level sensitivity to nuanced risks; 
+
+• Professional background matters: More experienced individuals tend to rate risk higher and more consistently; 
+
+• Human oversight is crucial, especially in high-stakes decision-making involving incomplete or ambiguous security information. These findings suggest that LLMs should not yet replace human experts in cyber-security risk assessments, especially for critical decisions. Instead, they may serve as decision-support tools—providing first-pass assessments that require validation. Orga-nizations might benefit from hybrid models in which LLMs help standardize inputs or accelerate assessments, while final judgments remain with qualified professionals. Furthermore, AI-based assessments could be more reliable in external threat con-texts, where risk is more clearly defined and structured. However, internal process evaluations (such as asset inventory or policy adherence) revealed the most significant discrepancies and require deeper contextual interpretation. While the study reveals important trends and insights, some limitations should be acknowledged: 
+
+• The analysis focused on only five LLM models and may not reflect performance across other models or future versions. 
+
+• The participant sample, though diverse, was limited to 50 individuals, which may impact generalizability. 
+
+• Risk assessment was based on simulated scenarios, which, although grounded in real practices, may not fully reflect operational complexity. 
+
+• LLMs were tested without enhanced prompt engineering or additional context that might improve performance. Future work should explore prompt optimization, model fine-tuning, and scenario complexity scaling to evaluate how LLM performance can be improved in real-world cybersecurity workflows. 
+
+# 6 Conclusion and future work 
+
+The results of this study demonstrate a systematic difference between risk assess-ments made by human experts and those generated by language models. The models generally assign lower risk levels than the experts, suggesting an underestimation of 30 risk in several situations. This discrepancy was statistically significant, suggesting the model may exhibit a conservative bias, particularly when humans perceive high risk. Therefore, AI should be considered a support tool, not a substitute for human expertise. In addition, we observed that participants’ experience influences risk assignment: more experienced and specialized professionals tend to assign higher risk ratings than those with fewer years of experience. This factor reinforces the importance of professional background in risk assessment and suggests that AI models may need adjustments to better capture the nuances of human perception in cybersecurity contexts. Another relevant finding was the smaller difference between human and LLM risk assessments regarding external threats (such as third-party risks). This may indicate that models better understand external threats than internal ones. On the other hand, the most significant deviations occurred in issues such as asset inventory, where human experts expressed greater concern about partial or incomplete coverage, while the model minimized this risk. Based on these findings, we propose several directions for future work: 
+
+• Expansion of the Dataset: Conduct new experiments with a more extensive and more diverse sample of professionals, including different industry sectors, to validate and refine the findings. 
+
+• Advanced Contextualization: Explore prompt engineering techniques to provide more details to the model, ensuring it better understands the context of the questions and can offer assessments closer to those of human experts. 
+
+• Hybrid Use of AI and Humans: Future research should explore hybrid approaches in which AI systems act as intelligent assistants to experts, performing pre-liminary tasks such as suggesting initial classifications, identifying patterns, or highlighting less visible risks. 
+
+• Evaluation of Other AI Models: Compare the performance of different LLMs in cybersecurity risk assessment, exploring which architectures best suit this task and whether models specifically trained for information security can offer better performance. Through these initiatives, our goal is to advance the use of AI in cybersecurity risk assessment, making the technology a strong, reliable ally in supporting security decision-making within organizations. 
+
+# Declarations 
+
+Funding 
+
+The authors thank EVA Cybersec for financial support. 31 Conflict of interest 
+
+The authors have no competing interests or other interests that might be perceived to influence the results or discussion reported in this paper. 
+
+Ethics approval 
+
+This manuscript adheres to the principles and policies of authorship ethics. This study involved the collection of anonymized opinions from voluntary participants. According to Brazilian regulations for research involving human subjects—specifically the Reso-lution CNS n º 510/2016, which governs ethical oversight for studies in the humanities and social sciences—research activities that gather anonymous opinion data without any possibility of identifying participants are exempt from review by an Institutional Review Board (IRB)/ethics committee. Therefore, no ethics committee approval was required for this study. 
+
+Consent to participate and publication 
+
+All authors read and approved the final manuscript for publication via the subscription publishing route. 
+
+Availability of data and materials 
+
+All materials used in this manuscript are public, and no permission is required. The results and data in this manuscript have not been published elsewhere. 
+
+Code availability 
+
+All materials used in this manuscript are public, and no permission is required. Additional materials for this article will be available upon request to authors. 
+
+Authors’ contributions 
+
+The authors contributed equally to this work. 
+
+# References 
+
+[1] Forum, W.E.: The global risks report 2025. Technical report, World Economic Forum (2025) [2] (ISC) ²: Global cybersecurity workforce prepares for an ai-driven world. Technical report, (ISC) ² CYBERSECURITY WORKFORCE STUDY (2024). https://edu. arrow.com/media/wtjfmszx/2024-isc2-wfs.pdf [3] Yao, Y., Duan, J., Xu, K., Cai, Y., Sun, Z., Zhang, Y.: A survey on large language model (llm) security and privacy: The good, the bad, and the ugly. High-Confidence Computing 4(2), 100211 (2024) https://doi.org/10.1016/j.hcc. 2024.100211 32 [4] Hadi, M.U., Qureshi, R., Shah, A., Irfan, M., Zafar, A., Shaikh, M.B., Akhtar, N., Wu, J., Mirjalili, S., et al.: A survey on large language models: Applications, challenges, limitations, and practical usage. Authorea Preprints 3 (2023) [5] Akhtar, Z.B.: Unveiling the evolution of generative ai (gai): a comprehensive and investigative analysis toward llm models (2021–2024) and beyond. Journal of Electrical Systems and Information Technology 11 (1), 22 (2024) [6] Li, Z., Dutta, S., Naik, M.: Llm-assisted static analysis for detecting security vulnerabilities. arXiv preprint arXiv:2405.17238 (2024) [7] Gennari, J., Lau, S.-h., Perl, S., Parish, J., Sastry, G.: Considerations for evaluat-ing large language models for cybersecurity tasks. Considerations for evaluating large language models for cybersecurity tasks (2024) [8] Ferrag, M.A., Alwahedi, F., Battah, A., Cherif, B., Mechri, A., Tihanyi, N.: Gen-erative ai and large language models for cyber security: All insights you need. Available at SSRN 4853709 (2024) [9] Pankajakshan, R., Biswal, S., Govindarajulu, Y., Gressel, G.: Mapping llm secu-rity landscapes: A comprehensive stakeholder risk assessment proposal. arXiv preprint arXiv:2403.13309 (2024) [10] Center for Internet Security: Cis critical security controls version 8. Technical report, Center for Internet Security (2021). https://www.cisecurity.org/controls [11] Zhao, W.X., Zhou, K., Li, J., Tang, T., Wang, X., Hou, Y., Min, Y., Zhang, B., Zhang, J., Dong, Z., et al.: A survey of large language models. arXiv preprint arXiv:2303.18223 (2023) [12] Naveed, H., Khan, A.U., Qiu, S., Saqib, M., Anwar, S., Usman, M., Akhtar, N., Barnes, N., Mian, A.: A comprehensive overview of large language models. arXiv preprint arXiv:2307.06435 (2023) [13] Goodfellow, I., Pouget-Abadie, J., Mirza, M., Xu, B., Warde-Farley, D., Ozair, S., Courville, A., Bengio, Y.: Generative adversarial networks. Communications of the ACM 63 (11), 139–144 (2020) [14] Barreto, F., Moharkar, L., Shirodkar, M., Sarode, V., Gonsalves, S., Johns, A.: Generative artificial intelligence: Opportunities and challenges of large language models. In: Balas, V.E., Semwal, V.B., Khandare, A. (eds.) Intelligent Computing and Networking, pp. 545–553. Springer, Singapore (2023) [15] Hadi, M.U., Qureshi, R., Shah, A., Irfan, M., Zafar, A., Shaikh, M.B., Akhtar, N., Wu, J., Mirjalili, S., et al.: A survey on large language models: Applications, challenges, limitations, and practical usage. Authorea Preprints 3 (2023) 33 [16] McIntosh, T.R., Susnjak, T., Liu, T., Watters, P., Xu, D., Liu, D., Nowrozy, R., Halgamuge, M.N.: From cobit to iso 42001: Evaluating cybersecurity frame-works for opportunities, risks, and regulatory compliance in commercializing large language models. Computers & Security 144 , 103964 (2024) [17] National Institute of Standards and Technology (NIST): Framework for improving critical infrastructure cybersecurity, version 2.0. Technical report, National Insti-tute of Standards and Technology (2024). https://www.nist.gov/cyberframework [18] Standardization (ISO), I.O.: Iso/iec 27001:2022 - information security, cyberse-curity and privacy protection. Technical report, International Organization for Standardization (ISO) (2022). https://www.iso.org/standard/27001 [19] Bhusal, D., Alam, M.T., Nguyen, L., Mahara, A., Lightcap, Z., Frazier, R., Fieblinger, R., Torales, G.L., Blakely, B.A., Rastogi, N.: SECURE: Benchmark-ing Large Language Models for Cybersecurity (2024). https://arxiv.org/abs/2405. 20441 [20] Veuthey, J.R., Majid, Z.A., Hariharan, S., Haimes, J.: MEQA: A Meta-Evaluation Framework for Question & Answer LLM Benchmarks (2025). https://arxiv.org/ abs/2504.14039 [21] Tihanyi, N., Ferrag, M.A., Jain, R., Bisztray, T., Debbah, M.: Cybermetric: a benchmark dataset based on retrieval-augmented generation for evaluating llms in cybersecurity knowledge. In: 2024 IEEE International Conference on Cyber Security and Resilience (CSR), pp. 296–302 (2024). IEEE [22] Benz, M., Chatterjee, D.: Calculated risk? a cybersecurity evaluation tool for smes. Business Horizons 63 (4), 531–540 (2020) https://doi.org/10.1016/j.bushor. 2020.03.010 [23] Agrawal, G., Pal, K., Deng, Y., Liu, H., Chen, Y.-C.: Cyberq: Generating ques-tions and answers for cybersecurity education using knowledge graph-augmented llms. Proceedings of the AAAI Conference on Artificial Intelligence 38 (21), 23164–23172 (2024) https://doi.org/10.1609/aaai.v38i21.30362 [24] Ferrag, M.A., Ndhlovu, M., Tihanyi, N., Cordeiro, L.C., Debbah, M., Lestable, T., Thandi, N.S.: Revolutionizing cyber threat detection with large language mod-els: A privacy-preserving bert-based lightweight model for iot/iiot devices. IEEE Access 12 , 23733–23750 (2024) https://doi.org/10.1109/ACCESS.2024.3363469 [25] Levi, M., Allouche, Y., Ohayon, D., Puzanov, A.: Cyberpal.ai: Empowering llms with expert-driven cybersecurity instructions. Proceedings of the AAAI Con-ference on Artificial Intelligence 39 (23), 24402–24412 (2025) https://doi.org/10. 1609/aaai.v39i23.34618 34 [26] Papachristofis, K., Vardoulias, G., Vavousis, K.: Comparative evaluation of cyber-security maturity models and frameworks. In: Themistocleous, M., Bakas, N., Kokosalakis, G., Papadaki, M. (eds.) Information Systems, pp. 166–178. Springer, Cham (2025) [27] Haastrecht, M., Sarhan, I., Shojaifar, A., Baumgartner, L., Mallouli, W., Spruit, M.: A threat-based cybersecurity risk assessment approach addressing sme needs. In: Proceedings of the 16th International Conference on Availabil-ity, Reliability and Security. ARES ’21. Association for Computing Machin-ery, New York, NY, USA (2021). https://doi.org/10.1145/3465481.3469199 . 
+
+https://doi.org/10.1145/3465481.3469199 
+
+[28] ScienceDirect: Paired Sample t-test. https://www.sciencedirect.com/topics/ biochemistry-genetics-and-molecular-biology/paired-sample-t-test 35

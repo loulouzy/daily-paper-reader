@@ -1,0 +1,973 @@
+Title: Octopus: History-Free Gradient Orthogonalization for Continual Learning in Multimodal Large Language Models
+
+URL Source: https://arxiv.org/pdf/2605.14938v1
+
+Published Time: Fri, 15 May 2026 01:36:09 GMT
+
+Number of Pages: 16
+
+Markdown Content:
+# Octopus: History-Free Gradient Orthogonalization for Continual Learning in Multimodal Large Language Models 
+
+## Yuehao Liu 1 Shanyan Guan 2 Weijia Zhang 1
+
+## Xuanming Shang 1 Yanhao Ge 2 Wei Li 2 Chao Ma 1* 
+
+> 1
+
+## MoE Key Lab of Artificial Intelligence, AI Institute, Shanghai Jiao Tong University  
+
+> 2
+
+## vivo Mobile Communication Co., Ltd. 
+
+{yuehao.liu, weijia.zhang, sxm2021, chaoma }@sjtu.edu.cn 
+
+{guanshanyan, halege, liwei.yxgh }@vivo.com 
+
+Project page: https://fxmangd26.github.io/Octopus/ 
+
+## Abstract 
+
+Continual learning in multimodal large language models (MLLMs) aims to sequentially acquire knowledge while mitigating catastrophic forgetting, yet existing methods face inherent limitations: architecture-based approaches in-cur additional computational overhead and often gener-alize poorly to new tasks, rehearsal-based methods rely on storing historical data, raising privacy and storage concerns, and conventional regularization-based strategies alone are insufficient to fully prevent parameter interfer-ence. We propose Octopus, a two-stage continual learning framework based on History-Free Gradient Orthogonaliza-tion (HiFGO), which enforces gradient-level orthogonal-ity without historical task data. Our proposed two-stage finetuning strategy decouples task adaptation from regular-ization, achieving a principled balance between plasticity and stability. Experiments on UCIT [20] show that Oc-topus establishes state-of-the-art performance, surpassing prior SOTA by 2.14% and 6.82% in terms of Avg and Last. 
+
+## 1. Introduction 
+
+Continual learning [5, 49, 53, 58, 62, 65, 73], sequentially learning across multiple task without forgetting, allows multimodal large language models (MLLMs) [39, 68] to in-crementally integrate knowledge across tasks, thereby ex-hibiting human-like adaptability when encountering novel scenarios. Catastrophic forgetting [1, 13, 15, 25, 46, 61, 66] constitutes the fundamental challenge in continual learning, referring to the degradation of previously acquired knowl-edge as a model adapts to new tasks. Current continual learning approaches for MLLMs can  
+
+> *Corresponding author. ImageNet-R
+> ArXivQA
+> VizWiz
+> IconQA
+> CLEVR-Math
+> Flickr30k
+> 43.4
+> 54.8
+> 66.2
+> 77.6
+> 76.4
+> 80.8
+> 85.2
+> 89.6
+> 45.4
+> 48.8
+> 52.2
+> 55.6
+> 28.6
+> 37.2
+> 45.8
+> 54.4
+> 41.8
+> 48.6
+> 55.4
+> 62.2
+> 27.8
+> 35.6
+> 43.4
+> 51.2
+> FineTune
+> LwF
+> EWC
+> L2P
+> O-LoRA
+> MoELoRA
+> HiDe-LLaVA
+> Octopus (ours)
+
+Figure 1. Performance comparison between Octopus (ours) and existing approaches on UCIT [20] in terms of Last . Results demonstrate that Octopus establishes a new SOTA performance and outperforms all competing methods by a substantial margin. 
+
+be broadly classified into three categories: architecture-based , rehearsal-based and regularization-based methods. Architecture-based methods [8, 20, 26] typically assign several LoRA modules to store task-specific information, which tends to deteriorate the model’s generalization to un-seen tasks and sacrificing computational efficiency during inference. Rehearsal-based methods [7, 57, 57] maintain memory modules that store historical task information, such as past data or intermediate layer activations. However, in real-world applications, access to historical task data may be impractical or raise data privacy concerns, while main-taining replay buffers incurs additional storage overhead. In contrast, regularization-based approaches [63, 74] are not 
+
+> arXiv:2605.14938v1 [cs.LG] 14 May 2026
+
+subject to the aforementioned limitations. These methods seek to constrain parameter updates within subspaces that minimally affect previously tasks to mitigate interference. The primary objective of regularization is to mitigate pa-rameter interference, wherein the acquisition of parameters for new tasks does not compromise the performance of pre-viously learned tasks, thereby alleviating catastrophic for-getting. primarily focus on enforcing parameter orthogo-nality. [63, 74] primarily focus on enforcing parameter or-thogonality. However, studies in model merging [59] sug-gest that parameter orthogonality is insufficient to fully pre-vent parameter interference. We theoretically demonstrate that, beyond parameter orthogonality, it is of greater signif-icance that gradient orthogonality must be enforced, which is consistent with prior works [14, 67]; however, existing gradient orthogonality-based methods [14, 67] remain fun-damentally constrained by their reliance on historical data. To address this limitation, we propose Octopus, atwo-stage continual learning framework based on history-free gradient orthogonalization. Specifically, we propose History-Free Gradient Orthogonalization (HiFGO) charac-terizing sensitivity of previous task parameters within cur-rent data distribution, leveraging only past weights (instead of past data) and current task data to enforce orthogonal constraints in gradient space. Moreover, we observed in experiments that the regularization constraints tend to com-pete with the objectives of original task, which is consistent with studies in multi-task learning [6, 10, 69, 70]. To al-leviate this competition, we propose a two-stage finetuning strategy maintaining parameters in proximity to the optimal solution under incorporation of regularization constraints. Extensive experiments on UCIT [20] benchmark demon-strate that our framework achieves state-of-the-art (SOTA), surpassing the previous SOTA [20] by 2.14% and 6.82% in terms of Avg and Last , respectively. It indicates that our proposed HiFGO effectively preserves previously learned knowledge while learning new tasks. Moreover, our two-stage finetuning strategy substantially enhances the perfor-mance ceiling of regularization-based methods, allowing them to approach even exceed the performance of multi-task training while preserving the efficacy of regularization, achieving effective balance between plasticity and stability. 
+
+## 2. Related Work 
+
+Parameter-Efficient Model Adaptation. MLLMs have achieved remarkable success across diverse tasks [3, 17, 19, 43, 51, 71]; however, maintaining a separately fine-tuned model for each new task incurs prohibitive computation and storage costs. Parameter-efficient fine-tuning (PEFT) [9, 23, 28, 32, 34, 52] have been proposed to address this issue. Approaches such as Adapters [23] and AdaptFormer [9] in-troduce trainable modules into pretrained networks, yet they increase model complexity and fail to ensure task isolation. Prompt-tuning [32] and Prefix-tuning [34] introduce learn-able representations into into Transformer layers, but their expressiveness is limited to input-level manipulation. Be-sides, LoRA and its variants decompose weight updates into low-rank subspace, enabling efficient and scalable adap-tation, and thus have become mainstream in MLLM fine-tuning, and have been certified to exhibit a lower degree of forgetting compared to full-parameter fine-tuning. 
+
+Conventional Continual Learning. The central objec-tive of continual learning is to alleviate catastrophic forget-ting in sequential task learning. Classical approaches such as EWC [31] and LwF [35] address this by introducing reg-ularization terms that penalize updates of parameters criti-cal to previous tasks. Methods such as DER [4], DGR [54] and GEM [40] implicitly preserve knowledge from previous tasks in order to mitigate forgetting by reinforcing histori-cal knowledge during training of new tasks. Another line of research such as Piggyback [44] tackles catastrophic forget-ting through architectural adaptation, expanding base model with task-specific modules or adaptive parameters to enable sequential learning without forgetting. 
+
+Continual Learning for Multi-Modal Language Models. 
+
+Prompt-based methods such as L2P [65], DualPrompt [64], and CODA-Prompt [56] enhance knowledge retention by tuning soft prompt vectors without altering model weights. MoE-based approaches, including HiDe-LLaVA [20] and MoILE [29], assign task-specific experts via routing mech-anisms. While effective, both incur additional inference or storage costs. Orthogonal gradient strategies like OGD [14] mitigate task interference by constraining updates to di-rections orthogonal to previous gradients, yet require ac-cess to past task data. Recent extensions—OLoRA [63], BiLoRA [74], and InfLoRA [36]—replace stored gradients with parameter vectors but still face limited efficacy and the inherent plasticity–stability trade-off. Octopus alleviates these limitations, achieving inference-efficient, rehearsal-free, and highly effective solution to continual learning. 
+
+## 3. Preliminaries 
+
+3.1. Low-Rank Adaptation 
+
+Low-Rank Adaptation (LoRA) [24] introduces a parameter-efficient finetuning paradigm for large-scale pre-trained models. Formally, consider a pre-trained parameter matrix 
+
+W0 ∈ Rd×k. Instead of optimizing W0, LoRA parameter-izes the weight update as product of two low-rank matrices: 
+
+∆W = BA,  (1) where A ∈ Rr×k and B ∈ Rd×r with r ≪ min( d, k ). The adapted weight is then defined as: 
+
+W = W0 + ∆ W = W0 + BA.  (2) Transformer Block 
+
+# …
+
+> Pretrained
+> Param.
+
+# +
+
+Ai
+
+Bi
+
+A
+
+B
+
+> Pretrained
+> Param.
+
+Transformer Block 
+
+# +
+
+> MLLM
+
+Task N 
+
+# …  
+
+> Question: What is happening in the image? Generate
+> a brief caption for the image.
+> Answer: Two young guys with shaggy hair look at their
+> hands while hanging out in the yard.
+
+Sequential 
+
+Learning    
+
+> Question: Is the dotted line a line of symmetry? Answer
+> the question using a single word or phrase. Answer: no.
+
+STAGE 1 
+
+# + +
+
+Ai-1
+
+Bi-1
+
+# +
+
+Task 1 
+
+A1
+
+B1
+
+STAGE 2   
+
+> Prev.
+> Data
+> NO Need
+> Constraint
+> 𝜕 𝑳 𝑫 𝒊 (𝜽 j)
+> 𝜕 𝜽 jj=1
+> i−1
+
+Data 1 
+
+> GPWC
+
+History -Free Gradient 
+
+Orthogonalization Figure 2. Overall pipeline for continual learning in MLLMs ( left ) and architecture of our proposed Octopus ( right ). In the context of continual learning, MLLMs are required to sequentially learn multiple tasks while overcoming the challenge of catastrophic forgetting caused by non-stationary data distributions. To address this, we propose Octopus, which adopts a two-stage fine-tuning paradigm. In the first stage, MLLM learns task-specific knowledge without constraints, enabling full adaptation to current task. In the second stage, we apply History-Free Gradient Orthogonalization (HiFGO) to mitigate parameter interference, while simultaneously constraining the parameter updates within an optimal solution space, thereby maintaining a effective balanced trade-off between plasticity and stability. R C A C A F V I  
+
+> 50
+> 60
+> 70
+> 80
+> 90
+> 100
+> Metric Value
+> Sgl. FT Seq. FT Seq. FT w/ HiFGO
+
+Figure 3. Effectiveness of HiFGO. We present the performance of single-task finetuning, sequential fine-tuning of two tasks, and fine-tuning with HiFGO constraints added after sequential fine-tuning (higher is better). The abbreviations in the table represent dataset names, with details provided in Sec. 5.3. 
+
+During fine-tuning, only the low-rank factors A and B
+
+are updated while original weights W0 remain frozen. Ow-ing to its efficiency and scalability, LoRA has become a popular technique for PEFT in various domains and and has been widely applied in continual learning tasks. 
+
+3.2. Continual Learning 
+
+Continual Learning (CL) considers the problem of incre-mentally acquiring knowledge from a sequence of tasks 
+
+T1, T 2, . . . , T N while preserving robust performance on previous tasks. Let fθ denote a model parameterized by 
+
+θ, and Di = ( xk, y k) denote the dataset corresponding to task Ti. From a probabilistic perspective, the objective of CL can be formulated as maximizing the expected predic-tive likelihood across the entire task sequence: 
+
+θ∗ = arg max 
+
+> θ
+
+1
+
+N
+
+> N
+
+X
+
+> i=1
+
+1
+
+|Di|
+
+X  
+
+> (xk,y k)∈Di
+
+log pθ (yk | xk), (3) where pθ (yk | xk) represents conditional probability of ob-serving label yk given input xk under the model fθ .This suggests that the goal of continual learning is to learn a unified parameter set that is generalized across all datasets, inherently balancing plasticity and stability during training process. However, in practice, it is fundamentally constrained by catastrophic forgetting (CF) [15, 46], a phe-nomenon in which sequential optimization on new tasks in-duces rapid deterioration of previously acquired knowledge. 
+
+## 4. Methodology 
+
+In this work, we propose Octopus, a two-stage continual learning framework based on history-free gradient orthogo-nalization for MLLMs. We first provide a theoretical justi-fication in Sec. I.1 for why the gradient directions of previ-ous tasks intrinsically capture model’s sensitivity subspace, thereby suggesting that beyond parameter orthogonality, it is of greater significance that gradient orthogonality must be enforced to mitigate parameter interference. Building upon this insight, we introduce a history-free gradient orthogo-nalization in Sec. 4.2 to mitigate parameter interference, which operates without reliance on historical task data. Our method offers a effective and data-efficient solution to mit-igating catastrophic forgetting in continual learning. Moreover, to mitigate the degradation in fine-tuning per-formance induced by parameter regularization, we intro-duce a two-stage finetuning framework in Sec. 4.3 that al-lows LoRA to satisfy the imposed constraints while remain-ing close to optimal manifold. This design effectively bal-ances plasticity and stability, thereby further enhancing the model’s capability for continual learning. The overall archi-tecture of our proposed method is illustrated in Fig. 2. 
+
+4.1. Analysis on Parameter Interference 
+
+We denote W0 as the pretrained parameters of MLLM, θi
+
+as the LoRA parameters after fine-tuning on Task i, Di as the corresponding training dataset for Task i, and LDi (θ)
+
+represents the expectation of loss function evaluated on Di
+
+given model parameters θ. For clarity, we first consider a sequential learning scenario involving two tasks, which can be naturally generalized to the multi-task case. Let W0 denotes the pretrained weights, θ1 and θ2 as the optimized LoRA weights of Task 1 and Task 2, respectively. Our objective is to ensure that the training on Task 2 does not degrade the performance achieved on Task 1. Formally, by defining θ′ 
+
+> 1
+
+= W0 + θ1, we require the following con-dition to hold, which we define as the lossless condition :
+
+LD1 (θ′
+
+> 1
+
+) = LD1 (θ′ 
+
+> 1
+
++ θ2). (4) We perform Taylor expansion around θ′ 
+
+> 1
+
+as: 
+
+LD1 (θ′ 
+
+> 1
+
++ θ2) = LD1 (θ′
+
+> 1
+
+) + ⟨ ∂L D1 (θ′
+
+> 1
+
+)
+
+∂θ ′
+
+> 1
+
+, θ 2⟩ + O(|| θ2|| 2),
+
+(5) where O(|| θ2|| 2) denotes the second- and higher-order residual terms. Since LoRA weights are typically much smaller in magnitude than pretrained weights during fine-tuning, O(|| θ2|| 2) can be safely neglected. Therefore, satis-fying the lossless condition reduces to: 
+
+⟨ ∂L D1 (θ′
+
+> 1
+
+)
+
+∂θ ′
+
+> 1
+
+, θ 2⟩ = 0 . (6) This observation suggests that the orthogonality between parameters of Task 2 and gradients of Task 1 on D1 pro-vides a principled guarantee to effectively mitigate parame-ter interference. In contrast, parameter orthogonality— i.e ., OLoRA [63]—fails to guarantee lossless disentanglement, as ∂L D1 (θ′
+
+> 1)
+> ∂θ ′
+> 1
+
+and θ1 may correspond to distinct directional semantics. Specifically, derived through fine-tuning from pretrained weights, θ1 represents the trajectory from pre-trained weights toward local optimum, rather than the in-stantaneous gradient direction at θ′
+
+> 1
+
+. Furthermore, the up-date direction of θ1 may vary throughout the optimization process, implying that θ1 does not necessarily align with a consistent gradient orientation on fixed parameters. However, in practical scenarios, historical data are often difficult to obtain or restricted due to data privacy concerns. Moreover, as the parameters of previous tasks typically con-verge to local optima, the gradient at θ′ 
+
+> 1
+
+tends to be weak 
+
+Algorithm 1 Octopus 
+
+Input : Pretrained weights W0; Number of tasks N ; Data of different tasks {Di}Ni=1 
+
+Output : Merged LoRA weights W0 + NP
+
+> i=1
+
+θi, 2
+
+1: Initialize θ1,1 following vanilla LoRA 2: for i in 1 : N do 
+
+3: Select subset Di1 and Di2 from Di
+
+▽ Stage-1 Finetuning 4: Finetune on Di1 using L1 (Eq. 9) and update θi, 1
+
+▽ Stage-2 Finetuning 5: Compute all GPWC (4.2) for Task i
+
+6: Finetune on Di2 using L2 (Eq. 10) and update θi, 2
+
+7: Return W0 + NP
+
+> i=1
+
+θi, 2 as the merged LoRA weight and highly oscillatory, thereby limiting the effectiveness of gradient-based regularization. To address this issue, we pro-pose a history-free gradient orthogonalization paradigm that enables effective parameter disentanglement across tasks. 
+
+4.2. History-Free Gradient Orthogonalization 
+
+To achieve balance between data privacy preservation and model efficacy, we introduce a novel approach termed 
+
+Hi story-Free Gradient Orthogonalization ( HiFGO ). The central objective of this method is to accurately character-ize the mutual influence between current and previous tasks without requiring access to any historical task data. Motivated by SD [72], which demonstrates that the representation space of each task can be decomposed into a stability-related subspace (task-shared subspace) and a plasticity-related subspace (task-specific subspace), we propose to quantify inter-task interference via Gradients of Previous parameters Within Current data distribution (GPWC ). Intuitively, GPWC reflects beneficial update di-rections that encapsulate the reusable knowledge embedded in earlier tasks, effectively capturing the shared representa-tional subspace across tasks. Moreover, since previous pa-rameters have converged to local optima within their respec-tive domain, direction of their gradients on current data dis-tribution also reveals optimization conflicts between tasks, indicating the potential for parameter updates in the current task to degrade performance on earlier ones. To mitigate such interference, we introduce a gradient or-thogonality constraint that enforces orthogonality between current parameters and GPWC. This regularization effec-tively disentangles parameter updates across tasks, promot-ing stability while maintaining adaptability. Concretely, during fine-tuning of Task i, we incorporate the following Method Replay ImageNet-R ArXivQA VizWiz IconQA CLEVR-Math Flickr30k Average Zero-shot - 17.20 52.16 41.07 18.70 18.63 46.99 32.46 Multi-task - 89.53 92.20 62.70 61.86 70.40 58.49 72.53 Avg Sequential Finetune - 49.31 78.40 50.48 53.44 55.53 57.95 57.52 Vanilla Rehearsal ! 88.71 86.13 54.15 61.76 70.53 58.13 69.90                                                                                                                                                     
+
+> ▽Architecture-based L2P [65] %41.52 82.32 51.98 52.21 43.16 52.77 53.99 MoELoRA [8] %64.49 82.42 49.54 56.87 56.35 58.34 61.33 HiDe-LLaVA [20] %85.70 92.70 54.10 66.87 59.12 55.15 68.94
+> ▽Regularization-based LwF [35] %55.60 79.86 53.23 54.87 56.51 56.34 59.40 EWC [31] %54.23 80.13 53.14 55.06 57.52 55.94 59.34 O-LoRA [63] %75.26 86.73 55.86 58.47 57.38 53.52 64.54
+> Octopus (ours)† %89.69 91.34 61.04 60.18 68.09 57.61 71.33 Octopus (ours) %88.41 93.30 61.65 59.91 66.32 56.87 71.08 Last Sequential Finetune -37.63 72.33 43.47 41.70 35.63 57.95 48.12 Vanilla Rehearsal !88.43 85.36 51.50 60.10 67.13 58.13 68.44
+> ▽Architecture-based L2P [65] %32.73 80.41 43.72 42.16 39.25 52.77 48.51 MoELoRA [8] %49.87 77.63 43.65 46.40 36.47 58.34 52.06 HiDe-LLaVA [20] %80.50 89.83 48.78 62.90 47.97 55.15 64.19
+> ▽Regularization-based LwF [35] %40.27 75.93 42.76 44.38 37.43 56.34 49.52 EWC [31] %39.05 77.88 43.24 45.33 39.72 55.94 50.20 O-LoRA [63] %69.36 82.42 48.64 53.66 42.53 53.52 58.36
+> Octopus (ours)† %88.80 89.83 56.44 59.90 70.60 57.11 70.45
+> Octopus (ours) %88.20 93.03 58.46 60.50 69.00 56.87 71.01
+
+Table 1. Comparison with various methods on UCIT [20] in terms of Avg and Last . The best and second methods are labeled with bold and underline styles. Zero-shot evaluates pretrained model without finetuning. Multi-task jointly finetunes model across all datasets, whereas 
+
+Sequential Finetune adapts only one LoRA module sequentially to all tasks. These settings provide an empirical characterization of the lower bound, upper bound, and baseline for continual learning methods. † denotes the use of Historical task proxy approximation in Eq. 8 
+
+orthogonality loss term into the optimization objective: 
+
+Lorth (θi) = 
+
+> i−1
+
+X
+
+> j=1
+
+∂L Di (θ′ 
+
+> j
+
+)
+
+∂θ ′
+
+> j
+
+!T
+
+θi, (7) where θ′ 
+
+> j
+
+= W0 + jP
+
+> m=1
+
+θm is denoted as the merged LoRA weights of Task j, while LDi (θ′ 
+
+> j
+
+) is denoted as the loss function of parameter θ′ 
+
+> j
+
+on Di
+
+We evaluate the efficacy of HiFGO through a controlled sequential fine-tuning protocol. We sequentially finetune an MLLM on two tasks (named Task 1 and Task 2),which would induce substantial degradation on Task 1 in com-parison to single-task finetuning. Then we further finetune MLLM on Task 2 for a few steps with HiFGO constraint. We evaluate the performance of Task 1, as shown in Fig. 3. The results show that sequential finetuning markedly de-grades prior-task performance, whereas introducing HiFGO nearly restores it to the level of single-task finetuning, which demonstrate that HiFGO effectively suppresses parameter interference and preserves previously acquired knowledge. 
+
+Historical task proxy approximation. In Eq. 7, the pa-rameters of the current task are required to compute the in-ner product with the GPWC of each historical task, which causes the training cost to grow linearly with the number of tasks. To address this issue, we introduce a lightweight approximation based on a valid proxy of historical tasks pa-rameters. Instead of computing the constraint with respect to all historical parameters, we use the parameter θ′ 
+
+> i−1
+
+from the most recent task as a proxy representing the entire task history, as: 
+
+L′
+
+> orth
+
+(θi) = 
+
+ ∂L Di (θ′
+
+> i−1
+
+)
+
+∂θ ′
+
+> i−1
+
+T
+
+θi (8) This approximation is motivated by the observation that a well-trained continual learning model preserves the perfor-mance of earlier tasks after each training stage, thereby im-plicitly encoding historical knowledge in the latest param-eters. As a result, the computational cost of the orthogonal loss is reduced from O(t) to O(1) .
+
+4.3. Two-stage Finetuning Strategy 
+
+Although the magnitudes of LoRA weights are typically much smaller than those of the pretrained parameters during fine-tuning, the vanilla fine-tuning paradigm can still incur non-negligible errors due to the influence of higher-order terms. To alleviate this issue, it is natural to introduce addi-tional regularization terms that constrain the scale of LoRA Settings ImageNet-R ArXivQA VizWiz IconQA CLEVR-Math Flickr30k Average BWT 
+
+▽ Constrain current parameters orthogonal to what 
+
+Prev. Param. Imd. 88.47 91.73 60.74 56.73 61.33 56.29 69.22 -2.51 
+
+Last 86.67 92.27 50.62 57.00 57.40 56.29 66.71 
+
+GPWC Imd. 88.47 93.13 61.04 60.47 63.63 56.87 70.60 +0.41 
+
+Last 88.20 93.03 58.46 60.50 69.00 56.87 71.01 Prev. Param. & GPWC Imd. 88.47 93.20 60.50 60.77 63.60 56.99 70.59 +0.45 
+
+Last 88.27 92.90 59.01 60.27 68.83 56.99 71.04 
+
+▽ Compute Gradients on what 
+
+Curr. Task (GPWC) Imd. 88.47 93.13 61.04 60.47 63.63 56.87 70.60 +0.41 
+
+Last 88.20 93.03 58.46 60.50 69.00 56.87 71.01 
+
+Prev. Task Imd. 88.47 93.53 61.53 61.67 65.70 56.31 71.20 -8.95 
+
+Last 86.50 73.43 51.47 58.57 46.40 57.15 62.25 
+
+Table 2. Effectiveness of History-Free Gradient Orthogonalization. We compare the performance of three orthogonalization strategies (orthogonal to param., GPWC or both) and that of two type of gradients ( GPWC and gradients of prev. param. on prev. task). Our method is emphasized in bold for clarity. We report the performance on each dataset under different settings in terms of Imd. and Last .
+
+weights, thereby mitigating the impact of such higher-order effects. However, our experimental observations indicate that imposing such constraint considerably degrades the fine-tuning performance and, consequently, compromises the model’s continual learning capability. We attribute this phenomenon to two primary factors: (1) the additional constraints substantially reduce the effec-tive parameter search space, and (2) the interference among multiple loss objectives increases the risk of the optimiza-tion process being trapped in suboptimal local minima. As a result, the optimized solution can diverge significantly from that obtained through standard fine-tuning. To address this challenge, we draw inspiration from an-nealing schedule [16] and propose a two-stage finetuning strategy, which enables model to first explore optimal so-lution in current data without constrains, and subsequently perform constrained refinement around local optimal. Specifically, during the first stage, both regularization terms are deactivated, allowing the model to freely adapt and approach a local optima region for current task. The loss function for Task i in this stage is defined as follow: 
+
+L1 = 1
+
+|Di|
+
+X  
+
+> (xk,y k)∈Di
+
+Lce (fθ′ 
+
+> i, 1
+
+(xk), y k). (9) Here, θ′ 
+
+> i, 1
+
+= W0 +θi, 1, where θi, 1 is initialized from θi−1,1.For the first task, θ1,1 is initialized from scratch. During the second training stage, we simultaneously ac-tivate both fine-tuning objective and regularization to ensure parameter updates not interfering with or degrading the per-formance of previously learned tasks. The loss function for Task i in this stage is defined as follows: 
+
+L2 = 1
+
+|Di|
+
+X  
+
+> (xk,y k)∈Di
+
+(Lce (fθ′ 
+
+> i, 2
+
+(xk), y k) + λ1Lorth (θi, 2)+ λ2Lnorm (θi, 2)) ,
+
+(10) 1 2 3 4 5 6    
+
+> Number of Tasks
+> 2
+> 1
+> 0
+> 1
+> BWT
+> 0.00 0.06 0.27
+> -0.47
+> -1.16
+> -2.51
+> 0.00
+> 0.23 0.38
+> 0.74
+> -0.07
+> 0.41
+> 0.00
+> 0.23 0.38
+> 0.77
+> -0.05
+> 0.46
+> Param.
+> GPWC
+> Param. & GPWC
+
+Figure 4. Backward transfer (BTW) of model after fine-tuning on each task with different orthogonalization method. 
+
+where θ′ 
+
+> i, 2
+
+= W0 + iP
+
+> m=1
+
+θm, 2 and θi, 2 is initialized by θi, 1.
+
+Lnorm (θi) is the L2-regularization term, and λ1, λ 2 are de-noted as the weight of regularization terms. This design enforces stability across tasks by explic-itly regularizing the optimization trajectory within a sub-space that preserves prior knowledge. Experimental re-sults demonstrate that the proposed two-stage finetun-ing paradigm effectively safeguards model’s performance, achieving a favorable trade-off between retaining past knowledge and optimizing for the current task. Our com-plete algorithmic procedure is summarized in Algo. 1. 
+
+## 5. Experiments 
+
+5.1. Experimental Setup 
+
+Benchmark. To evaluate the effectiveness of Octopus, we conduct experiments on UCIT [20], which is specif-ically designed to assess the continual learning capability of MLLMs under realistic, instruction-driven scenarios. It consists of a sequence of multimodal instruction datasets covering diverse visual domains and linguistic tasks, in-cluding visual question answering, caption generation, and mathematical reasoning. Each task introduces novel visual Method ImageNet-R ArXivQA VizWiz IconQA CLEVR-Math Flickr30k Average BWT w/ two-stage finetuning Imd. 88.47 93.13 61.04 60.47 63.63 56.87 70.60 +0.41                        
+
+> Last 88.20 93.03 58.46 60.50 69.00 56.87 71.01
+> w/o two-stage finetuning Imd. 87.47 92.53 48.61 40.70 49.90 55.62 62.47 -1.29
+> Last 86.90 92.20 45.96 38.90 47.53 55.62 61.18
+
+Table 3. Effectiveness of two-stage finetuning strategy. We report the performance on each dataset under both w/ and w/o two-stage fine-tuning settings in terms of Imd. and Last .
+
+and textual distributions, thereby inducing significant do-main shifts and catastrophic forgetting challenges. 
+
+Metrics. Following UCIT [20], we adopt Last and Avg 
+
+metrics to evaluate the continual learning performance of MLLMs. Last denotes the average accuracy over all tasks after sequentially learning the entire task stream, while Avg ,on the other hand, represents the mean accuracy across all tasks throughout the training process. In addition, we adopt 
+
+Imd. in several experiments to denote performance of a given task immediately after fine-tuning in the sequence learning process, which to some extent reflects the upper bound of the performance of that task during continual learning. We also report Backward Transfer (BWT) [40] in several experiments, which measures the average per-formance degradation on previous tasks and thereby re-flects the degree of forgetting exhibited by continual learn-ing method. For VQA tasks, we employ accuracy as the evaluation criterion, while for captioning tasks, we report the average score over multiple metrics, including BLEU-1-4 [48], METEOR [12], ROUGE-L [37], and CIDEr [60]. 
+
+Implementation details. Following UCIT [20], we use LLaVA-v1.5-7b [39] as the base multimodal model and em-bed LoRA modules in all linear layers of language model. In practice, we set Di1 = Di and select a small subset of 
+
+Di as Di2 to enforce constraints. The number of training epochs for all tasks is set to 1. We set batch size to 16 for all methods and run experiments on 4 × H20/P800 GPUs. 
+
+5.2. Main Results 
+
+We conduct comprehensive evaluations of Octopus on UCIT [20], comparing it against a diverse set of existing methods, as summarized in Tab. 1 and Fig. 1. For the sake of fairness, we compare Octopus with only architecture-based and regularization-based approaches, while including the vanilla rehearsal method as a reference. The quantitative results presented in Tab. 1 demonstrate our proposed Octopus achieves state-of-the-art (SOTA) per-formance and outperforms the best previous methods by 2.14% and 6.82% in Avg and Last metrics, respectively. Specifically, on one hand, Octopus demonstrates substan-tial improvements over existing regularization-based meth-ods such as EWC [31], LwF [35] and OLoRA [63]. Oc-topus achieves 6.54% and 12.65% performance improve-ment over OLoRA in terms of Avg and Last , which indicates 1 2 3 4 5 6      
+
+> Number of Tasks
+> 60
+> 70
+> 80
+> 90
+> Metric Value
+> R-A-V-I-C-F
+> A-I-R-F-C-V
+> I-F-R-C-A-V
+> (a) 123456
+> Number of Tasks
+> 60
+> 70
+> 80
+> 90
+> Metric Value
+> w/ - Imd.
+> w/ - Last
+> w/o - Imd.
+> w/o - Last (b)
+
+Figure 5. Average performance after fine-tuning on each task un-der different orderings (a) or w/ and w/o two-stage finetuning (b) .
+
+that our HiFGO exhibits more effective weight disentangle-ment compared to orthogonalization based on weight space. On the other hand, Octopus significantly outperforms other MoE-based approaches, such as MoELoRA [8] and HiDe-LLaVA [20], demonstrating that our method achieves su-perior mitigation of inter-task parameter interference while maintaining high inference efficiency. Moreover, it is particularly noteworthy that Octopus even surpasses the vanilla rehearsal baseline, which explicitly constructs a replay buffer to store and reuse data sam-ples from previous tasks. It underscores the ability of our method to achieve a more favorable plasticity–stability trade-off without relying on additional memory buffers. The explicit disentanglement of task representations also facilitates positive inter-task transfer, as evidenced by the ArXivQA Last metric exceeding that of Multi-task , while rehearsal-based strategies often suffer from task interfer-ence and lead to suboptimal performance. 
+
+5.3. Model Analysis 
+
+Effectiveness of History-Free Gradient Orthogonaliza-tion. Tab. 2 presents the comparison results obtained under different orthogonalization methods (orthogonal to previous parameters, GPWC or both) and settings (compute gradi-ent of previous parameters on current / previous dataset), demonstrating that our proposed HiFGO exhibits a substan-tial performance advantage over existing parameter-space or history-based gradient-space orthogonalization. Fig. 4 illustrates the average forgetting observed during sequential learning process, quantified using BWT. The re-sults reveal that HiFGO exhibits substantially stronger re-sistance to forgetting compared to parameter orthogonal-ization ( +0.41 v.s. -2.51 BWT), and even yields positive Method ImageNet-R ArXivQA VizWiz IconQA CLEVR-Math Flickr30k Average BWT                                                                                                          
+
+> w/o norm-regularization -Imd. 89.03 93.37 63.31 65.03 73.07 56.33 73.36 -8.59
+> Last 81.50 81.43 47.65 57.57 63.27 57.25 64.77
+> w/ norm-regularization
+> λ= 2 e−3Imd. 88.73 92.03 61.90 62.30 70.30 56.78 72.01 -3.36
+> Last 85.07 86.47 54.93 61.63 67.07 56.78 68.65
+> λ= 5 e−3Imd. 88.23 93.87 62.34 63.37 68.27 57.13 72.20 -1.48
+> Last 87.40 91.23 58.20 62.13 68.23 57.13 70.72
+> λ= 1 e−2Imd. 88.47 93.13 61.04 60.47 63.63 56.87 70.60 +0.41
+> Last 88.20 93.03 58.46 60.50 69.00 56.87 71.01
+> λ= 3 e−2Imd. 87.93 89.60 54.92 43.67 51.57 57.01 64.12 +2.91
+> Last 88.07 92.93 49.46 54.57 60.17 57.01 67.03
+> Table 4. Effectiveness of norm regularization. We report performance under both w/ and w/o settings in terms of Imd. and Last .Order R-A-V-I-C-F A-I-R-F-C-V I-F-R-C-A-V Last 71.01 69.04 69.16 Avg 71.08 70.04 70.00 Table 5. Results of different task orders on UCIT benchmark. We adopt an abbreviation scheme to simplify the representation of task sequence notation, as explained in Sec. 5.3
+
+backward transfer ( +0.41 BWT), which suggests that, the acquisition of a new task not only mitigates the degradation of performance on previous tasks but can further improve performance through the incorporation of newly acquired knowledge. within sequential learning process. Further-more, jointly enforcing both forms of orthogonal constraints yields no additional gains, underscoring that HiFGO consti-tutes a more principled and inherently effective constraint mechanism compared to parameter orthogonalization. Comparison in Tab. 2 between HiFGO and history-based gradient orthogonalization reveals that the latter exhibits substantial forgetting ( –8.95 BWT), which may stem from the fact that previous tasks have already converged to local optima, where gradient directions become less informative and highly oscillatory. In contrast, the GPWC employed in HiFGO provides a more faithful characterization of inter-task interference, thereby playing a substantially more ef-fective role in mitigating catastrophic forgetting. 
+
+Effectiveness of the two-stage finetuning strategy. Tab. 3 reports effectiveness of our proposed two-stage finetun-ing strategy, indicating that our two-stage finetuning strat-egy yields a substantial influence on the Imd. and Last met-rics, while exerting a relatively minor effect on BWT. It sug-gests that our two-stage finetuning strategy effectively bol-sters model’s efficacy during fine-tuning phase of individual task, elevates the performance upper bound in sequential learning, and thereby enhances overall performance. Fig. 5b provides additional support by illustrating average Imd. 
+
+and Last across varying task counts. Specifically, our two-stage finetuning strategy exerts a significant impact on the respective performance of Imd. and Last , but does not sig-nificantly affect the gap between them. 
+
+Effectiveness of norm regularization. As mentioned in Sec. 4.3, norm regularization would effectively mitigates perturbations induced by high-order terms in Eq. 5, yet it moderately degrades model’s finetuning efficacy. This ob-servation is substantiated by Tab. 4: stronger norm regu-larization yields superior performance in alleviating catas-trophic forgetting and even facilitates more pronounced positive backward transfer, but induces a marginal drop in the Imd. metric. Consequently, a trade-off must be struck between these two objectives—an optimal balance between plasticity and stability is achieved via an appropriate norm regularization strength (we choose λ = 1 e − 2 in practice). 
+
+Influence of task ordering. For clarity, we represent each dataset by a letter; for instance, I-F-R-C-A-V denotes the learning sequence IconQA → Flickr30k → ImageNet-R →
+
+CLEVR-Math → ArXivQA → VizWiz. Tab. 5 presents the performance of of sequential learning under varying task or-derings, in terms of Last and Avg , and Fig. 5a illustrates ac-cumulative average post–sequential-learning performance across varying numbers of tasks, where task count i corre-sponds to average performance over the first i tasks of R-A-V-I-C-F. Results show that Octopus demonstrates remark-able insensitivity to task order, with performance remaining highly consistent across different permutations or number of tasks. These observations indicate that Octopus exhibits strong robustness and ensures stable, order-invariant perfor-mance throughout the continual learning process. 
+
+## 6. Conclusion 
+
+We propose Octopus, a two-stage continual learning frame-work based on history-free gradient orthogonalization. Specifically, our proposed HiFGO effectively mitigates catastrophic forgetting without respect to historical data, while our two-stage finetuning strategy achieves an effec-tive trade-off between plasticity and stability. Experiments on UCIT corroborate that Octopus attains state-of-the-art (SOTA) performance, outperforming the prior SOTA by 2.14% and 6.82% in terms of the Avg and Last , respectively. Due to space constraints, our limitations: upper bound on the number of tasks and performance degradation on highly analogous tasks are detailed in Supplementary Material. Acknowledgments. This work was supported in part by NSFC (62322113, 62376156), Shanghai Municipal Science and Technology Major Project (2025SHZDZX025G15, 2021SHZDZX0102), and the Fundamental Research Funds for the Central Universities. We thank Kunlunxin for their technical support in training and evaluation on P800. 
+
+## References 
+
+[1] Hongjoon Ahn, Jihwan Kwak, Subin Lim, Hyeonsu Bang, Hyojun Kim, and Taesup Moon. Ss-il: Separated softmax for incremental learning. In ICCV , 2021. 1 [2] Peter Anderson, Basura Fernando, Mark Johnson, and Stephen Gould. Spice: Semantic propositional image cap-tion evaluation. In ECCV , 2016. 1, 2 [3] Shuai Bai, Keqin Chen, Xuejing Liu, Jialin Wang, Wenbin Ge, Sibo Song, Kai Dang, Peng Wang, Shijie Wang, Jun Tang, et al. Qwen2. 5-vl technical report. arXiv preprint arXiv:2502.13923 , 2025. 2 [4] Pietro Buzzega, Matteo Boschini, Angelo Porrello, Davide Abati, and Simone Calderara. Dark experience for general continual learning: a strong, simple baseline. NeurIPS , 2020. 2[5] Meng Cao, Yuyang Liu, Yingfei Liu, Tiancai Wang, Ji-ahua Dong, Henghui Ding, Xiangyu Zhang, Ian Reid, and Xiaodan Liang. Continual llava: Continual instruction tuning in large vision-language models. arXiv preprint arXiv:2411.02564 , 2024. 1 [6] Rich Caruana. Multitask learning. Machine learning , 1997. 2[7] Arslan Chaudhry, Marcus Rohrbach, Mohamed Elhoseiny, Thalaiyasingam Ajanthan, P Dokania, P Torr, and M Ran-zato. Continual learning with tiny episodic memories. In 
+
+Workshop on Multi-Task and Lifelong Reinforcement Learn-ing , 2019. 1 [8] Cheng Chen, Junchen Zhu, Xu Luo, Heng T Shen, Jingkuan Song, and Lianli Gao. Coin: A benchmark of continual instruction tuning for multimodel large language models. 
+
+NeurIPS , 2024. 1, 5, 7, 2 [9] Shoufa Chen, Chongjian Ge, Zhan Tong, Jiangliu Wang, Yibing Song, Jue Wang, and Ping Luo. Adaptformer: Adapting vision transformers for scalable visual recognition. 
+
+NeurIPS , 2022. 2 [10] Michael Crawshaw. Multi-task learning with deep neural networks: A survey. arXiv preprint arXiv:2009.09796 , 2020. 2[11] Jia Deng, Wei Dong, Richard Socher, Li-Jia Li, Kai Li, and Li Fei-Fei. Imagenet: A large-scale hierarchical image database. In CVPR , 2009. 1 [12] Michael Denkowski and Alon Lavie. Meteor universal: Lan-guage specific translation evaluation for any target language. In Proceedings of the ninth workshop on statistical machine translation , 2014. 7, 1 [13] Arthur Douillard, Matthieu Cord, Charles Ollion, Thomas Robert, and Eduardo Valle. Podnet: Pooled outputs distil-lation for small-tasks incremental learning. In ECCV , 2020. 1[14] Mehrdad Farajtabar, Navid Azizan, Alex Mott, and Ang Li. Orthogonal gradient descent for continual learning. In Inter-national conference on artificial intelligence and statistics ,2020. 2 [15] Robert M French. Catastrophic forgetting in connectionist networks. Trends in cognitive sciences , 1999. 1, 3 [16] Hao Fu, Chunyuan Li, Xiaodong Liu, Jianfeng Gao, Asli Ce-likyilmaz, and Lawrence Carin. Cyclical annealing schedule: A simple approach to mitigating kl vanishing. arXiv preprint arXiv:1903.10145 , 2019. 6 [17] Team GLM, Aohan Zeng, Bin Xu, Bowen Wang, Chenhui Zhang, Da Yin, Dan Zhang, Diego Rojas, Guanyu Feng, Hanlin Zhao, et al. Chatglm: A family of large language models from glm-130b to glm-4 all tools. arXiv preprint arXiv:2406.12793 , 2024. 2 [18] Yash Goyal, Tejas Khot, Douglas Summers-Stay, Dhruv Ba-tra, and Devi Parikh. Making the v in vqa matter: Elevating the role of image understanding in visual question answer-ing. In CVPR , 2017. 1 [19] Aaron Grattafiori, Abhimanyu Dubey, Abhinav Jauhri, Ab-hinav Pandey, Abhishek Kadian, Ahmad Al-Dahle, Aiesha Letman, Akhil Mathur, Alan Schelten, Alex Vaughan, et al. The llama 3 herd of models. arXiv preprint arXiv:2407.21783 , 2024. 2 [20] Haiyang Guo, Fanhu Zeng, Ziwei Xiang, Fei Zhu, Da-Han Wang, Xu-Yao Zhang, and Cheng-Lin Liu. Hide-llava: Hierarchical decoupling for continual instruction tun-ing of multimodal large language model. arXiv preprint arXiv:2503.12941 , 2025. 1, 2, 5, 6, 7, 4 [21] Danna Gurari, Qing Li, Abigale J Stangl, Anhong Guo, Chi Lin, Kristen Grauman, Jiebo Luo, and Jeffrey P Bigham. Vizwiz grand challenge: Answering visual questions from blind people. In CVPR , 2018. 1 [22] Dan Hendrycks, Steven Basart, Norman Mu, Saurav Kada-vath, Frank Wang, Evan Dorundo, Rahul Desai, Tyler Zhu, Samyak Parajuli, Mike Guo, et al. The many faces of robust-ness: A critical analysis of out-of-distribution generalization. In ICCV , 2021. 1 [23] Neil Houlsby, Andrei Giurgiu, Stanislaw Jastrzebski, Bruna Morrone, Quentin De Laroussilhe, Andrea Gesmundo, Mona Attariyan, and Sylvain Gelly. Parameter-efficient transfer learning for nlp. In ICML , 2019. 2 [24] Edward J Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, Lu Wang, Weizhu Chen, et al. Lora: Low-rank adaptation of large language models. ICLR ,2022. 2 [25] Xinting Hu, Kaihua Tang, Chunyan Miao, Xian-Sheng Hua, and Hanwang Zhang. Distilling causal effect of data in class-incremental learning. In CVPR , 2021. 1 [26] Tianyu Huai, Jie Zhou, Xingjiao Wu, Qin Chen, Qingchun Bai, Ze Zhou, and Liang He. Cl-moe: Enhancing multi-modal large language model with dual momentum mixture-of-experts for continual visual question answering. In CVPR ,2025. 1 [27] Drew A Hudson and Christopher D Manning. Gqa: A new dataset for real-world visual reasoning and compositional question answering. In CVPR , 2019. 1 [28] Menglin Jia, Luming Tang, Bor-Chun Chen, Claire Cardie, Serge Belongie, Bharath Hariharan, and Ser-Nam Lim. Vi-sual prompt tuning. In ECCV , 2022. 2 [29] Ziqi Jia, Anmin Wang, Xiaoyang Qu, Xiaowen Yang, and Jianzong Wang. Hierarchical-task-aware multi-modal mix-ture of incremental lora experts for embodied continual learning. arXiv preprint arXiv:2506.04595 , 2025. 2 [30] Sahar Kazemzadeh, Vicente Ordonez, Mark Matten, and Tamara Berg. Referitgame: Referring to objects in pho-tographs of natural scenes. In EMNLP , 2014. 1 [31] James Kirkpatrick, Razvan Pascanu, Neil Rabinowitz, Joel Veness, Guillaume Desjardins, Andrei A Rusu, Kieran Milan, John Quan, Tiago Ramalho, Agnieszka Grabska-Barwinska, et al. Overcoming catastrophic forgetting in neu-ral networks. Proceedings of the national academy of sci-ences , 2017. 2, 5, 7 [32] Brian Lester, Rami Al-Rfou, and Noah Constant. The power of scale for parameter-efficient prompt tuning. arXiv preprint arXiv:2104.08691 , 2021. 2 [33] Lei Li, Yuqi Wang, Runxin Xu, Peiyi Wang, Xiachong Feng, Lingpeng Kong, and Qi Liu. Multimodal arxiv: A dataset for improving scientific comprehension of large vision-language models. arXiv preprint arXiv:2403.00231 , 2024. 1 [34] Xiang Lisa Li and Percy Liang. Prefix-tuning: Optimiz-ing continuous prompts for generation. arXiv preprint arXiv:2101.00190 , 2021. 2 [35] Zhizhong Li and Derek Hoiem. Learning without forgetting. 
+
+TPAMI , 2017. 2, 5, 7 [36] Yan-Shuo Liang and Wu-Jun Li. Inflora: Interference-free low-rank adaptation for continual learning. In CVPR , 2024. 2[37] Chin-Yew Lin. Rouge: A package for automatic evaluation of summaries. In Text summarization branches out , pages 74–81, 2004. 7, 1 [38] Adam Dahlgren Lindstr¨ om and Savitha Sam Abra-ham. Clevr-math: A dataset for compositional lan-guage, visual and mathematical reasoning. arXiv preprint arXiv:2208.05358 , 2022. 1 [39] Haotian Liu, Chunyuan Li, Yuheng Li, and Yong Jae Lee. Improved baselines with visual instruction tuning. In CVPR ,2024. 1, 7 [40] David Lopez-Paz and Marc’Aurelio Ranzato. Gradient episodic memory for continual learning. NeurIPS , 2017. 2, 7[41] Pan Lu, Liang Qiu, Jiaqi Chen, Tony Xia, Yizhou Zhao, Wei Zhang, Zhou Yu, Xiaodan Liang, and Song-Chun Zhu. Iconqa: A new benchmark for abstract diagram under-standing and visual language reasoning. arXiv preprint arXiv:2110.13214 , 2021. 1 [42] Pan Lu, Swaroop Mishra, Tanglin Xia, Liang Qiu, Kai-Wei Chang, Song-Chun Zhu, Oyvind Tafjord, Peter Clark, and Ashwin Kalyan. Learn to explain: Multimodal reasoning via thought chains for science question answering. NeurIPS ,2022. 1 [43] Pan Lu, Hritik Bansal, Tony Xia, Jiacheng Liu, Chunyuan Li, Hannaneh Hajishirzi, Hao Cheng, Kai-Wei Chang, Michel Galley, and Jianfeng Gao. Mathvista: Evaluating mathemat-ical reasoning of foundation models in visual contexts. arXiv preprint arXiv:2310.02255 , 2023. 2 [44] Arun Mallya, Dillon Davis, and Svetlana Lazebnik. Piggy-back: Adapting a single network to multiple tasks by learn-ing to mask weights. In ECCV , 2018. 2 [45] Junhua Mao, Jonathan Huang, Alexander Toshev, Oana Camburu, Alan L Yuille, and Kevin Murphy. Generation and comprehension of unambiguous object descriptions. In 
+
+CVPR , 2016. 1 [46] Michael McCloskey and Neal J Cohen. Catastrophic inter-ference in connectionist networks: The sequential learning problem. In Psychology of learning and motivation . 1989. 1, 3[47] Anand Mishra, Shashank Shekhar, Ajeet Kumar Singh, and Anirban Chakraborty. Ocr-vqa: Visual question answering by reading text in images. In ICDAR , 2019. 1 [48] Kishore Papineni, Salim Roukos, Todd Ward, and Wei-Jing Zhu. Bleu: a method for automatic evaluation of machine translation. In Proceedings of the 40th annual meeting of the Association for Computational Linguistics , 2002. 7, 1 [49] German I Parisi, Ronald Kemker, Jose L Part, Christopher Kanan, and Stefan Wermter. Continual lifelong learning with neural networks: A review. Neural networks , 2019. 1 [50] Bryan A Plummer, Liwei Wang, Chris M Cervantes, Juan C Caicedo, Julia Hockenmaier, and Svetlana Lazeb-nik. Flickr30k entities: Collecting region-to-phrase corre-spondences for richer image-to-sentence models. In ICCV ,2015. 1 [51] Alec Radford, Jeffrey Wu, Rewon Child, David Luan, Dario Amodei, Ilya Sutskever, et al. Language models are unsu-pervised multitask learners. OpenAI blog , 2019. 2 [52] Wu Ran, Weijia Zhang, ShuYang Pang, Qi Zhu, Jinfan Liu, JingSheng Liu, Xin Cao, Qiang Li, Yichao Yan, and Chao Ma. Correlated low-rank adaptation for convnets. In 
+
+NeurIPS , 2025. 2 [53] David Rolnick, Arun Ahuja, Jonathan Schwarz, Timothy Lil-licrap, and Gregory Wayne. Experience replay for continual learning. In NeurIPS , 2019. 1 [54] Hanul Shin, Jung Kwon Lee, Jaehong Kim, and Jiwon Kim. Continual learning with deep generative replay. NeurIPS ,2017. 2 [55] Amanpreet Singh, Vivek Natarajan, Meet Shah, Yu Jiang, Xinlei Chen, Dhruv Batra, Devi Parikh, and Marcus Rohrbach. Towards vqa models that can read. In CVPR ,2019. 1 [56] James Seale Smith, Leonid Karlinsky, Vyshnavi Gutta, Paola Cascante-Bonilla, Donghyun Kim, Assaf Arbelle, Rameswar Panda, Rogerio Feris, and Zsolt Kira. Coda-prompt: Contin-ual decomposed attention-based prompting for rehearsal-free continual learning. In CVPR , 2023. 2 [57] James Seale Smith, Lazar Valkov, Shaunak Halbe, Vysh-navi Gutta, Rogerio Feris, Zsolt Kira, and Leonid Karlinsky. Adaptive memory replay for continual learning. In CVPR ,2024. 1 [58] Shikhar Srivastava, Md Yousuf Harun, Robik Shrestha, and Christopher Kanan. Improving multimodal large lan-guage models using continual learning. arXiv preprint arXiv:2410.19925 , 2024. 1 [59] George Stoica, Pratik Ramesh, Boglarka Ecsedi, Leshem Choshen, and Judy Hoffman. Model merging with svd to tie the knots. arXiv preprint arXiv:2410.19735 , 2024. 2 [60] Ramakrishna Vedantam, C Lawrence Zitnick, and Devi Parikh. Cider: Consensus-based image description evalua-tion. In CVPR , pages 4566–4575, 2015. 7, 1 [61] Lei Wang, Jun Liu, Liang Zheng, Tom Gedeon, and Piotr Koniusz. Meet jeanie: a similarity measure for 3d skeleton sequences via temporal-viewpoint alignment. IJCV , 2024. 1 [62] Liyuan Wang, Xingxing Zhang, Hang Su, and Jun Zhu. Acomprehensive survey of continual learning: Theory, method and application. TPAMI , 2024. 1 [63] Xiao Wang, Tianze Chen, Qiming Ge, Han Xia, Rong Bao, Rui Zheng, Qi Zhang, Tao Gui, and Xuan-Jing Huang. Or-thogonal subspace learning for language model continual learning. In Findings of the Association for Computational Linguistics: EMNLP , 2023. 1, 2, 4, 5, 7 [64] Zifeng Wang, Zizhao Zhang, Sayna Ebrahimi, Ruoxi Sun, Han Zhang, Chen-Yu Lee, Xiaoqi Ren, Guolong Su, Vin-cent Perot, Jennifer Dy, et al. Dualprompt: Complementary prompting for rehearsal-free continual learning. In ECCV ,2022. 2 [65] Zifeng Wang, Zizhao Zhang, Chen-Yu Lee, Han Zhang, Ruoxi Sun, Xiaoqi Ren, Guolong Su, Vincent Perot, Jen-nifer Dy, and Tomas Pfister. Learning to prompt for continual learning. In CVPR , 2022. 1, 2, 5 [66] Yue Wu, Yinpeng Chen, Lijuan Wang, Yuancheng Ye, Zicheng Liu, Yandong Guo, and Yun Fu. Large scale in-cremental learning. In CVPR , 2019. 1 [67] Zeyuan Yang, Zonghan Yang, Yichen Liu, Peng Li, and Yang Liu. Restricted orthogonal gradient projection for continual learning. AI Open , 2023. 2 [68] Shukang Yin, Chaoyou Fu, Sirui Zhao, Ke Li, Xing Sun, Tong Xu, and Enhong Chen. A survey on multimodal large language models. National Science Review , 2024. 1 [69] Yu Zhang and Qiang Yang. An overview of multi-task learn-ing. National Science Review , 2018. 2 [70] Yu Zhang and Qiang Yang. A survey on multi-task learn-ing. IEEE transactions on knowledge and data engineering ,2021. 2 [71] Xuanle Zhao, Xuexin Liu, Haoyue Yang, Xianzhen Luo, Fanhu Zeng, Jianling Li, Qi Shi, and Chi Chen. Chartedit: How far are mllms from automating chart analysis? eval-uating mllms’ capability via chart editing. arXiv preprint arXiv:2505.11935 , 2025. 2 [72] Zhen Zhao, Zhizhong Zhang, Xin Tan, Jun Liu, Yanyun Qu, Yuan Xie, and Lizhuang Ma. Rethinking gradient projection continual learning: Stability/plasticity feature space decou-pling. In CVPR , 2023. 4 [73] Da-Wei Zhou, Qi-Wei Wang, Zhi-Hong Qi, Han-Jia Ye, De-Chuan Zhan, and Ziwei Liu. Class-incremental learning: A survey. TPAMI , 2024. 1 [74] Hao Zhu, Yifei Zhang, Junhao Dong, and Piotr Koniusz. Bilora: Almost-orthogonal parameter spaces for continual learning. In CVPR , 2025. 1, 2 Octopus: History-Free Gradient Orthogonalization for Continual Learning in Multimodal Large Language Models 
+
+# Supplementary Material 
+
+This material provides supplementary information on the proposed Octopus framework. It presents more details on our experimental settings (Sec. G), further experimental re-sults (Sec. H), and more analysis, visualizations, and dis-cussions (Sec. I) to complement the main manuscript. Fi-nally, we discuss the limitations of Octopus. 
+
+## G. Further Experimental Details 
+
+G.1. Benchmarks 
+
+In the main manuscript, we evaluate our method on UCIT [20], while in the supplementary material we further report its performance on CoIN [8]. Below, we provide de-tailed descriptions of both evaluations. 
+
+UCIT [20] UCIT [20] is proposed to rigorously evalu-ate multimodal large language models in settings where instruction-following abilities must be incrementally ac-quired across heterogeneous visual–linguistic domains. This benchmark is constructed by unifying six widely used multimodal instruction datasets, including ImageNet-R [22], ArXivQA [33], VizWiz-Caption [21], IconQA [41], CLEVR-Math [38] and Flickr30k [50], and reorganizing them into a sequential task stream. These datasets collec-tively cover natural-image captioning, open-ended visual question answering and mathematical reasoning. 
+
+CoIN [8] CoIN [8] is introduced as a rigorous bench-mark for evaluating multimodal large language models (MLLMs) under a sequential instruction-tuning paradigm. By integrating eight distinct task categories covering mul-tiple datasets including VQAv2 [18], VizWiz [21], Sci-enceQA [42], TextVQA [55], GQA [27], OCR-VQA [47], ImageNet [11] and RECCOCO [30, 45], CoIN [8] cap-tures a wide spectrum of multimodal challenges, from vi-sual question answering and grounding to image classifi-cation and OCR-based VQA, thereby exposing models to large shifts in both visual domain and task semantics. 
+
+G.2. Metrics 
+
+For standard VQA tasks, we adopt accuracy as the evalua-tion metric. For image captioning, we follow the protocol of UCIT and use the average score across multiple metrics, including BLEU-1-4 [48], METEOR [12], ROUGE-L [37], CIDEr [60] and SPICE [2], as our evaluation criterion. 
+
+BLEU BLEU was originally introduced in [48] as a met-ric for measuring the n-gram similarity between a predicted sentence and its reference. It provides multiple variants depending on the n-gram order, with BLEU-1, BLEU-2, BLEU-3, and BLEU-4 being the most commonly used. The computation is formulated as follows: 
+
+pn =
+
+P
+
+> C∈{ Candidates }
+
+P
+
+> n
+
+-gram ∈C
+
+Count clip (n-gram )
+
+P
+
+> C′∈{ Candidates }
+
+P
+
+> n
+
+-gram ′∈C′
+
+Count (n-gram ′) .
+
+(11) 
+
+METEOR METEOR was proposed in [12] as a text evaluation metric that integrates lemmatization, synonym matching, and a weighted precision–recall formulation to more finely assess the semantic correspondence between generated outputs and reference texts. The computation is formulated as follows: 
+
+Score = F mean · (1 − P enalty ), (12) where: 
+
+F mean = 10 P R R + 9 P , (13) 
+
+P enalty = 0 .5 ·
+
+ #chunks 
+
+#unigrams matched 
+
+3
+
+. (14) 
+
+ROUGE-L ROUGE-L was proposed in [37] as an au-tomatic text evaluation metric based on longest-common-subsequence matching, which quantifies the structural over-lap between a generated sequence and a reference sequence to assess their content similarity. 
+
+CIDEr CIDEr was proposed in [60] as aTF–IDF–weighted consensus-based evaluation metric that measures the content consistency and informational relevance between generated descriptions and reference descriptions by emphasizing semantically distinctive n-grams. The computation is formulated as follows: 
+
+CIDER (ci, S i) = 
+
+> N
+
+X
+
+> n=1
+
+wnCIDER n(ci, S i), (15) where: 
+
+CIDER N (ci, S i) = 1
+
+m
+
+X
+
+> j
+
+gn(ci) · gn(sij )
+
+|| gn(ci)|| · || gn(sij )||  (16) Method Replay SciQA Image Viz REC Text GQA VQA OCR Average 
+
+Zero-shot - 69.79 9.93 45.50 58.47 57.75 60.77 66.50 64.93 54.21 Multi-task - 82.36 89.63 52.51 65.83 61.27 59.93 65.67 62.03 67.40 Avg Sequential Finetune - 64.22 40.13 43.87 38.32 55.04 55.89 60.61 64.78 52.86 
+
+▽ Architecture-based L2P [65] % 70.52 26.89 45.53 45.21 56.84 59.03 63.52 64.11 53.96 MoELoRA [8] % 68.38 48.50 44.22 40.23 55.62 57.04 62.14 65.75 55.24 HiDe-LLaVA [20] % 74.92 76.72 51.24 61.84 57.13 62.83 68.15 64.76 64.70 
+
+▽ Regularization-based LwF [35] % 65.20 40.63 43.22 40.05 56.23 54.67 60.64 65.12 53.22 EWC [31] % 65.11 40.89 44.09 39.67 54.92 56.03 61.12 64.55 53.30 O-LoRA [63] % 73.32 68.37 50.26 61.12 57.75 60.96 65.71 63.31 62.60 
+
+Octopus (ours) % 81.73 84.73 52.30 62.83 57.77 62.08 67.36 64.72 66.69 
+
+> Last
+
+Sequential Finetune - 57.43 28.90 41.88 30.05 51.39 50.76 53.28 64.78 47.31 
+
+▽ Architecture-based L2P [65] % 70.21 23.31 44.21 43.76 56.25 58.46 62.32 64.11 52.83 MoELoRA [8] % 62.02 37.21 43.32 33.22 52.05 53.12 57.92 65.75 50.58 HiDe-LLaVA [20] % 73.20 69.28 50.76 59.18 56.92 61.33 67.12 64.76 62.81 
+
+▽ Regularization-based LwF [35] % 60.71 30.58 41.49 36.01 52.80 47.07 53.43 65.12 48.40 EWC [31] % 59.75 31.88 42.26 34.96 51.06 51.84 55.30 64.55 48.95 O-LoRA [63] % 72.56 62.84 48.43 58.97 57.66 59.14 63.21 63.31 60.77 
+
+Octopus (ours) % 79.72 82.18 51.49 62.17 53.60 60.50 66.38 64.72 65.10 
+
+Table 6. Comparison with various methods on CoIN [8] in terms of Avg and Last . The best and second methods are labeled with bold and underline styles. Zero-shot evaluates the pretrained model without task-specific finetuning. Multi-task jointly finetunes the model across all datasets, whereas Sequential Finetune adapts only one LoRA module sequentially to individual tasks. These settings provide an empirical characterization of the lower bound, upper bound, and baseline for continual learning methods. STAGE 1  STAGE 2     
+
+> (a) STAGE 1 STAGE 2 (b) STAGE 1 STAGE 2 (c)
+
+Figure 6. Finetuning curve comparison between w/ two-stage finetuning and w/o two-stage finetuning on VizWiz-Caption (a) , IconQA (b) and CLEVR-Math (c) .
+
+SPICE SPICE was proposed in [2] as a scene-graph–based semantic evaluation metric that assesses the degree of semantic alignment between generated and refer-ence descriptions by comparing their structured representa-tions of objects, attributes, and relations. The computation is formulated as follows: 
+
+SP ICE (c, S ) = F1(c, S ) = 2P (c, S )R(c, S )
+
+P (c, S ) + R(c, S ) (17) 
+
+## H. Further Experimental Results 
+
+We conduct extensive comparisons against a variety of methods on the CoIN [8] benchmark, and the results are presented in Tab. 6. Compared with the current state-of-the-art (SOTA), our approach achieves improvements of 1.99% and 2.29% on Avg and Last , respectively. Consistent with the main manuscript, the competing methods are grouped into two categories: regularization-based and architecture-based. On one hand, our method significantly outperforms other regularization-based approaches, surpassing OLoRA [63] by 4.09% and 4.33% on Avg and Last , respectively. This further demonstrates that HiFGO exhibits more effective weight disentanglement compared to orthogonalization in the weight space, and that it is applicable to diverse data and task formats with strong robustness. On the other hand, our method also outperforms architecture-based approaches, indicating that it success-fully mitigates parameter interference across tasks. In con-trast, MoE tends to suffer from inaccurate task-origin pre-diction when processing test inputs, which limits its perfor-mance. I. Further Analysis 
+
+I.1. Theoretical Analysis of GPWC 
+
+For T ask A and T ask B in the task sequence, we denote θ∗
+
+> A
+
+as the parameters after fine-tuning on T ask A , and l(x; θ∗
+
+> A
+
+)
+
+as the loss function under input x and parameter θ∗
+
+> A
+
+. Then, GPWC can be expressed as: 
+
+ggpwc = Ex∼DB [∇θ l(x; θ∗
+
+> A
+
+)] , (18) where DB is the data distribution of T ask B .Let 
+
+LA(θ) = Ex∈DA [∇θ l(x; θ)] , (19) 
+
+LB (θ) = Ex∈DB [∇θ l(x; θ)] , (20) we define a family of tasks: 
+
+Lλ(θ) = LA(θ) + λ(LB (θ) − LA(θ)) , (21) where λ = 0 /λ = 1 represents T ask A/B .Under Lλ(θ), the optimal parameters θ∗(λ) satisfy: 
+
+∂∂θ Lλ(θ)
+
+> θ=θ∗(λ)
+
+= 0 , (22) which further implies 
+
+∇θ LA(θ∗(λ)) + λ(∇θ LB (θ∗(λ)) − ∇ θ LA(θ∗(λ))) = 0 .
+
+(23) Differentiating the above equation with respect to λ, we ob-tain 
+
+∂∂λ ∇θ LA(θ∗(λ)) + ∇θ LB (θ∗(λ)) − ∇ θ LA(θ∗(λ)) +λ ∂∂λ (∇θ LB (θ∗(λ)) − ∇ θ LA(θ∗(λ))) = 0 .
+
+(24) By substituting λ = 0 (at which point θ∗(λ)|λ=0 = θ∗ 
+
+> A
+
+and 
+
+∇θ LA(θ∗(λ)) |λ=0 = ∇θ LA(θ∗
+
+> A
+
+) = 0 ), we obtain 
+
+∂θ ∗
+
+∂λ ∂∂θ ∗ Ex∈DA [∇θ l(x; θ∗
+
+> A
+
+)] + Ex∈DB [∇θ l(x; θ∗
+
+> A
+
+)] = 0 ,
+
+(25) which implies gGP W C = HAv, where HA denotes the Hessian matrix of T ask A evaluated at θ∗
+
+> A
+
+, and v =
+
+− ∂θ ∗(λ) 
+
+> ∂λ θ∗(λ)= θ∗
+> A
+
+corresponds to the tangent direction in parameter space induced by the data manifold of T ask B ,which can be interpreted as the adaptation direction of θ∗
+
+> A
+
+toward T ask B .Let {ui} denote the eigenvectors of HA, and v can be decomposed as v = P
+
+> i
+
+γiui, and 
+
+gGP W C = HAv = X
+
+> i
+
+λiγiui, (26) Seq. FT  Octopus 
+
+Figure 7. ∆θTs→tHS ∆θs→t Comparison for Seq. FT and Octopus 𝜃 𝐴   
+
+> ∗
+> 𝜃 B
+> ∗
+> 𝜃 ∗
+> 𝑔 𝐺𝑃𝑊𝐶
+> 𝑂 0𝑤 1
+> 𝑤 2
+> ∇𝐿 𝑐𝑒
+> ∇𝐿 orth
+> ⊥𝑔 𝐺𝑃𝑊𝐶
+> 𝜃 𝐵
+
+Figure 8. A toy example for GPWC. 
+
+which is a weighted combination with the eigenvalues {λi}
+
+of HA as weights. This indicates that GPWC primarily cap-tures the projection of v onto the high-curvature directions of HA. These directions correspond to those along which updating θ∗ 
+
+> A
+
+under the data distribution of T ask B is more likely to degrade the performance on T ask A . Therefore, constraining the parameter update direction to be orthogo-nal to GPWC can effectively alleviate catastrophic forget-ting. Further, we provide an empirical analysis in Fig. 7: we compare the quadratic ∆θTs→tHS ∆θs→t for Seq. FT and Octopus, where ∆θs→t represent parameter increment of “source → target”, and HS is Hessian of source task. GPWC gains a lower quadratic value, proving it can signif-icantly mitigate the performance impact on prior tasks. 
+
+A toy example We provide a toy example to intuitively il-lustrate the role of GPWC. We illustrate the intuition using a simple linear regression model y = w1x1 + w2x2. We show the optimal parameters θ∗ 
+
+> A
+
+and θ∗ 
+
+> B
+
+of two linear re-gression tasks TA and TB in Fig. 8, and the blue and orange dashed curves represent the loss contours of TA and TB , re-spectively. After the model is trained on TA, the parameters converge to θ∗
+
+> A
+
+. If the model is subsequently trained on TB
+
+without any constraint, the parameter update will proceed approximately along the line connecting θ∗ 
+
+> A
+
+and θ∗ 
+
+> B
+
+due to linearity, eventually converging to θ∗ 
+
+> B
+
+. As a result, the per-Figure 9. Sensitivity analysis of λ1 and λ2
+
+formance on TA deteriorates significantly. Now consider the case where the GPWC constraint is introduced. When the model parameters move toward a point θB , the GPWC direction is defined as the direction from θ∗ 
+
+> A
+
+to θ∗ 
+
+> B
+
+. No-tably, this direction also corresponds to the direction along which the loss on TA increases during optimization for TB .Therefore, the gradient direction of Lorth becomes opposite to that of the gradient of the task loss Lce . Consequently, when a balance between Lce and Lorth is achieved during training, the resulting parameter θ∗ attains strong perfor-mance on TB while effectively preserving the performance on TA.
+
+I.2. Example Analysis 
+
+We provide a comparative analysis in Fig. 10 of our Octo-pus against OLoRA [63]. Octopus demonstrates markedly superior retention of previously acquired task capabilities after sequential learning. In the image captioning task, Oc-topus preserves salient visual details more faithfully, while in multimodal mathematical reasoning tasks, Octopus not only reproduces the correct answers obtained at finetuning time but, in some cases, autonomously corrects errors. 
+
+I.3. Comparison of FineTuning Dynamics for Two-Stage Strategy 
+
+To further investigate the effectiveness of our two-stage finetuning strategy, we visualize the finetuning dynamics on several datasets in Fig. 6, comparing the cases with and without the proposed strategy. As shown in the figure, during the first stage of unconstrained finetuning, the two-stage strategy converges faster and achieves a better final convergence result. In the second stage of constrained fine-tuning, the introduction of constraints does not substantially compromise the performance gains achieved during the first stage; after a certain number of steps, the model is still able to reach the performance level of the unconstrained setting. In contrast, directly applying constrained finetuning from the beginning leads to a noticeable degradation in fine-tuning performance, limiting the model’s plasticity. Our two-stage finetuning strategy strikes an effective balance between plasticity and stability, retaining adaptation capac-ity while avoiding excessive performance loss. CLEVR -Math 
+
+VizWiz -Caption                                        
+
+> Q: What is happening in the image? Generate a brief caption for
+> the image.
+> Q: What is happening in the image? Generate a brief caption for
+> the image.
+> I: A computer screen with a blue background and white text
+> L: A computer screen is displaying a message about a certificate
+> I: A computer screen with a blue background and white text
+> L: A computer screen is displaying a blue screen with white text
+> I: A piece of paper with a questionnaire on it
+> L: A person is filling out a form
+> I: A piece of paper with a questionnaire on it
+> L: A piece of paper with a questionnaire on it
+> OLoRA Octopus (ours)
+> Q: Subtract all cylinders. How many objects are left? Answer
+> the question using a single word or phrase.
+> I: 7
+> L: 6
+> I: 6
+> L: 7
+> Q: Subtract 1 purple cylinders. How many objects are left?
+> Answer the question using a single word or phrase.
+> I: 5
+> L: 4
+> I: 5
+> L: 5
+> OLoRA Octopus (ours)
+> LABEL: 7
+> LABEL: 7
+> LABEL: 5
+> LABEL: 5
+
+Figure 10. Instance-wise comparison between Octopus (ours) and OLoRA on the UCIT benchmark. Here, I denotes Imd. and L de-notes Last . We illustrates the output comparison of the two meth-ods after fine-tuning on a specific dataset and upon the completion of all training procedures. 
+
+I.4. Sensitive analysis of λ1 and λ2.
+
+λ1 and λ2 are set to balance the loss magnitudes. In the experiments, we default to setting λ1 = 2 × 10 −2 and 
+
+λ2 = 1 × 10 −2, and a comprehensive sensitivity analy-sis of the Last metric on the UCIT dataset with respect to 
+
+λ1 and λ2 is presented in Fig. 9. Results shows that the the performance remains consistently high and stable when 
+
+λ1 ∈ [1 × 10 −2, 6 × 10 −2] and λ2 ∈ [6 × 10 −3, 1.6 × 10 −2].The wide effective ranges demonstrate that our method is not overly sensitive to these hyperparameters and exhibits strong robustness against their variations, which validates substantial practical applicability of Octopus . 
+
+I.5. Extra Number of Parameters for Inference 
+
+In Fig. 11, we compare the additional parameters in-troduced during inference between Octopus and the cur-rent SOTA method HiDe-LLaVA [20] (We apply LoRA to all linear layers with rank = 48 and alpha = 96 for each method). MoE-based approaches, such as HiDe-LLaVA [20], require the loading of multiple expert mod-ules— i.e ., multiple LoRAs—during inference, and further necessitate an additional network component for task-ID assignment. In contrast, Octopus introduces only a sin-gle LoRA during inference, identical to standard sequential fine-tuning with LoRA. As shown in Fig. 11, compared with HiDe-LLaVA [20], 1 2 3 4 5 6
+
+> Number of Tasks
+> 200
+> 400
+> 600
+> 800
+> Number of Parameters (M)  Sequential Finetune
+> HiDe-LLaVA
+> Octopus
+
+Figure 11. Comparison of the additional number of parameters required during inference. 
+
+Octopus incurs only a negligible number of additional pa-rameters during inference, and more importantly, this over-head does not scale with the number of tasks. This design substantially reduces storage costs and improves inference efficiency. 
+
+Limitations Despite substantial improvements achieved, several limitations remain that warrant further investigation. First, similar to other LoRA-based regularization methods, our framework is constrained by the number of tasks; sec-ond, our framework would impair the performance of indi-vidual tasks for those that are highly similar in domain but differ in problem formulation. These limitations highlight the need for more sophisticated designs capable of over-coming task capacity constraints while effectively handling similar tasks. We hope our work provides valuable insights for future continual learning research for MLLMs.
