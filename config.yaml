@@ -25,3 +25,65 @@ subscriptions:
     stage: A
     diff_threshold_pct: 15
   keyword_recall_mode: or
+  intent_profiles:
+    - tag: llm-vlm
+      description: 多模态大语言模型及强化学习相关论文
+      enabled: true
+      paper_sources:
+        - arxiv
+      keywords:
+        - keyword: large language model
+          keyword_cn: 大语言模型
+          query: large language model research paper from laboratory
+        - keyword: vision language model
+          keyword_cn: 视觉语言模型
+          query: vision language model paper
+        - keyword: multimodal large language model
+          keyword_cn: 多模态大语言模型
+          query: multimodal large language model paper
+        - keyword: large model reinforcement learning
+          keyword_cn: 大模型强化学习
+          query: reinforcement learning for large language model
+        - keyword: technical report multimodal
+          keyword_cn: 多模态技术报告
+          query: technical report multimodal large language model
+        - keyword: multimodal reinforcement learning
+          keyword_cn: 多模态强化学习
+          query: multimodal reinforcement learning paper
+      intent_queries:
+        - query: Find academic papers on large language models from research laboratories excluding industry tech reports
+          query_cn: 查找来自研究实验室的大语言模型学术论文，排除行业技术报告
+          enabled: true
+          source: manual
+          note: ''
+        - query: Search for vision language model papers authored by university groups
+          query_cn: 搜索由大学团队撰写的视觉语言模型论文
+          enabled: true
+          source: manual
+          note: ''
+        - query: multimodal large language model research papers from academic labs
+          query_cn: 来自学术实验室的多模态大语言模型研究论文
+          enabled: true
+          source: manual
+          note: ''
+        - query: reinforcement learning for large language model in multimodal context
+          query_cn: 多模态背景下大语言模型的强化学习
+          enabled: true
+          source: manual
+          note: ''
+      updated_at: '2026-05-27T06:58:41.752Z'
+source_backends:
+  arxiv:
+    papers_table: arxiv_papers
+    use_vector_rpc: true
+    vector_rpc: match_arxiv_papers
+    vector_rpc_exact: match_arxiv_papers_exact
+    use_bm25_rpc: true
+    bm25_rpc: match_arxiv_papers_bm25
+    sync_table: arxiv_sync_status
+    sync_success_value: success
+    schema: public
+    kind: supabase
+    enabled: true
+    url: https://lyucdwgefyfbmaiopjbk.supabase.co
+    anon_key: sb_publishable_lX-oi64Uxyd7SIVv3_w2Uw_MTOojeKq
