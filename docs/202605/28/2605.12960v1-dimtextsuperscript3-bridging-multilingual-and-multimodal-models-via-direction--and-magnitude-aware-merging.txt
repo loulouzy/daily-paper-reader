@@ -1,0 +1,1606 @@
+Title: DiM3: Bridging Multilingual and Multimodal Models via Direction- and Magnitude-Aware Merging
+
+URL Source: https://arxiv.org/pdf/2605.12960v1
+
+Published Time: Thu, 14 May 2026 00:40:22 GMT
+
+Number of Pages: 26
+
+Markdown Content:
+# DiM 3: Bridging Multilingual and Multimodal Models via Direction- and Magnitude-Aware Merging 
+
+Zijing Wang 1 Mingyang Wang 2,3 Ercong Nie 4 Yongkang Liu 1∗ Shi Feng 1
+
+Mengjie Zhao 5 Daling Wang 1∗ Xiaocui Yang 1 and Hinrich Schütze 2,31Northeastern University, China; 2CIS, LMU Munich, Germany 
+
+> 3
+
+Munich Center for Machine Learning (MCML), Germany 
+
+> 4
+
+Shanghai Jiao Tong University, China; 5SB Intuitions, Tokyo, Japan 
+
+wzj1718@gmail.com 
+
+Abstract 
+
+Towards more general and human-like intelligence, large language models should seamlessly integrate both multilingual and multimodal capabilities; however, ex-tending an existing multimodal model to many languages typically requires expen-sive multilingual multimodal data construction and repeated end-to-end retraining. We study a training-free alternative: injecting multilingual capability into an ex-isting multimodal model by composing residual updates in the shared language model backbone. The key challenge is that multilingual and multimodal updates are heterogeneous, reflecting different functional roles in the shared model. To address this, we propose Di rection- and Magnitude-aware Multilingual Multimodal merging ( DiM 3), which selectively composes the two updates at each parameter dimension while preserving the original vision encoder and multimodal projector. Experiments on multilingual benchmarks in both text-only and vision-language set-tings, covering 57 languages across LLaVA- and Qwen-based backbones, show that DiM 3 consistently outperforms existing merging baselines, substantially improves multilingual performance over the original multimodal model, and remains com-petitive with dedicated multilingual multimodal fine-tuning while largely retaining general multimodal ability. We further show that DiM 3 can be directly applied to already trained multilingual multimodal models and still yield additional gains. Fur-ther interpretability analysis shows that DiM 3 primarily reshapes intermediate-layer semantic representations, strengthening cross-lingual alignment under both text-only and multimodal inputs while preserving higher-layer task-sensitive structure. Our repository is on https://github.com/wzj1718/DiM3 .
+
+1 Introduction 
+
+Multimodal large language models (MLLMs) [ 1 , 2 , 3, 4] have demonstrated remarkable capabilities across a wide range of multimodal tasks, particularly in high-resource languages (HRLs). However, their performance degrades substantially in low-resource languages (LRLs) [ 5, 6, 7 , 8 ], where linguis-tic resources and multimodal training data are scarce. A key reason is that existing MLLMs remain highly English-centric, with pretraining dominated by English data and only limited multilingual exposure [ 9, 10 , 11 ]. Such limited multilingual exposure is insufficient to support reliable reasoning and knowledge generalization in low-resource settings, leading to persistent performance gaps. To improve MLLMs performance in LRLs, prior work typically relies on supervised fine-tuning (SFT) or continual pre-training (CPT) [ 12 ]. SFT adapts models to downstream tasks using large amounts of 
+
+> ∗Corresponding authors. Preprint.
+> arXiv:2605.12960v1 [cs.CL] 13 May 2026
+
+labeled data, while CPT leverages large-scale target-language corpora to enhance language modeling and fluency [ 13 ]. Despite their effectiveness, both approaches require substantial amounts of data, either labeled or unlabeled, and extensive computational resources, making them costly and difficult to scale. These limitations motivate more efficient alternatives that can enhance multilingual capability without data-intensive retraining. Model merging [ 14 , 15 , 16 , 17 ] has emerged as a promising direction, enabling the integration of complementary capabilities from separately trained models without costly large-scale training. Existing methods typically represent the parameter differences between a fine-tuned model and a shared base model as task vectors [ 18 ] and combine them through importance-weighted aggre-gation [ 19 , 20 , 21 ]. While effective for relatively homogeneous model merging settings, these approaches struggle when task vectors are heterogeneous, differing in modality, geometric structure, and training origin, as well as functional roles. In particular, multilingual updates primarily enhance cross-lingual semantic alignment [ 22 , 23 , 24 ], whereas multimodal updates adapt the backbone for visual grounding [ 25 , 26 ]. Naively combining such mismatched updates can therefore lead to interference and degraded performance. To address this limitation, we propose DiM 3, a direction- and magnitude-aware merging strategy tailored to heterogeneous multilingual multimodal composition. Our key insight is that task vectors encode two complementary signals [ 27 , 28 ]: magnitude , reflecting the strength of parameter updates, and direction , capturing their functional reorientation relative to the base model. This decomposition is crucial in heterogeneous settings, where multilingual and multimodal updates may differ not only in update scale, but also in their functional directions. Instead of assuming global compatibility, 
+
+DiM 3 performs selective composition rather than uniform aggregation, adaptively assigning their con-tributions based on local geometric importance in parameter space. By jointly leveraging magnitude and direction, the method strengthens cross-lingual semantic alignment where multilingual signals are salient, while preserving multimodal grounding where multimodal updates dominate, enabling training-free multilingual transfer without compromising visual understanding. We evaluate DiM 3 on multilingual text-only and vision-language benchmarks covering 57 languages and multiple backbone families. Our method consistently outperforms existing merging baselines and substantially improves over the original multimodal model, while remaining competitive with dedicated multilingual multimodal fine-tuning despite requiring no additional training. Furthermore, DiM 3 can be applied to already trained multilingual multimodal models to yield additional gains, while maintains strong performance on general multimodal benchmarks. Analysis of internal repre-sentations shows that these improvements arise from reshaping intermediate-layer semantics, leading to stronger cross-lingual alignment under both text-only and multimodal inputs. Our contributions are threefold: (1) We formulate multilingual multimodal transfer as a training-free residual composition problem on a shared backbone, and demonstrate that multilingual and multimodal task vectors exhibit fundamental heterogeneity; to the best of our knowledge, this setting has not been previously explored. (2) We propose a direction- and magnitude-aware merging rule that selectively composes multilingual and multimodal updates at the parameter level, going beyond naive addition to better capture their distinct functional roles. (3) We demonstrate that this approach substantially improves multilingual multimodal performance while largely preserving general multimodal ability, can be directly applied to already trained multilingual multimodal models for further gains, and achieves these improvements by strengthening cross-lingual alignment in intermediate-layer representations. 
+
+2 Related Work 
+
+Multilingual Representation in LLMs. Recent work suggests that multilingual capability in LLMs is supported not only by token coverage, but also by cross-lingual alignment in internal representations [ 29 , 30 , 31 , 32 ]. Such alignment has been linked to stronger cross-lingual transfer and multilingual generalization [ 33 , 34 ]. Layer-wise analyses further indicate that middle layers tend to encode more transferable, language-agnostic information, whereas upper layers are more closely tied to language-specific generation [ 35 , 36 ]. These results imply that multilingual fine-tuning produces non-uniform, functionally structured residual changes in the shared backbone. 2Multimodal LLMs and Multilingual Multimodal Models. MLLMs are typically built from a vision encoder, a multimodal projector, and a pretrained language model, with much of multimodal reasoning mediated by the shared language backbone [ 37 , 38 , 39 ]. Existing efforts to improve multilingual capability in MLLMs therefore mainly rely on additional training, including multilingual instruction tuning, large-scale multilingual multimodal data construction, and language-aware visual instruction learning [ 40 , 9 , 10 , 41 ]. Recent studies also show that multimodal training can degrade multilingual fidelity, for example by inducing English-biased outputs under visual inputs, and address this issue through multilingual regularization or layer-specific enhancement [ 42 , 43 ]. While effective, these approaches remain training- and data-intensive, motivating our study of whether training-free parameter composition can inject multilingual capability into an existing multimodal model. 
+
+Model Merging. Model merging aims to compose capabilities from independently adapted check-points directly in parameter space [ 44 , 45 , 46 , 47 , 48 , 49 ]. Early work shows that fine-tuning residuals can be treated as task vectors and combined through simple arithmetic [ 18 ]. Subsequent methods improve this paradigm by reducing redundancy and mitigating interference, for example through spar-sification and rescaling [ 19 ], sign-aware conflict resolution [ 20 ], and sparse update selection [ 50 , 51 ]. More recent work explores finer-grained compatibility modeling: PCB-Merging balances parameter importance and inter-task competition during composition [ 52 ], STF formulates merging through the superposition of task-specific features [ 53 ] in representation space, and NeuroMerging further studies interference disentanglement at the neuron level [ 54 ]. However, most existing methods are designed for general multi-task composition and do not explicitly address the heterogeneous updates considered here. In our setting, multilingual adaptation and multimodal adaptation play different functional roles in a shared backbone, making uniform residual addition insufficient. Our method therefore focuses on a direction-magnitude aware composition rule tailored to multilingual multimodal transfer. 
+
+3 Methodology 
+
+3.1 Problem Setup 
+
+In our setting, we consider three models that share the same language model backbone: a base model 
+
+N , a multilingual model M , and a multimodal model V . The multilingual model extends N through continual pre-training on large-scale multilingual data to improve cross-lingual understanding and generation, while the multimodal model augments the same backbone with a vision encoder and a multimodal projector for grounded reasoning, i.e., V = V lm ⊗ V vis ⊗ V proj . As the backbone is the only component shared across all three models, transfer is performed in this parameter space. Let θN and θM denote the parameters of the base model N and the multilingual model M , and let 
+
+θV lm denote the language model parameters inside the multimodal model V . We define two source residuals relative to the same base point: 
+
+∆ml = θM − θN , ∆mm = θV lm − θN . (1) Here ∆ml captures multilingual adaptation and ∆mm captures the language-side adaptation induced by multimodal training. Our goal is to inject multilingual capability into V while preserving the visual grounding and multimodal coordination already established by its visual modules. We therefore keep the vision encoder and multimodal projector fixed, and only replace the shared language model backbone with a merged backbone eθV lm . Under the standard residual view of fine-tuning, this reduces the problem to composing two source residuals around a common reference point, rather than retraining a new multilingual multimodal model from scratch. 
+
+3.2 Residual Heterogeneity and Geometric Motivation 
+
+A natural baseline is direct task arithmetic, 
+
+θmerge ≈ θN + ∆ ml + ∆ mm , (2) but this approximation is reliable only when the two residuals are sufficiently compatible [ 55 ]. In our setting, multilingual and multimodal fine-tuning are driven by different supervision signals: the former primarily improves cross-lingual semantic alignment and generation, whereas the latter reshapes the 3embed 
+
+> 00
+> 04
+> 08
+> 12
+> 16
+> 20
+> 24
+> 28
+> lm_head
+> Layer
+> embed
+> in-ln
+> q
+> k
+> v
+> o
+> post-ln
+> gate
+> up
+> down
+> final-ln
+> lm-head
+> Residual norm ratio (ML)
+> embed
+> 00
+> 04
+> 08
+> 12
+> 16
+> 20
+> 24
+> 28
+> lm_head
+> Layer
+> Residual norm ratio (MM)
+> embed
+> 00
+> 04
+> 08
+> 12
+> 16
+> 20
+> 24
+> 28
+> lm_head
+> Layer
+> Direction deviation (ML)
+> embed
+> 00
+> 04
+> 08
+> 12
+> 16
+> 20
+> 24
+> 28
+> lm_head
+> Layer
+> Direction deviation (MM)
+> embed
+> 00
+> 04
+> 08
+> 12
+> 16
+> 20
+> 24
+> 28
+> lm_head
+> Layer
+> Residual cosine similarity
+> 0.1
+> 0.2
+> 0.3
+> 0.4
+> 0.1
+> 0.2
+> 0.3
+> 0.4
+> 0.02
+> 0.04
+> 0.06
+> 0.08
+> 0.10
+> 0.02
+> 0.04
+> 0.06
+> 0.08
+> 0.10
+> −0.4
+> −0.2
+> 0.0
+> 0.2
+> 0.4
+
+Figure 1: Residual heterogeneity in the shared language model backbone. The panels show residual norm, base-relative reorientation, and cross-residual alignment for ∆ml and ∆mm across layers and modules. Together, these diagnostics reveal that multilingual and multimodal adaptations differ in both update magnitude and geometry, motivating selective rather than uniform composition. same backbone to cooperate with projected visual features. This motivates a heterogeneity hypothesis :multilingual and multimodal residuals should not be treated as interchangeable parameter offsets, because they support different functional roles in the shared backbone. To characterize the heterogeneity between the multilingual and multimodal updates, we study three complementary diagnostics: (1) residual norm , which measures update magnitude; (2) base-relative reorientation , which captures directional change relative to the base model; and (3) cross-residual alignment , which measures how well the multilingual and multimodal updates align with each other. For each layer weight matrix W ∈ Rdout ×din , we adopt a DoRA-style column-wise decomposi-tion [28], representing each column as a magnitude-direction pair: 
+
+m(W )j = ∥W:,j ∥2, D(W ):,j = W:,j 
+
+m(W )j + ϵ , (3) where j indexes the input column and ϵ is a small numerical stabilizer. Relative to the base model N ,we define magnitude deviation and directional deviation for each source k ∈ { ml , mm } as 
+
+δmag 
+
+k,j = |mk(j) − mN (j)| , δdir 
+
+k,j = 1 − cos  Dk(: , j ), D N (: , j ). (4) Additionally, we quantify cross-residual alignment through the cosine similarity between the two source residuals at the same column. 
+
+Proposition 3.1 (Residual geometry) . Ignoring ϵ for clarity, the squared residual norm of column j
+
+decomposes as 
+
+∥Wk, :,j − WN, :,j ∥22 =  δmag 
+
+k,j 
+
+2 + 2 mk(j)mN (j) δdir 
+
+k,j . (5) 
+
+Proof. Since Wk, :,j = mk(j)Dk(: , j ), WN, :,j = mN (j)DN (: , j ), and ∥Dk(: , j )∥2 = ∥DN (: 
+
+, j )∥2 = 1 ,
+
+∥Wk, :,j − WN, :,j ∥22 = mk(j)2 + mN (j)2 − 2mk(j)mN (j) cos  Dk(: , j ), D N (: , j ). (6) Rearranging gives 
+
+ mk(j) − mN (j)2 + 2 mk(j)mN (j) 1 − cos  Dk(: , j ), D N (: , j ) (7) 
+
+=  δmag 
+
+k,j 
+
+2 + 2 mk(j)mN (j) δdir 
+
+k,j , (8) which is exactly the claimed decomposition. This decomposition shows that base-relative residual departure contains both a radial term and an angular term. In our setting, it provides a geometric basis for treating magnitude deviation and direction deviation as complementary signals: differences in norm structure favor magnitude-aware selection, while differences in reorientation favor direction-aware selection. Figure 1 confirms that 
+
+∆ml and ∆mm differ across layers and modules not only in residual norm, but also in base-relative reorientation and cross-residual alignment. This pattern indicates that the compatibility between multilingual and multimodal updates is local rather than global: some parts of backbone should remain closer to multimodal structure, whereas others can absorb stronger multilingual transfer. We therefore seek a selective merge strategy that uses both magnitude and direction signals. 43.3 Direction- and Magnitude-Aware Multilingual Multimodal Merging 
+
+Following the analysis above, we merge the two source residuals in a column-wise manner within the shared language model backbone. We use column-wise aggregation because it is a natural unit for both the geometry and the function of the linear map. The magnitude-direction decomposition is defined on column vectors, and each column W:,j determines how input dimension j contributes to all output dimensions. For each source k ∈ { mm , ml } and each column j, we use both δmag  
+
+> k,j
+
+and δdir 
+
+> k,j
+
+to estimate source salience. The former measures how strongly a source rewrites a column, while the latter measures how differently that column is reoriented relative to the base model. For either branch ∗ ∈ { mag , dir }, let δ∗ 
+
+> k,j
+
+denote the corresponding deviation value. We first normalize deviations within each matrix by their relative ranks across columns: 
+
+r∗ 
+
+> k,j
+
+= rank( δ∗ 
+
+> k,j
+
+)
+
+din 
+
+. (9) We then convert these normalized ranks into cross-source salience scores: 
+
+s∗ 
+
+> k,j
+
+= exp( r∗ 
+
+> k,j
+
+)
+
+P 
+
+> k′
+
+exp( r∗ 
+
+> k′,j
+
+) . (10) This yields a relative importance score based on within-source column salience rather than absolute deviation scale. As suggested by Figure 1, the multilingual and multimodal residuals exhibit sub-stantial cross-source heterogeneity across layers and modules, both in residual norm and direction deviation. In this setting, raw deviations are not directly comparable across the two sources: a large raw value may reflect a broader deviation range for one source in a given matrix, rather than stronger relative salience at the current column. We therefore compare the two sources through within-matrix ranks, which preserve relative ordering inside each source while reducing sensitivity to source- and module-specific scale variation. Rank normalization also makes the comparison less sensitive to a small number of extreme entries. We validate this design through salience-estimator ablations in Section 5.4. In the two-source case, the softmax can be written as 
+
+s∗ 
+
+> ml ,j
+
+= σ r∗ 
+
+> ml ,j
+
+− r∗
+
+> mm ,j
+
+ , s∗ 
+
+> mm ,j
+
+= 1 − s∗ 
+
+> ml ,j
+
+, (11) where σ(x) = 1 /(1 + e−x). Hence the gate is driven by the salience gap between the multilingual and multimodal residuals, rather than by absolute update scale. We aggregate the two salience branches by simple averaging: 
+
+ωk,j = 12
+
+
+
+smag  
+
+> k,j
+
++ sdir 
+
+> k,j
+
+
+
+. (12) This symmetric design treats magnitude- and direction-based evidence equally by default, and is later validated in the ablation study. It can also be interpreted as the closed-form solution of the following consensus objective: 
+
+ωj = arg min  
+
+> ω∈∆2
+
+∥ω − smag  
+
+> j
+
+∥22 + ∥ω − sdir  
+
+> j
+
+∥22, (13) where ∆2 = {ω ∈ R2 : ω1 + ω2 = 1 , ω i ≥ 0}. Thus a column receives more multilingual mass when multilingual salience is high in either branch, and remains closer to the multimodal update when multimodal salience dominates. The role of this symmetric aggregation is examined in Section 5.4. The merged parameter is then computed column-wise as 
+
+fW:,j = WN, :,j + X
+
+> k∈{ mm ,ml }
+
+ωk,j ∆(W )  
+
+> k:,j
+
+, (14) For one-dimensional parameters such as normalization weights or bias terms, the direction-magnitude decomposition is not available. We therefore use absolute base-relative deviation, 
+
+δ1d  
+
+> k,i
+
+= |wk,i − wN,i |, (15) derive element-wise salience scores in the same rank-based manner, and merge by 
+
+ewi = wN,i + X
+
+> k∈{ mm ,ml }
+
+γk,i ∆(w) 
+
+> ki
+
+. (16) 5After merging all shared backbone parameters, we write eθV lm back into the multimodal anchor while leaving the vision encoder and projector unchanged. The final merged multimodal model is 
+
+eV =  θV vis , θ V proj , eθV lm 
+
+. (17) Table 1: Role assignment of models in each shared-backbone setting.                 
+
+> Family Backbone MM anchor Multilingual expert Extra references
+> LLaMA LLaMA-2-7B [56] LLaVA-v1.5-7B [26] Emma-500 [57] PLAST-7B [43]; Palo-7B/13B [40] Qwen2 Qwen2-7B-Instruct [58] Pangea-7B [9] Qwen2-7B-Multilingual-RP Pangea-7B Qwen3 Qwen3-8B [4] Qwen3-VL-8B-Instruct [59] AfriqueQwen-8B [60] Qwen3-VL-8B-Instruct
+
+4 Experimental Setup 
+
+Baselines We conduct experiments under three shared-backbone settings, summarized in Table 1. In all cases, merging is performed only on the shared language model parameters, while the visual components of the multimodal model are kept fixed. For merging method baselines , we compare DiM 3 with representative training-tree merging ap-proaches, including Task Arithmetic [ 18 ], DARE [ 19 ], TIES-Merging [ 20 ], Breadcrumbs [ 50 ], PCB-Merging [ 52 ], STF [ 53 ], and NeuroMerging [ 54 ]. These methods span several major directions in model merging, including direct task vector composition, sparsity-based selection, conflict resolu-tion, and more structured compatibility modeling. This comparison allows us to test whether DiM 3
+
+provides advantages over existing merging strategies in multilingual and multimodal settings. Details on these baselines are provided in Appendix A. For model baselines , we report the performance of the backbone-compatible source models and multilingual multimodal reference systems used in each setting. In the LLaMA-based setup, these include the base model LLaMA-2-7B, the multilingual model Emma-500, the multimodal anchor LLaVA-v1.5-7B, PLAST-7B [ 43 ], and Palo-7B/13B [ 40 ], where PLAST-7B is a parameter-efficient multilingual enhancement of LLaVA-v1.5-7B and Palo is a multilingual multimodal model fine-tuned from the same backbone. In the Qwen3-based setting, we further report Qwen3-VL-8B-Instruct [ 59 ]and AfriqueQwen-8B [ 60 ] as the multimodal and multilingual source models, respectively. To examine whether DiM 3 can also be directly applied to an existing multilingual multimodal model, we additionally conduct merging experiments based on Pangea-7B [ 9], using it as a pretrained multilingual multimodal checkpoint in the Qwen2 family. 
+
+Benchmarks We evaluate DiM 3 on three categories of benchmarks. For multilingual text-only tasks , we consider XCOPA [ 61 ], XStoryCloze [ 62 ], and XNLI [ 63 ]. On these benchmarks, we evaluate the shared language model backbones of LLaMA-2-7B, Emma-500, LLaVA-v1.5-7B, and the models produced by different merging methods. This setting isolates multi-lingual semantic transfer in pure text scenarios and tests whether merging preserves the multilingual gains of the source model. Detailed benchmark settings are provided in Appendix A. We also list all languages used in our experiments and their corresponding ISO 639-1/2 codes in Appendix Table 7. For multilingual multimodal tasks , we use xMMMU [ 9 ], MaXM [ 6 ], MaRVL [ 64 ], xGQA [ 5], CVQA [ 8], and Afri-MCQA [ 65 ]. Together, these benchmarks are used to evaluate multilingual visual understanding and cross-lingual multimodal reasoning. In the LLaMA-based setting, we report results on all six benchmarks. We further include Afri-MCQA in the Qwen2- and Qwen3-based shared-backbone settings to examine DiM 3 under additional backbone families. For general multimodal tasks , we report results on MMStar [ 66 ], MMMU [ 67 ], and SEED-Bench-2-Plus [ 68 ]. We use these benchmarks in the main LLaMA-based setting to assess whether multilingual transfer degrades the general multimodal competence of the anchor model. All evaluation results are obtained using the lm-evaluation-harness [69 ] and lmms-eval [ 70 ] libraries under the same settings to ensure fair comparison. For the merging baselines, hyperparameters are chosen by grid search on validation sets, and we report the best configuration for each method. 65 Main Results 
+
+5.1 Multilingual Capability Transfer in Text-Only Benchmarks Comparison with Existing Merging Methods on Multilingual Text Benchmarks. We first evaluate whether DiM 3 can transfer multilingual capability to the shared language backbone under text-only inputs. Following Section 3, we compose the multilingual residual from Emma-500 with the language-backbone residual of LLaVA-v1.5-7B around the common base model LLaMA-2, while keeping the visual modules fixed. For text-only evaluation, we ex-tract the language model component from each merged model and evaluate it independently. Table 2: Results on multilingual text-only tasks. Best and second-best re-sults within each dataset are highlighted.                                     
+
+> Models XCOPA XStoryCloze XNLI
+> language models
+> Llama_2_7B 56.27 55.74 39.07 EMMA-500 62.47 64.77 43.64
+> LLaVA-v1.5-7B 51.98 49.48 35.55
+> merging methods
+> Task Arithmetic 56.78 58.41 40.07 DARE 56.55 56.81 39.14 TIES-Merging 57.44 58.57 40.47 Breadcrumbs 56.98 57.49 40.42 PCB-Merging 55.55 54.18 37.14 STF 55.40 56.25 39.14 NeuroMerging 56.09 56.54 40.01 DiM 363.38 64.82 42.93
+
+Table 2 summarizes the average multilingual score 
+
+Avg mul on XCOPA, XStoryCloze, and XNLI, while Ap-pendix Tables 8, 9, 10, and 11 report the full language-wise results. Our method achieves the best average mul-tilingual score on all three benchmarks, consistently out-performing existing merging baselines. This shows that direction-magnitude-aware merging is better suited to com-posing multilingual and multimodal residuals than prior parameter-merging rules. 
+
+Comparison with Base Models on Multilingual Text Benchmarks. The same pattern holds when compared with backbone-compatible source models. Relative to LLaVA-v1.5-7B, DiM 3 yields large gains on all three text benchmarks, confirming that multilingual capability is effectively transferred into the shared language backbone. At the same time, it remains close to Emma-500 overall, and even surpasses it in Avg mul on XCOPA and XStoryCloze. Overall, these results show that our method can effectively inherit multilingual capability from the multilingual source model while maintaining compatibility with the original LLaVA backbone. Table 3: Results on multilingual multimodal tasks.                                                                            
+
+> Models XMMMU MaXM MaRVL XGQA CVQA Afri-MCQA
+> LLaVA-v1.5-7B 31.48 20.10 49.78 30.62 39.32 24.61 Task Arithmetic 32.67 22.27 49.81 36.54 40.47 24.39 DARE 31.38 19.54 49.76 31.51 38.42 24.32 TIES-Merging 32.27 24.23 49.71 36.64 39.22 23.84 Breadcrumbs 29.92 21.92 49.64 36.03 34.24 21.00 PCB-Merging 27.95 0.06 ––7.80 0.00 STF 32.05 11.09 50.87 10.87 34.59 23.86 NeuroMerging 33.47 20.53 49.84 20.98 39.38 23.67 Palo-7B 31.30 16.45 50.73 36.93 37.00 24.47 Palo-13B 31.30 28.68 49.70 30.60 39.59 23.95 DiM 3-7B 33.85 33.44 62.91 48.04 43.78 26.31 MMStar MMMU SEED-Bench-2-Plus
+> 30.0
+> 32.5
+> 35.0
+> 37.5
+> 40.0
+> 42.5
+> 45.0
+> Score (%)
+> 33.83
+> 36.33
+> 40.97
+> 32.95 33.11
+> 38.08
+> 34.86
+> 37.22
+> 40.45
+> LLaVA-7B
+> Palo-7B
+> DiM³-7B
+
+Figure 2: Results on three general multimodal benchmarks. Table 4: Afri-MCQA results under the Qwen2- and Qwen3-based shared-backbone settings.                                   
+
+> Backbone Model Am Ha Ig Lug Om Rw Ki So Ti Ak Yo Tn Ny Zu Sot Ln Avg
+> Qwen2 Pangea-7B 0.357 0.271 0.352 0.320 0.130 0.370 0.253 0.310 0.287 0.332 0.380 0.185 0.265 0.198 0.131 0.389 0.283 DiM 30.317 0.342 0.407 0.425 0.320 0.480 0.376 0.345 0.347 0.388 0.390 0.315 0.390 0.333 0.331 0.419 0.370
+> Qwen3 Qwen3-VL-8B-Instruct 0.377 0.342 0.347 0.415 0.335 0.460 0.392 0.405 0.357 0.430 0.420 0.350 0.380 0.302 0.323 0.490 0.383 DiM 30.493 0.498 0.362 0.450 0.445 0.645 0.407 0.555 0.505 0.388 0.445 0.420 0.480 0.406 0.277 0.460 0.452
+
+5.2 Multilingual Transfer in Multimodal Benchmarks 
+
+We next evaluate multilingual capability transfer under multimodal inputs. Table 3 summarizes the average multilingual score Avg mul on six benchmarks: xMMMU, MaXM, MaRVL, xGQA, CVQA, and Afri-MCQA, while Appendix Tables 12, 13, 14, and 15 report the full language-wise results. Across all six benchmarks, our method achieves the best average multilingual performance, showing that DiM 3 transfers multilingual capability effectively in multimodal settings. A notable phenomenon is that some existing merging baselines become unstable in this heterogeneous multimodal setting. This is especially evident on generative multilingual tasks such as MaXM, where several methods produce repetitive, weakly relevant, or degenerate outputs; the problem is particularly severe for PCB-Merging, which we omit from later multimodal evaluations. This failure mode suggests that successful multimodal merging must preserve the coordination between 7x                                          
+
+> Llama_2_7B
+> 10
+> 0
+> 10
+> Layer 0
+> y
+> x
+> EMMA-500
+> x
+> LLaVA-v1.5-7B
+> x
+> TIES
+> x
+> DiM 3
+> x
+> 20
+> 0
+> 20
+> Layer 9
+> y
+> xxxx
+> x
+> 10
+> 0
+> 10
+> Layer 12
+> y
+> xxxx
+> x
+> 20 10 010 20
+> x
+> 10
+> 0
+> 10
+> Layer 32
+> y
+> x
+> 10 50510 15
+> x
+> x
+> 10 50510
+> x
+> x
+> 15 10 50510 15
+> x
+> x
+> 10 010 20
+> x
+> Ar Bg De El En Es Fr Hi Ru Sw Th Tr Ur Vi Zh
+
+Figure 3: t-SNE visualizations of average-pooled hidden states on multilingual text inputs from XNLI across selected layers for LLaMA-2-7B, Emma-500, LLaVA-v1.5-7B, TIES-Merging, and DiM 3.Colors denote languages. DiM 3 shows more overlapping language clusters at intermediate layers, consistent with stronger cross-lingual alignment. language generation and visual grounding, not merely interpolate parameters. In this regard, DiM 3 is substantially more robust than prior merging strategies. The appendix further shows that the gains are broadly distributed across languages and are particularly pronounced in lower-resource settings. Table 4 further validates this trend under the additional shared-backbone settings in Table 1, while Appendix Table 14 reports the corresponding results of different merging methods. In the Qwen3 setting, DiM 3 improves Qwen3-VL-8B-Instruct from 0.383 to 0.452 average accuracy, confirming that the method remains effective across a different backbone family. In the Pangea-based Qwen2 setting, merging Pangea-7B with Qwen2-7B-Multilingual-RP raises the average score from 0.283 to 0.370, showing that DiM 3 can further improve an already fine-tuned multilingual multimodal model. Compared with dedicated multilingual multimodal fine-tuning baselines such as Palo, our method remains highly competitive while requiring no end-to-end multilingual multimodal retraining. 
+
+5.3 Retaining General Multimodal Ability 
+
+Table 5: Ablations on salience estima-tion and branch aggregation.                                                   
+
+> Variant MMStar MMMU SEED MaXM MaRVL
+> DiM 334.86 37.22 40.45 33.44 62.91
+> MinMax 33.74 29.00 39.48 32.57 52.23 Ratio 2.56 25.33 10.01 3.58 34.16 Raw 33.64 31.00 39.48 33.00 52.29 ZScore 34.50 36.67 40.80 33.32 51.30 Dir-W 34.27 36.67 40.71 31.71 51.90 Mag-W 34.26 36.33 40.40 33.19 51.03 Mag-Only 33.89 34.78 40.10 33.34 50.16 Dir-Only 34.01 30.33 40.01 29.82 55.93
+
+We further examine whether multilingual transfer compro-mises general multimodal ability. As shown in Figure 2, DiM 3-7B remains comparable to the LLaVA-7B anchor, improving on MMStar and MMMU and staying close on SEED-Bench-2-Plus. Meanwhile, it consistently out-performs the directly fine-tuned multilingual multimodal baseline Palo-7B, with scores of 34.86 vs. 32.95, 37.22 vs. 33.11, and 40.45 vs. 38.08, respectively. These results indicate that DiM 3 better preserves the anchor model’s general multimodal competence than the fine-tuned multi-lingual multimodal baseline. Overall, the trade-off is mild: the merged model remains comparable to LLaVA on general multimodal tasks while delivering substantially stronger multilingual gains. 
+
+5.4 Ablations 
+
+We ablate two components of the merge rule: the salience estimator in Eq. 9 and the branch aggregation rule in Eq. 12. Table 5 reports results on five representative multimodal benchmarks. 8For salience estimation, we compare the proposed rank-based softmax with four alternatives: Raw, which applies softmax directly to the original deviations; ZScore, which standardizes deviations within each tensor before softmax; MinMax, which replaces rank normalization with min-max normalization; and Ratio, which assigns source weights in proportion to their raw deviations without the softmax comparison. For branch aggregation, we compare the symmetric average in Eq. 12 with four alternatives: Dir-Weighted (Dir-W) and Mag-Weighted (Mag-W), which use asymmetric combinations of the two branches, and Magnitude-Only (Mag-Only) and Direction-Only (Dir-Only), which keep only one branch. Two conclusions emerge. First, rank-based salience is the most robust estimator: Ratio degrades sharply on all five benchmarks, while Raw and MinMax are consistently weaker; ZScore is more competitive, but still underperforms our method on four of the five tasks. Second, the joint two-branch design matters: both Magnitude-Only and Direction-Only fall short of the full model, and both asymmetric variants are slightly worse than the symmetric average. 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 
+
+> Layers
+> 0.0
+> 0.1
+> 0.2
+> 0.3
+> 0.4
+> 0.5
+> Silhouette Score
+> Task Arithmetic
+> TIES
+> DARE
+> Breadcrumbs
+> PCB-Merging
+> NeuroMerging
+> STF
+> LLaVA-v1.5-7B
+> Palo-7B
+> Palo-13B
+> DiM 3
+
+Figure 4: Layer-wise silhouette scores of multilingual hidden-state representations under multilingual multimodal inputs. Lower values indicate stronger cross-lingual overlap in the representation space. 
+
+6 Analysis: What Does the Merge Change? 
+
+Hidden-State Geometry on Multilingual Text To understand why merging improves multilingual transfer, we analyze the hidden-state geometry of multilingual text inputs. Figure 3 presents t-SNE visualizations of average-pooled hidden states on XNLI for LLaMA-2-7B, EMMA-500, LLaVA-v1.5-7B, TIES-Merging, and DiM 3; full-layer results and additional baselines are provided in Appendix Figures 6, 7, 8, and 9. Across models, we observe a consistent layer-wise pattern: lower layers remain largely language-dependent, reflecting lexical and surface-form information. In middle layers, however, DiM 3 exhibits substantially stronger cross-lingual overlap than LLaMA-2-7B, LLaVA-v1.5-7B, and existing merging baselines. In upper layers, representations become more dispersed again across languages, indicating the reintroduction of language-sensitive structure for generation. Overall, this analysis suggests that merging primarily reshapes the intermediate semantic space, strengthening cross-lingual alignment without disrupting higher-layer task-sensitive representations. 
+
+Hidden-State Geometry in Multimodal Multilingual Inputs We next examine whether this representation-level effect persists under multimodal conditioning. Appendix Figure 5 shows t-SNE visualizations of average-pooled hidden states from xMMMU for LLaVA-v1.5-7B and our merged model, and Figure 4 reports the corresponding layer-wise silhouette scores for all baselines, where lower values indicate stronger cross-lingual overlap. The multimodal results closely mirror the text-only setting. Lower layers retain clear language separation, whereas in the middle layers DiM 3
+
+yields substantially stronger cross-lingual overlap than LLaVA, indicating a more shared semantic space under visual inputs. This trend is supported quantitatively by the silhouette scores, where DiM 3 consistently achieves lower values across most layers compared to LLaVA and other merging baselines. The increase in higher layers further suggests that improved mid-layer alignment does not collapse representations into a single undifferentiated cluster. Overall, these findings confirm that DiM 3 primarily reshapes intermediate semantic representations, now under visual conditioning, providing a consistent explanation for the observed multilingual multimodal gains in Section 5. 
+
+7 Conclusion 
+
+In this work, we formulate multilingual multimodal composition as a training-free residual compo-sition problem on a shared vision-language backbone, and show that multilingual and multimodal 9adaptations should be treated as heterogeneous residual updates rather than homogeneous parameter offsets. We propose a direction- and magnitude-aware merging strategy that selectively composes these updates while preserving the visual modules of the multimodal anchor. Experiments on multilin-gual text and multilingual multimodal benchmarks show that DiM 3 consistently improves multilingual performance, outperforms representative merging baselines, remains competitive with dedicated multilingual multimodal fine-tuning, and largely preserves general multimodal ability. Overall, our results highlight that effective capability composition depends not only on the magnitude of parameter changes, but also on their directional alignment, with the primary impact occurring in intermediate semantic representations. 
+
+References 
+
+[1] Aaditya Singh, Adam Fry, Adam Perelman, Adam Tart, Adi Ganesh, Ahmed El-Kishky, Aidan McLaughlin, Aiden Low, AJ Ostrow, Akhila Ananthram, et al. Openai gpt-5 system card. arXiv preprint arXiv:2601.03267 , 2025. [2] Gemini Team, Rohan Anil, Sebastian Borgeaud, Jean-Baptiste Alayrac, Jiahui Yu, Radu Soricut, Johan Schalkwyk, Andrew M Dai, Anja Hauth, Katie Millican, et al. Gemini: a family of highly capable multimodal models. arXiv preprint arXiv:2312.11805 , 2023. [3] Weiyun Wang, Zhangwei Gao, Lixin Gu, Hengjun Pu, Long Cui, Xingguang Wei, Zhaoyang Liu, Linglin Jing, Shenglong Ye, Jie Shao, et al. Internvl3. 5: Advancing open-source multimodal models in versatility, reasoning, and efficiency. arXiv preprint arXiv:2508.18265 , 2025. [4] An Yang, Anfeng Li, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu, Chang Gao, Chengen Huang, Chenxu Lv, et al. Qwen3 technical report. arXiv preprint arXiv:2505.09388 , 2025. [5] Jonas Pfeiffer, Gregor Geigle, Aishwarya Kamath, Jan-Martin O Steitz, Stefan Roth, Ivan Vuli´ c, and Iryna Gurevych. xgqa: Cross-lingual visual question answering. In Findings of the association for computational linguistics: ACL 2022 , pages 2497–2511, 2022. [6] Soravit Changpinyo, Linting Xue, Michal Yarom, Ashish Thapliyal, Idan Szpektor, Julien Amelot, Xi Chen, and Radu Soricut. Maxm: Towards multilingual visual question answering. In Findings of the Association for Computational Linguistics: EMNLP 2023 , pages 2667–2682, 2023. [7] Florian Schneider and Sunayana Sitaram. M5–a diverse benchmark to assess the performance of large multimodal models across multilingual and multicultural vision-language tasks. In 
+
+Findings of the Association for Computational Linguistics: EMNLP 2024 , pages 4309–4345, 2024. [8] David Orlando Romero Mogrovejo, Chenyang Lyu, Haryo Akbarianto Wibowo, Santiago Gón-gora, Aishik Mandal, Sukannya Purkayastha, Jesus-German Ortiz-Barajas, Emilio Villa Cueva, Jinheon Baek, Soyeong Jeong, et al. Cvqa: Culturally-diverse multilingual visual question answering benchmark. In The Thirty-eight Conference on Neural Information Processing Systems Datasets and Benchmarks Track , 2024. [9] Xiang Yue, Yueqi Song, Akari Asai, Seungone Kim, Jean de Dieu Nyandwi, Simran Khanuja, Anjali Kantharuban, Lintang Sutawika, Sathyanarayanan Ramamoorthy, and Graham Neu-big. Pangea: A fully open multilingual multimodal llm for 39 languages. In The Thirteenth International Conference on Learning Representations , 2024. [10] Hai-Long Sun, Da-Wei Zhou, Yang Li, Shiyin Lu, Chao Yi, Qing-Guo Chen, Zhao Xu, Weihua Luo, Kaifu Zhang, De-Chuan Zhan, et al. Parrot: Multilingual visual instruction tuning. In 
+
+Forty-second International Conference on Machine Learning .[11] Gregor Geigle, Abhay Jain, Radu Timofte, and Goran Glavaš. mblip: Efficient bootstrapping of multilingual vision-llms. In Proceedings of the 3rd Workshop on Advances in Language and Vision Research (ALVR) , pages 7–25, 2024. 10 [12] Mingxu Tao, Chen Zhang, Quzhe Huang, Tianyao Ma, Songfang Huang, Dongyan Zhao, and Yansong Feng. Unlocking the potential of model merging for low-resource languages. In Yaser Al-Onaizan, Mohit Bansal, and Yun-Nung Chen, editors, Findings of the Association for Computational Linguistics: EMNLP 2024 , pages 8705–8720, Miami, Florida, USA, November 2024. Association for Computational Linguistics. [13] Thuat Nguyen, Chien Van Nguyen, Viet Dac Lai, Hieu Man, Nghia Trung Ngo, Franck Dernoncourt, Ryan A. Rossi, and Thien Huu Nguyen. CulturaX: A cleaned, enormous, and multilingual dataset for large language models in 167 languages. In Nicoletta Calzolari, Min-Yen Kan, Veronique Hoste, Alessandro Lenci, Sakriani Sakti, and Nianwen Xue, editors, 
+
+Proceedings of the 2024 Joint International Conference on Computational Linguistics, Language Resources and Evaluation (LREC-COLING 2024) , pages 4226–4237, Torino, Italia, May 2024. ELRA and ICCL. [14] Mitchell Wortsman, Gabriel Ilharco, Samir Ya Gadre, Rebecca Roelofs, Raphael Gontijo-Lopes, Ari S Morcos, Hongseok Namkoong, Ali Farhadi, Yair Carmon, Simon Kornblith, et al. Model soups: averaging weights of multiple fine-tuned models improves accuracy without increasing inference time. In International conference on machine learning , pages 23965–23998. PMLR, 2022. [15] Didi Zhu, Zhongyi Sun, Zexi Li, Tao Shen, Ke Yan, Shouhong Ding, Chao Wu, and Kun Kuang. Model tailor: mitigating catastrophic forgetting in multi-modal large language models. In 
+
+Proceedings of the 41st International Conference on Machine Learning , pages 62581–62598, 2024. [16] Shuqi Liu, Han Wu, Bowei He, Xiongwei Han, Mingxuan Yuan, and Linqi Song. Sens-merging: Sensitivity-guided parameter balancing for merging large language models. In Findings of the Association for Computational Linguistics: ACL 2025 , pages 19243–19255, 2025. [17] Zhenyi Lu, Chenghao Fan, Wei Wei, Xiaoye Qu, Dangyang Chen, and Yu Cheng. Twin-merging: Dynamic integration of modular expertise in model merging. Advances in Neural Information Processing Systems , 37:78905–78935, 2024. [18] Gabriel Ilharco, Marco Tulio Ribeiro, Mitchell Wortsman, Ludwig Schmidt, Hannaneh Ha-jishirzi, and Ali Farhadi. Editing models with task arithmetic. In The Eleventh International Conference on Learning Representations .[19] Le Yu, Bowen Yu, Haiyang Yu, Fei Huang, and Yongbin Li. Language models are super mario: Absorbing abilities from homologous models as a free lunch. In Forty-first International Conference on Machine Learning , 2024. [20] Prateek Yadav, Derek Tam, Leshem Choshen, Colin A Raffel, and Mohit Bansal. Ties-merging: Resolving interference when merging models. Advances in neural information processing systems , 36:7093–7115, 2023. [21] Yingfeng Luo, Dingyang Lin, Junxin Wang, Ziqiang Xu, Kaiyan Chang, Tong Zheng, Bei Li, Anxiang Ma, Tong Xiao, Zhengtao Yu, and Jingbo Zhu. One size does not fit all: A distribution-aware sparsification for more precise model merging, 2025. [22] Katharina Hämmerl, Jindˇ rich Libovick `y, and Alexander Fraser. Understanding cross-lingual alignment—a survey. In Findings of the Association for Computational Linguistics: ACL 2024 ,pages 10922–10943, 2024. [23] Linting Xue, Noah Constant, Adam Roberts, Mihir Kale, Rami Al-Rfou, Aditya Siddhant, Aditya Barua, and Colin Raffel. mt5: A massively multilingual pre-trained text-to-text trans-former. In Proceedings of the 2021 conference of the North American chapter of the association for computational linguistics: Human language technologies , pages 483–498, 2021. [24] Changjiang Gao, Hongda Hu, Peng Hu, Jiajun Chen, Jixing Li, and Shujian Huang. Multilin-gual pretraining and instruction tuning improve cross-lingual knowledge alignment, but only shallowly. In Kevin Duh, Helena Gomez, and Steven Bethard, editors, Proceedings of the 2024 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies (Volume 1: Long Papers) , pages 6101–6117, Mexico City, Mexico, June 2024. Association for Computational Linguistics. 11 [25] Junnan Li, Dongxu Li, Silvio Savarese, and Steven Hoi. Blip-2: Bootstrapping language-image pre-training with frozen image encoders and large language models. In International conference on machine learning , pages 19730–19742. PMLR, 2023. [26] Haotian Liu, Chunyuan Li, Qingyang Wu, and Yong Jae Lee. Visual instruction tuning. Advances in neural information processing systems , 36:34892–34916, 2023. [27] Tim Salimans and Durk P Kingma. Weight normalization: A simple reparameterization to accelerate training of deep neural networks. Advances in neural information processing systems ,29, 2016. [28] Shih-Yang Liu, Chien-Yi Wang, Hongxu Yin, Pavlo Molchanov, Yu-Chiang Frank Wang, Kwang-Ting Cheng, and Min-Hung Chen. Dora: Weight-decomposed low-rank adaptation. In 
+
+Forty-first International Conference on Machine Learning , 2024. [29] Tyler Chang, Zhuowen Tu, and Benjamin Bergen. The geometry of multilingual language model representations. In Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing , pages 119–136, 2022. [30] Joanito Agili Lopo, Muhammad Ravi Shulthan Habibi, Tack Hwa Wong, Muhammad Ilham Ghozali, Fajri Koto, Genta Indra Winata, Peerat Limkonchotiwat, Alham Fikri Aji, and Samuel Cahyawijaya. Language surgery in multilingual large language models. In Proceedings of the 5th Workshop on Multilingual Representation Learning (MRL 2025) , pages 438–467, 2025. [31] Chris Wendler, Veniamin Veselovsky, Giovanni Monea, and Robert West. Do llamas work in english? on the latent language of multilingual transformers. In Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) ,pages 15366–15394, 2024. [32] Yuxin Chen, Zhengzhou Cai, Xiangtian Ji, Weixiang Zhao, An Zhang, Xiang Wang, and Tat-Seng Chua. Understanding multilingualism in mixture-of-experts llms: Routing mechanism, expert specialization, and layerwise steering. arXiv preprint arXiv:2601.14050 , 2026. [33] Chongxuan Huang, Yongshi Ye, Biao Fu, Qifeng Su, and Xiaodong Shi. From neurons to semantics: Evaluating cross-linguistic alignment capabilities of large language models via neurons alignment. In Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , pages 28956–28974, 2025. [34] Mengyu Bu and Yang Feng. Language on demand, knowledge at core: Composing llms with encoder-decoder translation models for extensible multilinguality. arXiv preprint arXiv:2603.17512 , 2026. [35] Mengyu Bu, Shaolei Zhang, Zhongjun He, Hua Wu, and Yang Feng. Alignx: Advancing multilingual large language models with multilingual representation alignment. In Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing , pages 6471– 6500, 2025. [36] Yiran Zhao, Wenxuan Zhang, Guizhen Chen, Kenji Kawaguchi, and Lidong Bing. How do large language models handle multilingualism? Advances in Neural Information Processing Systems , 37:15296–15319, 2024. [37] Jean-Baptiste Alayrac, Jeff Donahue, Pauline Luc, Antoine Miech, Iain Barr, Yana Hasson, Karel Lenc, Arthur Mensch, Katherine Millican, Malcolm Reynolds, et al. Flamingo: a visual language model for few-shot learning. Advances in neural information processing systems ,35:23716–23736, 2022. [38] Zijing Wang, Yongkang Liu, Mingyang Wang, Ercong Nie, Deyuan Chen, Zhengjie Zhao, Shi Feng, Daling Wang, Xiaocui Yang, Yifei Zhang, et al. Plam: Training-free plateau-guided model merging for better visual grounding in mllms. arXiv preprint arXiv:2601.07645 , 2026. [39] Xinhan Zheng, Huyu Wu, Xueting Wang, and Haiyun Jiang. Unveiling intrinsic text bias in multimodal large language models through attention key-space analysis. arXiv preprint arXiv:2510.26721 , 2025. 12 [40] Hanoona Rasheed, Muhammad Maaz, Abdelrahman Shaker, Salman Khan, Hisham Cholakkal, Rao M Anwer, Tim Baldwin, Michael Felsberg, and Fahad S Khan. Palo: A polyglot large multimodal model for 5b people. In Proceedings of the Winter Conference on Applications of Computer Vision , pages 1745–1754, 2025. [41] Gregor Geigle, Florian Schneider, Carolin Holtermann, Chris Biemann, Radu Timofte, Anne Lauscher, and Goran Glavaš. Centurio: On drivers of multilingual ability of large vision-language model. In Proceedings of the 63rd Annual Meeting of the Association for Computa-tional Linguistics (Volume 1: Long Papers) , pages 2831–2881, 2025. [42] Iñigo Pikabea, Iñaki Lacunza, Oriol Pareras Velasco, Carlos Escolano, Aitor Gonzalez-Agirre, Javier Hernando, and Marta Villegas. Breaking language barriers in visual language models via multilingual textual regularization. In Proceedings of the 14th International Joint Conference on Natural Language Processing and the 4th Conference of the Asia-Pacific Chapter of the Association for Computational Linguistics , pages 299–337, 2025. [43] Yuchun Fan, Yilin Wang, Yongyu Mu, Lei Huang, Bei Li, Xiaocheng Feng, Tong Xiao, and Jingbo Zhu. Language-specific layer matters: Efficient multilingual enhancement for large vision-language models. In Findings of the Association for Computational Linguistics: EMNLP 2025 , pages 12473–12500, 2025. [44] Enneng Yang, Li Shen, Guibing Guo, Xingwei Wang, Xiaochun Cao, Jie Zhang, and Dacheng Tao. Model merging in llms, mllms, and beyond: Methods, theories, applications, and opportu-nities. ACM Computing Surveys , 58(8):1–41, 2026. [45] Zijing Wang, Xingle Xu, Yongkang Liu, Yiqun Zhang, Peiqin Lin, Shi Feng, Xiaocui Yang, Daling Wang, and Hinrich Schütze. Why do more experts fail? a theoretical analysis of model merging. arXiv preprint arXiv:2505.21226 , 2025. [46] Zijing Wang, Yongkang Liu, Yingfeng Luo, Ming Wang, Zhen Song, Shi Feng, Xiaocui Yang, Dingyang Lin, Daling Wang, Yifei Zhang, et al. Scaling intelligence through model merging: A comprehensive survey. Authorea Preprints , 2025. [47] Yifei He, Yuzheng Hu, Yong Lin, Tong Zhang, and Han Zhao. Localize-and-stitch: Efficient model merging via sparse task arithmetic. arXiv preprint arXiv:2408.13656 , 2024. [48] Runxi Cheng, Feng Xiong, Yongxian Wei, Wanyun Zhu, and Chun Yuan. Whoever started the interference should end it: Guiding data-free model merging via task vectors. In Forty-second International Conference on Machine Learning .[49] Yiyang Du, Xiaochen Wang, Chi Chen, Jiabo Ye, Yiru Wang, Peng Li, Ming Yan, Ji Zhang, Fei Huang, Zhifang Sui, et al. Adamms: Model merging for heterogeneous multimodal large language models with unsupervised coefficient optimization. In Proceedings of the Computer Vision and Pattern Recognition Conference , pages 9413–9422, 2025. [50] MohammadReza Davari and Eugene Belilovsky. Model breadcrumbs: Scaling multi-task model merging with sparse masks. In European Conference on Computer Vision , pages 270–287. Springer, 2024. [51] Daniel Marczak, Bartłomiej Twardowski, Tomasz Trzci´ nski, and Sebastian Cygert. Magmax: Leveraging model merging for seamless continual learning. In European Conference on Computer Vision , pages 379–395. Springer, 2024. [52] Guodong Du, Junlin Lee, Jing Li, Runhua Jiang, Yifei Guo, Shuyang Yu, Hanting Liu, Sim K Goh, Ho-Kin Tang, Daojing He, et al. Parameter competition balancing for model merging. 
+
+Advances in Neural Information Processing Systems , 37:84746–84776, 2024. [53] Haiquan Qiu, You Wu, Dong Li, Jianmin Guo, and Quanming Yao. Superpose task-specific features for model merging. In Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing , pages 4200–4214, 2025. 13 [54] Zitao Fang, Guodong Du, Shuyang Yu, Yifei Guo, Yiwei Zhang, Yiyao Cao, Jing Li, Ho-Kin Tang, and Sim Kuan Goh. To see a world in a spark of neuron: Disentangling multi-task interference for training-free model merging. In Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing , pages 15731–15751, 2025. [55] Yongxian Wei, Runxi Cheng, Weike Jin, Enneng Yang, Li Shen, Lu Hou, Sinan Du, Chun Yuan, Xiaochun Cao, and Dacheng Tao. Optmerge: Unifying multimodal llm capabilities and modalities via model merging. arXiv preprint arXiv:2505.19892 , 2025. [56] Hugo Touvron, Thibaut Lavril, Gautier Izacard, Xavier Martinet, Marie-Anne Lachaux, Timo-thée Lacroix, Baptiste Rozière, Naman Goyal, Eric Hambro, Faisal Azhar, et al. Llama: Open and efficient foundation language models. arXiv preprint arXiv:2302.13971 , 2023. [57] Shaoxiong Ji, Zihao Li, Jaakko Paavola, Peiqin Lin, Pinzhen Chen, Dayyán O’Brien, Hengyu Luo, Hinrich Schütze, Jörg Tiedemann, and Barry Haddow. Emma-500: Enhancing massively multilingual adaptation of large language models. arXiv preprint arXiv:2409.17892 , 2024. [58] Qwen2 technical report. 2024. [59] Shuai Bai, Yuxuan Cai, Ruizhe Chen, Keqin Chen, Xionghui Chen, Zesen Cheng, Lianghao Deng, Wei Ding, Chang Gao, Chunjiang Ge, et al. Qwen3-vl technical report. arXiv preprint arXiv:2511.21631 , 2025. [60] Hao Yu, Tianyi Xu, Michael A Hedderich, Wassim Hamidouche, Syed Waqas Zamir, and David Ifeoluwa Adelani. Afriquellm: How data mixing and model architecture impact continued pre-training for african languages. arXiv preprint arXiv:2601.06395 , 2026. [61] Edoardo Maria Ponti, Goran Glavaš, Olga Majewska, Qianchu Liu, Ivan Vuli´ c, and Anna Korhonen. Xcopa: A multilingual dataset for causal commonsense reasoning. In Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP) , pages 2362–2376, 2020. [62] Xi Victoria Lin, Todor Mihaylov, Mikel Artetxe, Tianlu Wang, Shuohui Chen, Daniel Simig, Myle Ott, Naman Goyal, Shruti Bhosale, Jingfei Du, et al. Few-shot learning with multilingual generative language models. In Proceedings of the 2022 conference on empirical methods in natural language processing , pages 9019–9052, 2022. [63] Alexis Conneau, Ruty Rinott, Guillaume Lample, Adina Williams, Samuel Bowman, Holger Schwenk, and Veselin Stoyanov. Xnli: Evaluating cross-lingual sentence representations. In 
+
+Proceedings of the 2018 conference on empirical methods in natural language processing , pages 2475–2485, 2018. [64] Fangyu Liu, Emanuele Bugliarello, Edoardo Maria Ponti, Siva Reddy, Nigel Collier, and Desmond Elliott. Visually grounded reasoning across languages and cultures. In Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing , pages 10467– 10485, 2021. [65] Atnafu Lambebo Tonja, Srija Anand, Emilio Villa-Cueva, Israel Abebe Azime, Jesu-joba Oluwadara Alabi, Muhidin A Mohamed, Debela Desalegn Yadeta, Negasi Haile Abadi, Abigail Oppong, Nnaemeka Casmir Obiefuna, et al. Afri-mcqa: Multimodal cultural question answering for african languages. arXiv preprint arXiv:2601.05699 , 2026. [66] Lin Chen, Jinsong Li, Xiaoyi Dong, Pan Zhang, Yuhang Zang, Zehui Chen, Haodong Duan, Jiaqi Wang, Yu Qiao, Dahua Lin, et al. Are we on the right way for evaluating large vision-language models? Advances in Neural Information Processing Systems , 37:27056–27087, 2024. [67] Xiang Yue, Yuansheng Ni, Kai Zhang, Tianyu Zheng, Ruoqi Liu, Ge Zhang, Samuel Stevens, Dongfu Jiang, Weiming Ren, Yuxuan Sun, et al. Mmmu: A massive multi-discipline multimodal understanding and reasoning benchmark for expert agi. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition , pages 9556–9567, 2024. 14 [68] Bohao Li, Yuying Ge, Yi Chen, Yixiao Ge, Ruimao Zhang, and Ying Shan. Seed-bench-2-plus: Benchmarking multimodal large language models with text-rich visual comprehension. arXiv preprint arXiv:2404.16790 , 2024. [69] Stella Biderman, Hailey Schoelkopf, Lintang Sutawika, Leo Gao, Jonathan Tow, Baber Ab-basi, Alham Fikri Aji, Pawan Sasanka Ammanamanchi, Sidney Black, Jordan Clive, et al. Lessons from the trenches on reproducible evaluation of language models. arXiv preprint arXiv:2405.14782 , 2024. [70] Kaichen Zhang, Bo Li, Peiyuan Zhang, Fanyi Pu, Joshua Adrian Cahyono, Kairui Hu, Shuai Liu, Yuanhan Zhang, Jingkang Yang, Chunyuan Li, et al. Lmms-eval: Reality check on the evaluation of large multimodal models. In Findings of the Association for Computational Linguistics: NAACL 2025 , pages 881–916, 2025. 15 A Baselines and Benchmarks 
+
+All experiments were conducted on NVIDIA RTX A6000 GPUs with 48GB memory per GPU. 
+
+A.1 Merging Methods Task Arithmetic. Task Arithmetic [ 18 ] represents a task as the parameter difference between a fine-tuned model and its base model, and composes capabilities through linear operations on these task vectors. It provides the basic formulation of training-free model editing and serves as the foundation for many subsequent merging methods. 
+
+DARE. DARE [ 19 ] sparsifies fine-tuning deltas by randomly dropping a large fraction of parameters and rescaling the remainder. This procedure is motivated by the redundancy of task vectors and is intended to reduce interference while largely preserving the effect of the original update. 
+
+TIES-Merging. TIES-Merging [ 20 ] trims small-magnitude updates, resolves sign disagreement across task vectors, and merges only the coordinates that are consistent with the elected sign. The method is designed to explicitly reduce destructive interference caused by conflicting residual directions. 
+
+Breadcrumbs. Breadcrumbs [ 50 ] constructs sparse masks over task vectors to retain informative updates while filtering out both negligible changes and large disruptive outliers. 
+
+PCB-Merging. PCB-Merging [ 52 ] formulates merging as a parameter competition balancing problem. It estimates parameter importance within each task model and competition across task models, then selectively retains and rescales updates to preserve task-relevant information while reducing harmful conflicts during composition. 
+
+STF. STF [ 53 ] approaches model merging from a representation perspective by superposing task-specific features rather than relying solely on direct parameter arithmetic. It emphasizes that com-patibility across tasks can be modeled through structured interactions in feature space, providing an alternative to purely parameter-level heuristics. 
+
+NeuroMerging. NeuroMerging [ 54 ] studies merging through neuronal structure by disentangling task-specific information into complementary neuronal subspaces. It aims to mitigate multi-task interference at the neuron level and thereby better preserve complementary knowledge across source models. 
+
+A.2 Models Emma-500. Emma-500 [ 57 ] is a massively multilingual language model obtained by continual pre-training of LLaMA-2-7B on the MaLA corpus, with coverage extending to 546 languages. The model is designed to improve multilingual performance, especially for underrepresented languages, while preserving compatibility with the original LLaMA-2-7B backbone. In our experiments, Emma-500 serves as the multilingual source model that provides the multilingual residual to be merged into the multimodal anchor. 
+
+Palo. Palo [ 40 ] is a multilingual multimodal model developed to support visual reasoning in 10 major languages covering roughly 5 billion people. It is built through multilingual multimodal instruc-tion tuning, using a semi-automated translation pipeline to extend English multimodal supervision to multiple target languages, and is reported at several model scales including 7B. In our experiments, Palo is used as a trained multilingual multimodal reference model rather than a merging source, providing a comparison point for performance achievable through additional multilingual multimodal training. 
+
+PLAST-7B. PLAST [ 43 ] is an efficient multilingual enhancement method for large vision-language models. Starting from LLaVA-v1.5-7B, it identifies shallow language-specific layers through neuron-activation analysis and then fine-tunes only these layers using question-translation pairs, with the goal of improving multilingual understanding while updating only a small fraction of parameters. 16 AfriqueQwen-8B. AfriqueQwen-8B [ 60 ] is a multilingual language model obtained by continued pre-training Qwen3-8B on a 26B token mixture covering 20 African languages. It is part of the AfriqueLLM suite, which systematically studies how data composition and model architecture affect adaptation to African languages. In our experiments, AfriqueQwen-8B serves as the multilingual source model in the Qwen3-based shared-backbone setting. 
+
+Pangea-7B. Pangea-7B [ 9] is a multilingual multimodal model trained through multilingual multi-modal instruction tuning on PangeaIns, a 6M-sample dataset spanning 39 languages. It is designed to support multilingual and cross-cultural multimodal reasoning, and is evaluated in the original paper on PangeaBench, a benchmark suite covering 14 datasets in 47 languages. In our experiments, Pangea-7B is used as an already trained multilingual multimodal checkpoint in the Qwen2-based shared-backbone setting to test whether the proposed method can further improve an existing multi-lingual multimodal model. 
+
+A.3 Benchmarks XCOPA. XCOPA [ 61 ] is a multilingual benchmark for causal commonsense reasoning in 11 languages. Each example asks the model to choose the more plausible cause or effect for a given event, making it a compact test of cross-lingual commonsense understanding. 
+
+XStoryCloze. XStoryCloze [ 62 ] is a multilingual story completion benchmark spanning 11 lan-guages. The task requires selecting the more coherent ending for a short narrative context, probing discourse-level commonsense and narrative understanding across languages. 
+
+XNLI. XNLI [ 63 ] is a standard cross-lingual natural language inference benchmark covering 15 languages. It extends MultiNLI with translated development and test sets and is widely used to evaluate multilingual sentence understanding. 
+
+xMMMU. xMMMU [ 9] is the multilingual extension of MMMU introduced in PangeaBench, designed to evaluate multilingual multimodal understanding and reasoning across a broad range of subjects and languages. 
+
+MaXM. MaXM [ 6] is a multilingual visual question answering benchmark covering seven lan-guages. It is constructed through a scalable translation-based pipeline and serves as a test-only benchmark for multilingual VQA. 
+
+MaRVL. MaRVL [ 64 ] is a multilingual and multicultural benchmark for visually grounded reason-ing. It pairs images with statements written by native speakers and asks the model to judge whether each statement is true or false, with data designed to reflect linguistic and cultural diversity. 
+
+xGQA. xGQA [ 5 ] extends the GQA benchmark to seven typologically diverse languages for cross-lingual visual question answering. It is designed to reveal multilingual multimodal misalignment by measuring how well models transfer visual reasoning ability beyond English. This makes it particularly informative for testing whether multilingual transfer remains compatible with visual grounding. 
+
+CVQA. CVQA [ 8] is a culturally diverse multilingual visual question answering benchmark that goes beyond translation-based multilingual evaluation. It includes culturally grounded images and questions collected across diverse countries, languages, and scripts, making it a useful testbed for both linguistic diversity and cultural coverage. 
+
+Afri-MCQA. Afri-MCQA [ 65 ] is a multilingual cultural multimodal question-answering bench-mark covering about 7.5k image-grounded QA pairs across 15 African languages from 12 countries. The benchmark provides parallel English and native-language question-answer pairs in both text and speech, and is constructed by native speakers. 
+
+MMStar. MMStar [ 66 ] is a multimodal evaluation benchmark designed to test whether large vision-language models genuinely use visual information rather than exploiting shortcuts or benchmark artifacts. It emphasizes visually indispensable questions and more reliable evaluation design. 17 MMMU. MMMU [ 67 ] is a large-scale benchmark for multimodal understanding and reasoning at a college-exam level of difficulty. It covers a wide range of disciplines, subjects, and image types, and is intended to measure advanced perception and domain-specific reasoning. 
+
+SEED-Bench-2-Plus. SEED-Bench-2-Plus [ 68 ] is a benchmark for text-rich visual comprehension in multimodal large language models. It focuses on scenarios where substantial textual content appears inside images, requiring models to jointly process visual layout and embedded text. 
+
+B Other Ablations 
+
+We further ablate the merge scope by applying DiM 3 to different modules of the shared language model. ‘Embed_Only’ merges only the token embedding layer, ‘LLM_Only’ merges only the transformer backbone, and ‘Lmhead_Only’ merges only the output language modeling head. We also evaluate partial-layer variants that merge ‘embed_tokens’, a contiguous block of transformer layers, and ‘lm_head’, namely ‘0_7layers’, ‘8_15layers’, ‘16_23layers’, and ‘24_31layers’. As shown in Table 6, merging only a single module is insufficient, and partial-layer merging is consistently weaker than applying DiM 3 to the full shared backbone. Among the partial variants, ‘24_31layers’ is the strongest and remains relatively close to the original LLaVA on general multimodal performance, suggesting that upper layers preserve a substantial portion of task-sensitive multimodal structure. Nevertheless, the full DiM 3 merge yields the best overall results, which is consistent with the analysis in Section 6: the gain is not attributable to a single isolated module, but is associated with improved shared semantic alignment across the backbone, with the most pronounced changes occurring in intermediate layers while higher-layer task-sensitive structure is still preserved. Table 6: Ablation on merge scope: results of applying DiM 3 to different modules and layer ranges of the shared language model.                                                       
+
+> Variant MMStar MMMU SEED Afri-MCQA MaXM MaRVL
+> DiM 334.86 37.22 40.45 26.31 33.44 62.91
+> Embed_Only 33.33 35.67 41.81 24.67 19.79 49.99 LLM_Only 32.70 28.33 35.92 19.01 16.91 54.17 Lmhead_Only 20.31 25.67 24.68 0.00 2.68 49.74 0_7layers 10.40 27.44 12.08 1.01 2.66 49.72 8_15layers 16.51 25.67 14.32 0.00 2.01 50.28 16_23layers 28.11 30.33 35.70 0.00 1.82 50.40 24_31layers 34.36 35.22 42.03 24.74 27.13 49.89
+
+C Limitations 
+
+Our method currently relies on a reasonably compatible shared backbone between the multilingual source model and the multimodal anchor. When the source checkpoints differ substantially in architecture or tokenizer design, parameter-space composition may become less stable because the two residual updates no longer admit a clean common reference point. Extending training-free merging beyond this shared-backbone setting, especially to models with tokenizer or architectural mismatches, remains an important direction for future work. 18 Table 7: Languages used in our experiments and their corresponding ISO 639-1/2 codes (57 in total). 
+
+ISO 639 Language 
+
+Ak Akan/Twi 
+
+Am Amharic 
+
+Ar Arabic 
+
+Bg Bulgarian 
+
+Bn Bengali 
+
+Br Breton 
+
+De German 
+
+El Greek 
+
+En English 
+
+Es Spanish 
+
+Et Estonian 
+
+Eu Basque 
+
+Fil Filipino 
+
+Fr French 
+
+Ga Irish 
+
+Ha Hausa 
+
+He Hebrew 
+
+Hi Hindi 
+
+Ht Haitian 
+
+ISO 639 Language 
+
+Id Indonesian 
+
+Ig Igbo 
+
+It Italian 
+
+Ja Japanese 
+
+Jv Javanese 
+
+Ki Kikuyu 
+
+Ko Korean 
+
+Ln Lingala 
+
+Lug Luganda 
+
+Min Minangkabau 
+
+Mn Mongolian 
+
+Mr Marathi 
+
+Ms Malay 
+
+My Burmese 
+
+No Norwegian 
+
+Ny Chichewa 
+
+Om Oromo 
+
+Pt Portuguese 
+
+Qu Quechua 
+
+ISO 639 Language 
+
+Ro Romanian 
+
+Ru Russian 
+
+Rw Kinyarwanda 
+
+Si Sinhala 
+
+So Somali 
+
+Sot Sesotho 
+
+Su Sundanese 
+
+Sw Swahili 
+
+Ta Tamil 
+
+Te Telugu 
+
+Th Thai 
+
+Ti Tigrinya 
+
+Tn Setswana 
+
+Tr Turkish 
+
+Ur Urdu 
+
+Vi Vietnamese 
+
+Yo Yoruba 
+
+Zh Chinese 
+
+Zu Zulu Table 8: Results on XCOPA and XStoryCloze across multilingual settings. Avg mul denotes the average performance over all languages except English. 
+
+XCOPA Methods Et Ht Id It Qu Sw Ta Th Tr Vi Zh Avg mul 
+
+Task Arithmetic 48.20 50.60 65.00 68.00 49.80 49.80 52.00 55.40 55.60 63.80 66.40 56.78 DARE 48.60 50.60 63.60 67.20 50.80 50.60 52.80 57.40 56.00 60.20 64.20 56.55 TIES-Merging 48.00 49.80 67.00 68.40 49.40 50.80 52.20 56.40 56.20 66.20 67.40 57.44 Breadcrumbs 48.40 50.60 65.80 66.20 51.00 51.00 51.40 57.00 55.80 65.60 64.00 56.98 PCB-Merging 48.00 52.80 60.40 60.40 51.20 56.60 55.80 56.20 55.00 56.60 58.00 55.55 STF 53.80 55.00 59.80 53.40 49.80 52.80 56.60 53.00 57.40 59.80 58.00 55.40 NeuroMerging 52.40 55.20 58.20 55.60 47.40 51.40 56.40 54.60 58.20 64.00 63.60 56.09 DiM 3 60.60 55.80 73.40 70.80 55.00 61.40 60.80 56.60 62.00 70.00 70.80 63.38 XStoryCloze Methods Ar Es Eu Hi Id My Ru Sw Te Zh En Avg mul 
+
+Task Arithmetic 53.67 70.22 51.82 56.52 64.06 48.91 67.44 51.75 55.13 64.53 80.41 58.41 DARE 51.62 67.70 52.22 53.34 61.42 48.91 64.92 50.50 54.20 63.27 78.95 56.81 TIES-Merging 54.07 71.08 51.56 56.32 64.86 49.11 67.97 51.03 55.06 64.59 80.94 58.57 Breadcrumbs 52.42 69.82 51.03 55.26 63.20 48.78 65.72 50.56 55.66 62.41 80.87 57.49 PCB-Merging 53.21 62.41 52.08 53.34 53.34 43.94 60.42 49.50 52.08 61.48 67.31 54.18 STF 60.23 55.06 53.54 58.90 56.12 50.03 57.31 53.54 58.44 59.36 61.15 56.25 NeuroMerging 58.31 57.78 53.21 58.37 58.24 48.25 60.89 52.68 55.86 61.81 65.72 56.54 DiM 3 64.06 69.82 63.80 64.92 68.96 55.20 70.75 62.14 62.67 65.92 79.02 64.82 
+
+Table 9: Results on XNLI across 15 languages.                                                                                                                                                 
+
+> Methods Ar Bg De El Es Fr Hi Ru Sw Th Tr Ur Vi Zh En Avg mul
+> Task Arithmetic 33.53 42.01 46.10 38.76 43.78 47.71 39.56 40.32 36.31 36.02 41.00 34.02 43.41 38.51 56.91 40.07 DARE 33.69 43.29 42.49 37.91 45.22 45.42 38.55 40.76 34.82 34.46 38.07 33.57 41.73 37.91 56.63 39.14 TIES-Merging 33.49 42.49 47.63 39.72 45.82 48.88 41.33 41.24 36.47 35.82 41.29 34.50 41.16 36.79 58.51 40.47 Breadcrumbs 33.78 43.61 47.75 39.28 45.22 49.08 40.28 43.09 36.22 35.74 40.80 33.53 39.20 38.27 58.67 40.42 PCB-Merging 33.13 41.73 44.02 33.41 41.12 45.10 33.33 40.44 37.35 33.49 34.38 33.45 35.90 33.17 40.24 37.14 STF 33.49 46.10 42.77 40.24 40.84 51.41 38.07 36.71 33.33 33.65 43.57 38.31 37.51 31.93 38.55 39.14 NeuroMerging 33.61 41.29 44.10 41.04 43.57 47.71 42.81 39.60 34.02 35.50 40.84 43.29 38.27 34.46 41.04 40.01 DiM 335.10 43.25 47.71 43.17 44.18 45.82 45.94 44.02 43.57 39.24 42.37 43.90 44.62 38.11 50.68 42.93
+
+19 Table 10: Results on XCOPA and XStoryCloze across multilingual settings. 
+
+XCOPA Models Et Ht Id It Qu Sw Ta Th Tr Vi Zh Avg mul 
+
+Llama_2_7B 49.00 50.40 62.00 62.80 50.80 52.20 53.60 56.40 54.80 63.40 63.60 56.27 EMMA-500 61.40 57.00 73.60 65.40 50.00 64.80 60.60 56.20 61.00 70.20 67.00 62.47 LLaVA-v1.5-7B 49.40 51.60 50.80 50.00 51.20 52.00 53.80 54.60 54.20 51.00 53.20 51.98 DiM 3 60.60 55.80 73.40 70.80 55.00 61.40 60.80 56.60 62.00 70.00 70.80 63.38 XStoryCloze Models Ar Es Eu Hi Id My Ru Sw Te Zh En Avg mul 
+
+Llama_2_7B 50.17 67.70 50.56 53.54 59.36 48.51 63.34 50.43 54.33 59.50 77.10 55.74 EMMA-500 65.25 69.89 64.39 63.80 69.03 58.44 67.84 63.34 64.00 61.75 75.65 64.77 LLaVA-v1.5-7B 47.98 51.89 50.23 47.58 48.64 47.32 50.17 48.58 53.67 48.78 66.71 49.48 DiM 3 64.06 69.82 63.80 64.92 68.96 55.20 70.75 62.14 62.67 65.92 79.02 64.82 
+
+Table 11: Results on XNLI across multilingual settings. 
+
+Models Ar Bg De El Es Fr Hi Ru Sw Th Tr Ur Vi Zh En Avg mul 
+
+Llama-2-7B 34.22 42.13 48.11 36.59 42.45 50.28 38.71 39.88 35.02 36.27 36.87 33.90 38.07 34.46 55.66 39.07 EMMA-500 34.78 46.27 47.07 45.86 46.75 34.78 47.59 46.55 46.18 41.97 44.86 45.98 47.03 35.22 53.78 43.64 
+
+LLaVA-v1.5-7B 33.57 33.45 38.71 36.22 37.55 37.87 34.98 35.30 33.65 34.06 35.82 34.58 36.06 35.86 52.81 35.55 DiM 3 35.10 43.25 47.71 43.17 44.18 45.82 45.94 44.02 43.57 39.24 42.37 43.90 44.62 38.11 50.68 42.93 
+
+Table 12: Results on xMMMU and MaXM across multilingual settings. 
+
+xMMMU MaXM 
+
+Models Ar Fr Hi Id Ja Pt En Avg mul Fr Hi He Ro Th Zh En Avg mul 
+
+LLaVA-v1.5-7B 28.90 34.90 27.80 32.00 31.60 33.70 35.70 31.48 32.20 16.92 12.50 15.14 16.04 27.80 49.81 20.10 Task Arithmetic 30.20 36.60 27.10 33.00 32.70 36.40 35.90 32.67 33.33 21.15 12.50 16.90 18.66 31.05 49.42 22.27 DARE 28.90 34.90 27.50 31.60 33.10 32.30 35.60 31.38 34.47 17.69 12.50 11.27 16.04 25.27 49.81 19.54 TIES-Merging 28.50 32.20 26.80 33.00 35.70 37.40 34.70 32.27 33.71 26.92 21.79 16.90 17.54 28.52 48.25 24.23 Breadcrumbs 27.20 32.60 25.80 30.30 30.90 32.70 31.90 29.92 31.44 24.62 19.64 19.01 10.82 25.99 48.64 21.92 PCB-Merging 21.50 31.50 30.20 28.30 27.90 28.30 24.70 27.95 0.38 0.00 0.00 0.00 0.00 0.00 12.45 0.06 STF 31.50 34.20 30.90 34.00 29.00 32.70 31.00 32.05 10.61 10.00 11.79 7.75 11.94 14.44 18.29 11.09 NeuroMerging 28.50 37.20 30.60 36.70 33.10 34.70 33.80 33.47 25.00 14.23 26.79 9.15 22.76 25.27 30.74 20.53 Palo-7B 30.90 33.20 28.90 34.00 27.10 33.70 31.70 31.30 33.71 16.54 12.14 11.27 14.55 10.47 51.36 16.45 Palo-13B 29.50 33.90 32.00 32.30 26.80 33.30 33.80 31.30 40.91 39.62 12.86 33.45 14.55 30.69 51.36 28.68 PLAST-7B - - - - - - - - - 10.70 10.20 36.70 20.8 - - -DiM 3-7B 34.60 36.60 29.20 32.30 35.70 34.70 32.60 33.85 35.98 35.77 40.71 14.79 36.19 37.18 50.58 33.44 
+
+Table 13: Results on MaRVL and XGQA across multilingual settings. 
+
+MaRVL XGQA 
+
+Models Id Sw Ta Tr Zh En Avg mul Bn De Id Ko Pt Ru Zh En Avg mul 
+
+LLaVA-v1.5-7B 50.09 49.37 49.36 50.00 50.10 51.22 49.78 15.48 28.50 33.17 38.00 27.53 32.97 38.67 61.89 30.62 Task Arithmetic 50.00 49.46 49.60 50.08 49.90 51.12 49.81 16.88 38.03 37.33 41.93 34.42 42.01 45.20 61.50 36.54 DARE 50.00 49.37 49.60 49.83 50.00 50.92 49.76 14.78 32.96 34.23 34.07 30.85 36.47 37.19 60.16 31.51 TIES-Merging 50.00 49.37 49.28 50.00 49.90 50.99 49.71 18.54 38.21 38.24 40.59 35.71 41.85 43.32 58.37 36.64 Breadcrumbs 50.00 49.37 49.52 50.00 49.31 51.13 49.64 15.66 41.30 38.26 37.01 38.39 40.80 40.78 53.27 36.03 STF 51.33 50.27 51.05 50.59 51.09 52.49 50.87 0.91 16.96 11.11 9.42 10.40 11.24 16.06 20.56 10.87 NeuroMerging 49.91 49.28 49.84 50.17 50.00 50.93 49.84 2.44 28.56 23.34 17.60 24.56 26.62 23.74 36.19 20.98 Palo-7B 51.95 49.55 49.44 52.29 50.40 55.39 50.73 41.92 38.97 36.67 41.28 31.86 21.84 45.94 60.25 36.93 Palo-13B 50.00 49.37 49.60 49.75 49.80 51.10 49.70 31.91 21.22 28.28 29.39 26.75 32.85 43.78 59.08 30.60 DiM 3-7B 64.80 79.42 54.75 54.24 61.36 54.05 62.91 38.96 51.98 49.21 48.00 49.80 47.93 50.42 59.27 48.04 
+
+20 Table 14: Results on Afri-MCQA across multilingual settings. 
+
+Method Am Ha Ig Lug Om Rw Ki So Ti Ak Yo Tn Ny Zu Sot Ln Avg 
+
+Llama-2-7B 
+
+LLaVA-v1.5-7B 0.216 0.256 0.256 0.265 0.225 0.295 0.237 0.270 0.199 0.276 0.235 0.255 0.200 0.260 0.254 0.237 0.246 Task Arithmetic 0.216 0.256 0.251 0.265 0.225 0.290 0.237 0.270 0.199 0.271 0.235 0.245 0.200 0.250 0.254 0.237 0.244 DARE 0.216 0.251 0.246 0.260 0.225 0.295 0.237 0.270 0.199 0.276 0.235 0.260 0.195 0.240 0.254 0.232 0.243 TIES-Merging 0.216 0.251 0.241 0.265 0.215 0.275 0.227 0.260 0.199 0.271 0.235 0.245 0.195 0.240 0.246 0.232 0.238 Breadcrumbs 0.060 0.246 0.236 0.250 0.210 0.265 0.232 0.260 0.046 0.229 0.215 0.240 0.180 0.229 0.223 0.237 0.210 PCB-Merging 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 STF 0.251 0.246 0.221 0.280 0.235 0.300 0.242 0.235 0.199 0.271 0.170 0.260 0.205 0.208 0.246 0.248 0.239 NeuroMerging 0.166 0.246 0.266 0.295 0.215 0.300 0.253 0.270 0.167 0.257 0.210 0.235 0.200 0.208 0.246 0.253 0.237 Palo-7B 0.216 0.251 0.261 0.255 0.225 0.290 0.247 0.270 0.199 0.280 0.225 0.250 0.205 0.260 0.246 0.232 0.245 Palo-13B 0.216 0.256 0.246 0.260 0.220 0.270 0.242 0.260 0.199 0.262 0.230 0.250 0.195 0.240 0.254 0.232 0.240 DiM 3-7B 0.241 0.256 0.281 0.320 0.245 0.335 0.232 0.320 0.204 0.304 0.235 0.250 0.215 0.240 0.269 0.263 0.263 
+
+Qwen2-7B-Instruct 
+
+Pangea-7B 0.357 0.271 0.352 0.320 0.130 0.370 0.253 0.310 0.287 0.332 0.380 0.185 0.265 0.198 0.131 0.389 0.283 Task Arithmetic 0.332 0.312 0.357 0.425 0.240 0.475 0.345 0.340 0.306 0.360 0.390 0.265 0.345 0.333 0.285 0.424 0.346 DARE 0.367 0.292 0.322 0.350 0.225 0.430 0.335 0.320 0.301 0.322 0.320 0.265 0.340 0.271 0.231 0.404 0.318 TIES-Merging 0.337 0.327 0.357 0.415 0.275 0.480 0.366 0.335 0.301 0.351 0.395 0.315 0.385 0.333 0.292 0.455 0.357 Breadcrumbs 0.327 0.276 0.332 0.395 0.295 0.455 0.351 0.345 0.324 0.346 0.440 0.335 0.395 0.302 0.315 0.414 0.353 PCB-Merging 0.337 0.271 0.327 0.375 0.325 0.455 0.371 0.345 0.333 0.346 0.390 0.315 0.385 0.323 0.277 0.429 0.350 STF 0.367 0.312 0.387 0.380 0.260 0.400 0.304 0.325 0.333 0.318 0.350 0.265 0.275 0.292 0.208 0.394 0.323 NeuroMerging 0.307 0.281 0.407 0.415 0.305 0.455 0.340 0.380 0.343 0.346 0.380 0.355 0.400 0.333 0.308 0.424 0.361 DiM 3 0.317 0.342 0.407 0.425 0.320 0.480 0.376 0.345 0.347 0.388 0.390 0.315 0.390 0.333 0.331 0.419 0.370 
+
+Qwen3-8B 
+
+Qwen3-VL-8B-Instruct 0.377 0.342 0.347 0.415 0.335 0.460 0.392 0.405 0.357 0.430 0.420 0.350 0.380 0.302 0.323 0.490 0.383 Task Arithmetic 0.402 0.337 0.352 0.420 0.340 0.495 0.381 0.435 0.357 0.383 0.415 0.335 0.385 0.281 0.308 0.505 0.383 DARE 0.231 0.181 0.236 0.220 0.245 0.190 0.289 0.250 0.273 0.224 0.265 0.225 0.280 0.250 0.300 0.248 0.244 TIES-Merging 0.382 0.342 0.372 0.410 0.390 0.490 0.407 0.425 0.366 0.383 0.415 0.335 0.395 0.292 0.269 0.505 0.386 Breadcrumbs 0.010 0.015 0.025 0.000 0.000 0.015 0.000 0.000 0.028 0.000 0.000 0.005 0.025 0.000 0.000 0.020 0.009 PCB-Merging 0.402 0.342 0.307 0.395 0.370 0.475 0.366 0.430 0.426 0.374 0.425 0.320 0.370 0.313 0.346 0.404 0.379 STF 0.427 0.442 0.367 0.400 0.415 0.645 0.407 0.530 0.458 0.336 0.475 0.340 0.440 0.354 0.262 0.404 0.419 NeuroMerging 0.211 0.292 0.226 0.240 0.275 0.380 0.191 0.385 0.273 0.215 0.335 0.235 0.235 0.281 0.200 0.187 0.260 DiM 3 0.493 0.498 0.362 0.450 0.445 0.645 0.407 0.555 0.505 0.388 0.445 0.420 0.480 0.406 0.277 0.460 0.452 
+
+Table 15: Multilingual performance comparison of different merging methods on CVQA. 
+
+Language LLaVA-v1.5-7B Task Arithmetic DARE TIES-Merging Breadcrumbs PCB-Merging STF NeuroMerging Palo-7B Palo-13B DiM 3
+
+Am 26.50 29.06 29.91 27.78 25.21 0.43 35.90 30.34 19.23 26.07 33.76 Bn 29.37 31.47 31.47 32.87 29.02 1.05 23.43 25.52 37.76 36.01 32.52 Br 29.63 31.36 31.11 29.38 27.16 20.74 23.95 33.58 29.14 33.33 30.86 Bg 39.35 39.08 40.43 37.74 34.23 11.05 34.77 42.05 36.66 40.97 39.89 Zh 48.57 48.95 45.89 47.80 41.87 0.19 44.17 47.23 45.51 46.65 47.80 Ar 32.51 35.96 34.98 33.00 30.05 2.46 32.51 33.99 29.06 27.59 40.39 
+
+Fil 46.31 46.80 45.32 45.32 37.44 5.91 37.44 47.29 38.92 46.80 47.29 
+
+Hi 39.80 37.31 38.81 39.80 31.34 1.49 45.27 51.74 42.79 45.27 51.24 Ig 32.50 35.50 34.00 33.00 28.00 8.00 12.00 28.00 29.50 33.00 35.50 
+
+Id 42.23 46.12 42.23 46.60 39.56 5.83 36.17 46.60 41.26 44.90 49.03 
+
+Ga 43.87 47.24 44.48 48.16 38.04 7.06 34.97 45.09 43.25 37.12 47.24 Ja 34.98 36.45 32.02 33.00 28.08 0.00 31.03 31.53 30.54 37.93 32.51 Jv 36.36 39.06 32.66 36.36 29.97 11.78 29.29 39.39 32.32 38.72 42.42 
+
+Rw 34.47 35.74 32.34 34.04 29.79 20.00 32.34 33.62 28.94 28.94 43.40 
+
+Ko 51.03 51.03 50.69 51.03 46.55 0.00 47.24 43.79 44.48 46.55 47.93 Ms 47.94 51.11 47.30 51.75 40.32 9.52 40.95 44.76 42.86 46.35 48.57 Mr 36.14 36.14 35.64 34.16 26.24 0.99 42.08 36.63 39.11 39.11 45.05 
+
+Min 36.65 37.05 33.07 34.66 33.86 9.56 29.48 41.04 31.87 39.04 42.63 
+
+Mn 29.49 29.17 28.53 32.37 27.24 19.55 30.13 30.13 28.53 26.92 36.22 
+
+No 52.51 53.51 51.17 50.17 42.14 7.36 43.81 51.17 48.83 53.18 50.50 Om 37.38 35.05 34.58 32.24 29.44 18.22 17.29 33.18 32.71 31.78 35.98 Pt 57.39 58.80 56.69 55.28 52.46 17.61 47.54 57.39 56.69 56.69 53.52 Ro 50.99 53.64 51.32 55.96 46.69 3.31 44.70 50.99 46.03 55.63 53.64 Ru 57.50 57.50 52.50 55.50 46.50 8.00 56.50 60.00 47.00 52.50 61.00 
+
+Si 24.44 25.33 27.11 28.00 26.22 2.22 9.33 11.56 27.56 24.89 39.11 
+
+Es 54.57 54.71 52.43 52.19 47.72 18.90 44.22 52.19 49.66 51.51 51.60 Su 38.00 38.50 34.50 38.00 33.00 8.50 27.00 41.00 32.00 40.50 44.50 
+
+Sw 36.26 39.56 37.36 38.10 33.33 18.68 35.90 47.25 36.26 40.66 49.45 
+
+Ta 31.78 30.84 27.57 30.84 28.50 0.93 34.11 28.50 27.57 32.71 40.65 
+
+Te 34.50 32.50 30.00 25.50 25.00 0.00 26.50 16.00 28.50 26.50 36.50 
+
+Ur 25.92 30.05 25.00 28.67 26.38 2.52 42.20 39.22 42.43 39.45 46.33 
+
+Avg mul 39.32 40.47 38.42 39.33 34.24 7.80 34.59 39.38 37.00 39.59 43.78 
+
+21 Table 16: Results on three general multimodal benchmarks: MMStar, MMMU, and SEED-Bench-2-Plus. This table reports the exact scores corresponding to the comparison summarized in Figure 2. 
+
+Models MMStar MMMU SEED-Bench-2-Plus 
+
+LLaVA-v1.5-7B 33.83 36.33 40.97 Task Arithmetic 33.53 36.89 42.07 DARE 36.11 35.78 41.90 TIES-Merging 34.27 36.33 43.13 
+
+Breadcrumbs 32.01 33.33 40.32 STF 31.51 30.67 34.43 NeuroMerging 34.58 36.89 40.84 Palo-7B 32.95 33.11 38.08 DiM 3-7B 34.86 37.22 40.45 x                                                
+
+> Layer 0
+> 7.5 5.0 2.5 0.0 2.5 5.0 7.5
+> 10
+> 0
+> 10
+> LLaVA-v1.5-7B
+> y
+> x
+> Layer 5
+> 10 50510
+> x
+> Layer 9
+> 10 50510
+> x
+> Layer 11
+> 10 50510
+> x
+> Layer 27
+> 7.5 5.0 2.5 0.0 2.5 5.0 7.5
+> x
+> 505
+> x
+> 10
+> 0
+> 10
+> DiM 3
+> y
+> x
+> 10 50510
+> x
+> 10 50510 15
+> x
+> 10 50510
+> x
+> x
+> 10 505
+> xAR EN FR HI ID JA PT
+
+Figure 5: t-SNE visualizations of average-pooled hidden states for the question spans in multilingual multimodal inputs from xMMMU across selected layers. We focus on question tokens to avoid confounding effects from English instruction templates and image tokens. 22 x
+
+Layer 0 
+
+> 10
+> 0
+> 10
+> DARE
+> x
+
+Layer 9 
+
+> x
+
+Layer 12 
+
+> x
+
+Layer 22 
+
+> x
+
+Layer 32                        
+
+> x
+> 10
+> 0
+> 10
+> Task Arithmetic  xxxx
+> x
+> 10
+> 0
+> 10
+> TIES
+> xxxx
+> x
+> 10
+> 0
+> 10
+> Breadcrumbs  xxxx
+> x
+> 10
+> 0
+> 10
+> NeuroMerging  xxxx
+> x
+> 10
+> 0
+> 10
+> PCB-Merging  xxxx
+> x
+> 10
+> 0
+> 10
+> STF
+> xxxx
+> x
+> 10 50510 15
+
+x      
+
+> 20
+> 10
+> 0
+> 10
+> 20
+> DiM 3
+> x
+> 10 50510 15 20
+
+x      
+
+> x
+> 15 10 50510 15
+
+x  
+
+> x
+> 10 010
+
+x   
+
+> x
+> 10 010 20
+
+x
+
+Ar Bg De El En Es Fr Hi Ru Sw Th Tr Ur Vi Zh Figure 6: Additional t-SNE visualizations of average-pooled hidden states on multilingual text inputs from XNLI across selected layers. The figure compares a broader set of merging baselines to illustrate differences in cross-lingual hidden-state geometry. 23 x
+
+Llama_2_7B 
+
+15 
+
+10 
+
+5
+
+0
+
+5
+
+10 
+
+> Layer 0
+> y
+
+x
+
+EMMA-500 
+
+x
+
+LLaVA-v1.5-7B 
+
+x
+
+STF 
+
+x
+
+DiM 3
+
+x
+
+10 
+
+5
+
+0
+
+5
+
+10 
+
+> Layer 1
+> y
+
+x x x x
+
+x
+
+15 
+
+10 
+
+5
+
+0
+
+5
+
+10 
+
+> Layer 2
+> y
+
+x x x x
+
+x
+
+15 
+
+10 
+
+5
+
+0
+
+5
+
+> Layer 3
+> y
+
+x x x x
+
+x
+
+10 
+
+5
+
+0
+
+5
+
+10 
+
+15 
+
+> Layer 4
+> y
+
+x x x x
+
+x
+
+10 
+
+5
+
+0
+
+5
+
+10 
+
+15 
+
+> Layer 5
+> y
+
+x x x x
+
+x
+
+10 
+
+5
+
+0
+
+5
+
+10 
+
+15 
+
+> Layer 6
+> y
+
+x x x x
+
+x
+
+15 
+
+10 
+
+5
+
+0
+
+5
+
+10 
+
+15 
+
+> Layer 7
+> y
+
+x x x x
+
+x
+
+15 
+
+10 
+
+5
+
+0
+
+5
+
+10 
+
+15 
+
+> Layer 8
+> y
+
+x x x x
+
+x
+
+20 
+
+10 
+
+0
+
+10 
+
+20 
+
+> Layer 9
+> y
+
+x x x x
+
+x
+
+10 
+
+0
+
+10 
+
+> Layer 10
+> y
+
+x x x x
+
+x
+
+20 
+
+10 
+
+0
+
+10 
+
+20 
+
+> Layer 11
+> y
+
+x x x x
+
+x
+
+15 
+
+10 
+
+5
+
+0
+
+5
+
+10 
+
+15 
+
+> Layer 12
+> y
+
+x x x x
+
+x
+
+20 10 0 10 
+
+x
+
+15 
+
+10 
+
+5
+
+0
+
+5
+
+10 
+
+> Layer 13
+> y
+
+x
+
+10 0 10 
+
+x
+
+x
+
+10 0 10 
+
+x
+
+x
+
+10 5 0 5 10 15 
+
+x
+
+x
+
+10 0 10 
+
+x
+
+Ar Bg De El En Es Fr Hi Ru Sw Th Tr Ur Vi Zh Figure 7: Full layer-wise t-SNE visualizations of average-pooled hidden states on multilingual text inputs from XNLI for layers 0–13. 24 x
+
+Llama_2_7B 
+
+15 
+
+10 
+
+5
+
+0
+
+5
+
+10 
+
+15 
+
+> Layer 14
+> y
+
+x
+
+EMMA-500 
+
+x
+
+LLaVA-v1.5-7B 
+
+x
+
+STF 
+
+x
+
+DiM 3
+
+x
+
+10 
+
+5
+
+0
+
+5
+
+10 
+
+> Layer 15
+> y
+
+x x x x
+
+x
+
+15 
+
+10 
+
+5
+
+0
+
+5
+
+10 
+
+> Layer 16
+> y
+
+x x x x
+
+x
+
+15 
+
+10 
+
+5
+
+0
+
+5
+
+10 
+
+> Layer 17
+> y
+
+x x x x
+
+x
+
+10 
+
+0
+
+10 
+
+> Layer 18
+> y
+
+x x x x
+
+x
+
+10 
+
+0
+
+10 
+
+20 
+
+> Layer 19
+> y
+
+x x x x
+
+x
+
+10 
+
+0
+
+10 
+
+> Layer 20
+> y
+
+x x x x
+
+x
+
+15 
+
+10 
+
+5
+
+0
+
+5
+
+10 
+
+> Layer 21
+> y
+
+x x x x
+
+x
+
+10 
+
+5
+
+0
+
+5
+
+10 
+
+15 
+
+> Layer 22
+> y
+
+x x x x
+
+x
+
+10 
+
+5
+
+0
+
+5
+
+10 
+
+15 
+
+> Layer 23
+> y
+
+x x x x
+
+x
+
+10 
+
+0
+
+10 
+
+> Layer 24
+> y
+
+x x x x
+
+x
+
+15 
+
+10 
+
+5
+
+0
+
+5
+
+10 
+
+15 
+
+> Layer 25
+> y
+
+x x x x
+
+x
+
+15 
+
+10 
+
+5
+
+0
+
+5
+
+10 
+
+> Layer 26
+> y
+
+x x x x
+
+x
+
+15 10 5 0 5 10 
+
+x
+
+10 
+
+5
+
+0
+
+5
+
+10 
+
+15 
+
+> Layer 27
+> y
+
+x
+
+10 0 10 
+
+x
+
+x
+
+10 0 10 
+
+x
+
+x
+
+10 5 0 5 10 15 
+
+x
+
+x
+
+10 5 0 5 10 15 
+
+x
+
+Ar Bg De El En Es Fr Hi Ru Sw Th Tr Ur Vi Zh Figure 8: Full layer-wise t-SNE visualizations of average-pooled hidden states on multilingual text inputs from XNLI for layers 14–27. 25 x
+
+Llama_2_7B 
+
+> 10
+> 5
+> 0
+> 5
+> 10
+> Layer 28
+> y
+
+x
+
+EMMA-500 
+
+x
+
+LLaVA-v1.5-7B 
+
+x
+
+STF 
+
+x
+
+DiM 3
+
+x
+
+> 10
+> 5
+> 0
+> 5
+> 10
+> Layer 29
+> y
+
+x x x x
+
+x
+
+> 10
+> 5
+> 0
+> 5
+> 10
+> Layer 30
+> y
+
+x x x x
+
+x
+
+> 10
+> 5
+> 0
+> 5
+> 10
+> Layer 31
+> y
+
+x x x x
+
+x    
+
+> 20 10 010 20
+
+x
+
+> 10
+> 5
+> 0
+> 5
+> 10
+> Layer 32
+> y
+
+x  
+
+> 10 010
+
+x
+
+x    
+
+> 10 50510
+
+x
+
+x     
+
+> 10 50510 15
+
+x
+
+x   
+
+> 10 010 20
+
+x
+
+Ar Bg De El En Es Fr Hi Ru Sw Th Tr Ur Vi Zh Figure 9: Full layer-wise t-SNE visualizations of average-pooled hidden states on multilingual text inputs from XNLI for layers 28–32. 26

@@ -1,0 +1,772 @@
+Title: Focus-then-Context: Subject-Centric Progressive Visual Token Reduction for Vision-Language Models
+
+URL Source: https://arxiv.org/pdf/2605.20950v1
+
+Published Time: Thu, 21 May 2026 00:54:07 GMT
+
+Number of Pages: 17
+
+Markdown Content:
+# Focus-then-Context: Subject-Centric Progressive Visual Token Reduction for Vision-Language Models 
+
+Yulin Zhao 1 Yun Wang 2 Dehua Zheng 2 Borui jiang 2 Zheng Zhang 1 3 
+
+## Abstract 
+
+Vision-Language Models (VLMs) face a bottle-neck of prohibitive computational costs arising from massive visual token sequences during in-ference. Existing vision token reduction methods alleviate this burden, but they unintentionally pre-serve the isolated visual subject strictly aligned with the user’s query, which fails to substantially explore salient subjects and their contextual rela-tionships. In this paper, we propose SPpruner ,a subject-centric progressive reduction paradigm that emulates the Focus-then-Context mechanism of the human visual perception system. Specifi-cally, we first construct a focus identification mod-ule to explicitly model the interplay between vi-sual saliency and semantic relevance. Herein, it can excavate the comprehensive visual subject spectrum to ensure a high-fidelity representation of visual input. Subsequently, a context-aware structural scanning module is developed to ag-gregate contextual cues from neighboring regions. As such, it can effectively restore global relational dependencies to uphold the structural integrity of the preserved subjects. Extensive experiments demonstrate that our paradigm consistently out-performs SOTA methods, achieving up to a 2.53× speedup with only 22.2% of visual tokens retained in Qwen2.5-VL and a 67% FLOPs reduction on LLaVA with a negligible 0.6% accuracy drop. 
+
+## 1. Introduction 
+
+Vision-Language Models have demonstrated remarkable success across a broad range of vision tasks (Wu et al., 2016; Wang et al., 2024c). The core component, the vi-sion encoder, enables the model to map images or videos into a long sequence of visual tokens, enhancing its under-standing of visual content. However, this comes at a high 
+
+> 1
+
+Harbin Institute of Technology, Shenzhen, China 2Huawei Noah’s Ark Lab 3ShenZhen Loop Area Institute. Correspondence to: Zheng Zhang <darrenzz219@gmail.com >.
+
+Preprint. May 21, 2026. 
+
+computational cost due to the massive length of visual token sequences, which becomes particularly burdensome when processing long-sequence videos (Tang et al., 2025) or high-resolution images (Li et al., 2024b). This kind of inference paradigm severely restricts their efficiency, making practical deployment difficult in resource-constrained environments. To mitigate this challenge, Token Reduction (TR) has been proposed to accelerate the inference procedure. Exist-ing TR paradigms generally fall into two categories: (1) 
+
+redundancy-centric reduction , such as ToMe (Bolya et al., 2022), Visionzip (Yang et al., 2025), and FastV (Chen et al., 2024b), which merge or prune tokens based on statistical redundancy or spatial similarity, and (2) query-centric re-duction , exemplified by CDpruner(Zhang et al., 2025) and SparseVLM (Zhang et al., 2024), which selectively retains tokens solely in response to their relevance to user queries. Despite the efficiency gains, these methods exhibit a funda-mental limitation: they treat TR as a statistical filtering task rather than a subject perception process. As illustrated in Figure 1, existing methods often fail to adequately preserve tokens that cover all salient visual subjects and their contex-tual interactions. For instance, query-centric paradigms tend to retain tokens strictly aligned with explicit text queries and inadvertently discard other salient subjects (e.g., mirror ) that are critical for answering comprehensive questions. This aggressive reduction is detrimental because comprehensive scene understanding often requires contextual information beyond the explicit query terms. Our analysis identifies two primary causes for this shortfall, both stemming from information loss during the token reduction procedure: (1) Loss of Focus: Existing paradigms relying solely on query-based attention typically capture only the most iso-lated relevant regions referred to in the given text query. They inadvertently suppress other visually salient regions that are critical for global perception, severely limiting the model’s performance in complex multi-subject scenarios. (2) Loss of Context: By treating token reduction as a local filtering task, current paradigms neglect the structural in-formation of the initial visual input. This results in a set of disjoint visual tokens lacking the necessary environmental context, which makes it difficult to deduce causal or spatial 1
+
+> arXiv:2605.20950v1 [cs.CV] 20 May 2026
+
+Subject-Centric Progressive Visual Token Reduction for VLMs Redundancy -centric 
+
+VS 
+
+Query -centric Reduction SPpruner (Ours)  
+
+> Besides the “Cat ”, what other objects are
+> present on the table? Please provide the
+> answer in the form of a paragraph.
+
+Query -centric Subject -centric (Ours)    
+
+> Besides the cat, the table also contains a
+> phone , a bowl , a lamp , and a black object ,
+> which might be part of a bag or coat.
+
+Enquiry on Vanilla Qwen                                                                     
+
+> Query Alignment
+> Loss of Focus
+> Loss of Context
+> There might be ablack object on table
+> leaning against the wall ,possibly part of a
+> bag .(Hallucination, fragmented att ention )
+> There is ablack bracelet and amobile phone on
+> the table, and ablack object is close to them .
+> (Fragmented att ention and missing context )
+> There is amirror on the table, with amobile
+> phone, abracelet and abowl under it, and a
+> black object visible in the bo tt om .
+> Focus -then -Context
+> Salient
+> Subjects Contextual Cues
+> Association
+
+Visual Input 
+
+Figure 1. Comparison between existing paradigms and SPpruner . Query-centric paradigms tend to retain tokens strictly aligned with explicit text queries and inadvertently discard other salient subjects (e.g., mirror ) that are critical for answering comprehensive questions. This loss of other salient subjects serves visual understanding. In contrast, SPpruner preserves a broad spectrum of visual subjects and their structural context, facilitating comprehensive visual reasoning. Red and green indicate missed and captured subjects, respectively. 
+
+relationships among the retained visual subjects. In this work, we propose a novel subject-centric progressive token reduction paradigm, named SPpruner . It is designed to address the limitations of prior approaches by incorporat-ing the Focus-then-Context principle of the Human Visual Perception System (HVPS) (Curcio et al., 1990; Eckstein, 2011), where primary visual subjects are identified before analyzing their surrounding contextual relationships. Un-like traditional approaches that rely solely on attention or relevance, SPpruner takes into account both intrinsic visual saliency and semantic relevance, as illustrated in Figure 2(a), allowing it to precisely mine a broader spectrum of salient subjects and ensuring the retention of diverse visual com-ponents beyond mere query alignment. Subsequently, as depicted in Figure 2(b), we employ a context-aware struc-tural scanning module to aggregate contextual cues from neighboring regions associated with preserved subjects, em-powering the model to effectively uphold structural fidelity and sustain holistic image understanding, even under ag-gressively high token compression rates. In summary, our main contributions are as follows: • We propose SPpruner, a novel subject-centric progres-sive token reduction paradigm that simulates HVPS to precisely capture a broader spectrum of salient visual subjects along with their contextual associations, rec-onciling the conflict between efficient inference and comprehensive visual understanding. • We construct a focus identification module to enhance the model’s capability in capturing diverse visual sub-jects, and develop a context-aware structural scanning module to aggregate contextual cues and restore global relationships associated with these subjects. • SPpruner is a plug-and-play solution requiring no ad-ditional training or fine-tuning. Extensive experiments on 22 benchmarks demonstrate that SPpruner incurs merely a 2.3% performance loss at 88.9% reduction on LLaVA-Next and achieves a 62% reduction in GFLOPS with only a 5% performance drop, validating its potential for efficient real-world deployment. 
+
+## 2. Related Work 
+
+2.1. Vision-Language Models 
+
+The integration of large language models with high-capacity vision encoders has catalyzed a paradigm shift in multi-modal reasoning (Wu et al., 2016; Wang et al., 2024c). Pio-neering architectures such as LLaVA (Liu et al., 2023) and MiniGPT-4 (Zhu et al., 2023) align pre-trained visual repre-sentations with LLMs via visual instruction tuning, estab-lishing robust baselines for visual understanding. To capture fine-grained details and support long-context inputs, recent advancements like Qwen-VL (Wang et al., 2024b), mPLUG-Owl2 (Ye et al., 2024), LLaVA-Next (Liu et al., 2024a), LLaVA-Onevision (Li et al., 2024a), and InternVL (Chen et al., 2024c) have aggressively scaled up input resolutions and vision encoder capacities. While yielding exceptional performance, these models inevitably produce massive vi-sual token sequences, leading to high computational over-head. This significant computational cost severely hinders 2Subject-Centric Progressive Visual Token Reduction for VLMs s
+
+> (a) Focus Identi fi cation Module
+
+# …
+
+# …                         
+
+> Final Image
+> Vision Token Text Token
+> Dropped Vision Token Dropped Token
+> …
+> Xtext
+> X!+Rel (X𝐫 ,Xtext )
+> X!
+> (b) Context -Aware Structural Scanning Module
+> Metric
+> Metric
+> Metric
+> Subject 1Subject 2Subject N
+> Subject 2Subject 1Subject N
+> Subject 2Subject 1Subject N
+> Selection
+
+…                                
+
+> Candidate Set Focal Set
+> Structure -Responsive Sampling
+> Δ=max 1,(N!"#$%! −ℱ)-𝛿
+> d&d'd(
+> δ=1
+> n*d"
+> #
+> "$%
+> (c) Subject -Centric Token Set Construction
+> Subject subregion
+> Kept Range
+> X!
+> Transformer Layer 1
+> Transformer Layer 2
+> Transformer Layer N
+> MHSA
+> Add &Norm
+> Add &Norm
+> Feed Forward
+
+!Scanning 
+
+!Focus 
+
+Figure 2. Framework of SPpruner. (a) The focus identification module first identifies salient visual subjects by combining intrinsic visual saliency with semantic relevance to the text query. (b) The context-aware structural scanning module then employs a structure-responsive sampling mechanism to select contextual tokens associated with these identified subjects, ensuring structural integrity. (c) Construct the final retained visual token set ˜Xv by combining the focal subject tokens with their associated contextual tokens. 
+
+their practical deployment in resource-constrained environ-ments, necessitating effective token reduction strategies. 
+
+2.2. Visual Token Reduction 
+
+To mitigate the computational bottleneck, training-free to-ken reduction (TR) has emerged as a promising direction. Existing approaches can be broadly categorized into two paradigms based on their reduction criteria: Redundancy-Centric Reduction and Query-Centric Reduction .
+
+Redundancy-Centric Reduction. This category of meth-ods operates on the premise that visual data contains inher-ent spatial or statistical redundancy. They aim to merge or prune tokens by leveraging intrinsic visual properties, treat-ing token reduction as a statistical compression task. For example, ToMe (Bolya et al., 2022) uses bipartite matching or clustering based on visual similarity to merge spatially redundant tokens. Similarly, VisionZip (Yang et al., 2025) and FastV (Chen et al., 2024b) filter tokens based on vision attention, assuming that tokens with low attention weights in early layers are dispensable. Moreover, DivPrune (Alvar et al., 2025) formulates token reduction as a maximization task, relying on the similarity among visual tokens for re-duction. Although these methods effectively reduce the sequence length, they suffer from semantic agnosticism. By relying solely on statistical metrics, they risk merging semantically distinct concepts, leading to a significant degra-dation in fine-grained and holistic visual perception. 
+
+Query-Centric Reduction. Recognizing the importance of user query, recent works have shifted towards query-centric reduction. Methods such as SparseVLM (Zhang et al., 2024), DART (Wen et al., 2025), and PACT (Dhouib et al., 2025) explicitly utilize the cross-attention scores be-tween visual tokens and the textual query to steer token selection. While this improves alignment with the user’s query, these approaches exhibit a fundamental limitation: they aggressively discard visual subjects that are not ex-plicitly mentioned in the text but are critical for contextual reasoning, such as contextual cues among the visual subjects. This results in the retained visual tokens failing to maintain consistency with the visual input, severing the global de-pendencies required for holistic image understanding. This issue will be further addressed in the subsequent sections through both theoretical discussion and empirical validation of our novel token reduction paradigm. 
+
+## 3. Methodology 
+
+3.1. Preliminaries Architecture of Vision-Language Models. In this work, we employ a standard vision-language model architecture comprising a vision encoder, a cross-modal projector, and a large language model backbone. The projector maps raw visual inputs into a sequence of continuous visual embed-dings. Formally, the input sequence concatenates system instructions Xs, visual tokens Xv, and the user query Xq.During generation phase, LLM decodes the output token t
+
+sequentially based on Xinput = {Xs; Xv; Xq}, which can be formulated as: ti = f (Xinput , t0, t1, t2, · · · , ti−1).
+
+Visual Token Reduction and Dilemma. The objective of visual token reduction is to alleviate the computational overhead during inference. In contrast to the semantically dense text tokens Xtext = {Xs, Xq}, visual tokens exhibit inherent spatial redundancy, rendering them prime candi-3Subject-Centric Progressive Visual Token Reduction for VLMs 
+
+dates for sparsification. We formulate the token reduction problem as follows: Let Xv be the original set of visual to-kens with cardinality N. We seek to identify a sparse subset 
+
+˜Xv of size ˜N (where ˜N < N) that maximally preserves the information required for reasoning. Mathematically, this transforms into finding an optimal subset that minimizes the divergence L between the predictions of the original and compressed inputs, subject to a budget constraint: 
+
+˜Xv = argmin      
+
+> ˜Xv⊂Xv,|˜Xv|= ˜N
+
+L
+
+
+
+P(Xtext ; Xv), ˜P(Xtext ; ˜Xv)
+
+
+
+.
+
+(1) While existing TR tasks typically leverage unimodal ( Xv) or cross-modal ( Xtext , Xv) information to guide visual token retention, this strict alignment paradigm inevitably leads to the loss of implicit subjects and contextual cues, compro-mising model’s holistic understanding of the entire image. 
+
+3.2. Framework of SPpruner 
+
+In this section, we present a subject-centric progressive token reduction paradigm that excavates a broader salient subject spectrum and more informative global relational dependencies without incurring additional training and fine-tuning, reconciling the conflict between efficient inference and comprehensive visual understanding. 
+
+3.3. Focus Identification Module (FIM) 
+
+The first objective is to mitigate the Loss of Focus by identi-fying visual subjects that are visually salient and semanti-cally relevant. Unlike prior query-guided methods that only retain tokens strictly aligned with user’s query, we start by establishing a focal set F to excavate the comprehensive vi-sual subject spectrum to ensure a high-fidelity representation of visual input. Herein, we define a composite scoring func-tion S(xi) for each visual token xi ∈ Xv by synergizing its intrinsic visual magnitude with its semantic relevance: 
+
+S(xi) = Φ ( ∥xi∥1) + Φ ( R(xi | Xq)) ,
+
+R(xi | Xq) = Exq,j∈Xq
+
+" xi · x⊤
+
+> q,j
+
+∥xi∥2∥xq,j∥2
+
+#
+
+, (2) where Φ denotes a min-max normalization function aligning the metrics to a unified scale. Here, the first term serves as a robust proxy for intrinsic visual saliency, while the latter captures the semantic alignment. By establishing the focal set F via the top-K tokens from S(xi), SPpruner identifies a broad spectrum of salient subjects, spanning from explicit query targets to implicit but salient subjects. 
+
+3.4. Context-Aware Structural Scanning Module (CASSM) 
+
+While the identified focal tokens capture the core subjects, a disjoint set of visual subject tokens is insufficient for holistic image understanding. To address the Loss of Context , we develop a context-aware structural scanning module that simulates the scanning mechanism of human visual system to aggregate contextual cues and restore global relationships associated with these subjects. To ensure the preservation of sufficient contextual cues, we define a contextual utility function U(xc) that evaluates candidate tokens xc across two dimensions: structural dependency and semantic align-ment , collectively yielding a informative representation of the subject’s neighboring structural context: 
+
+U(xc) = M(xc | F , C)
+
+| {z }
+
+> Structural Dependency
+
++ R(xc | Xq) 
+
+| {z }
+
+> Semantic Alignment
+
+, (3) where C is candidate token set, M(·) captures structural dependency between subject and candidate tokens, and R(·)
+
+ensures that the scanning remains relevant to user’s query. This formulation ensures that preserved tokens capture suffi-cient structural context, while remaining highly aligned with the user’s query. Furthermore, the structural dependency term M(xc | F , C) is evaluated from two perspectives: 
+
+M(xc | F , C) = Exf ∈F 
+
+ xc · xf⊤
+
+∥xc∥2, ∥xf ∥2
+
+
+
++
+
+Ez∈C 
+
+
+
+1 − xc · z⊤
+
+∥xc∥2, ∥z∥2
+
+
+
+,
+
+(4) where the first term encourages focal tokens to maintain appropriate structural correlation with their neighboring to-kens, preserving local structural coherence. The second term evaluates global discriminability among candidate tokens, facilitating a more discriminative structural representation. Consequently, we develop a Structure-Responsive Sampling 
+
+(SRS) mechanism to optimize scanning granularity. This module progressively modulates retention stride according to structural divergence between focal tokens and candi-date tokens, ensuring the retention of the most informative contextual cues. This procedure can be formulated as: 
+
+d(xc) = exp 
+
+
+
+−Exf ∈F 
+
+ xc · xf⊤
+
+∥xc∥2, ∥xf ∥2
+
+ 
+
+,δ = Ec∈C [d(xc)] .
+
+(5) The retention stride ∆ is then dynamically adjusted: 
+
+∆ = max (1 , ⌊(N target − |F| ) · δ⌋) . (6) When candidate tokens lie in proximity to candidate tokens, the retention stride ∆ will increase to preserve more contex-tual information reflecting the subject’s content. Conversely, the stride should be reduced. Intuitively, this strategy adap-tively adjusts the sampling stride based on the structural discrepancy between the subject and candidate tokens, rec-onciling contextual sufficiency and compression efficiency. 4Subject-Centric Progressive Visual Token Reduction for VLMs 
+
+Table 1. Performance comparison on LLaVA-1.5-7B under varying token budgets. 
+
+Methods MME MMB(EN) MMB(CN) POPE VizWiz GQA VQAv2 SQA IMG TextVQA Rel. 
+
+Upper Bound: 576 Tokens (100%) 
+
+Vanilla 1862 64.6 58.1 85.9 50.1 61.9 78.5 69.5 58.2 100% 
+
+Retain 192 Tokens (↓ 66.7%) FastV (ECCV’24) 1612 61.2 57.0 64.8 50.8 52.7 67.1 67.3 52.5 90.0% PyramidDrop (CVPR’25) 1791 63.1 57.1 85.1 51.1 59.3 75.1 68.9 56.9 98.7% VisionZip (CVPR’25) 1769 62.9 57.4 85.5 51.6 59.3 76.8 68.8 57.2 99.0% DivPrune (CVPR’25) 1765 62.3 56.3 87.1 52.8 60.1 76.0 68.7 56.6 98.8% DART (EMNLP’25) 1834 63.7 57.3 82.7 52.8 60.0 74.7 68.9 57.3 99.0% PACT (CVPR’25) 1790 63.0 56.4 83.8 52.6 60.7 74.8 69.0 55.5 98.1% 
+
+SPpruner (Ours) 1841 63.8 57.6 83.3 52.7 60.5 77.8 69.2 57.5 99.4 %
+
+Retain 128 Tokens (↓ 77.8%) FastV (ECCV’24) 1490 56.1 56.4 59.8 51.3 49.6 61.8 60.2 50.6 82.9% PyramidDrop (CVPR’25) 1765 62.3 56.6 83.1 51.0 57.6 72.9 68.5 56.7 96.5% VisionZip (CVPR’25) 1758 62.0 56.7 83.2 52.9 57.7 75.6 68.5 56.8 97.6% DivPrune (CVPR’25) 1711 61.3 54.9 87.0 53.6 59.3 74.1 68.4 56.0 97.4% DART (EMNLP’25) 1844 63.1 57.3 80.1 53.5 58.2 71.3 68.7 56.6 97.2% PACT (CVPR’25) 1757 62.2 54.3 83.0 52.8 60.5 74.8 69.1 54.9 96.9% 
+
+SPpruner (Ours) 1849 63.4 57.0 80.3 53.0 59.2 77.8 69.2 56.9 98.5 %
+
+Retain 64 Tokens (↓ 88.9%) FastV (ECCV’24) 1256 48.0 52.7 48.0 50.8 46.1 55.0 51.1 47.8 74.0% PyramidDrop (CVPR’25) 1579 57.9 49.5 74.4 50.7 54.6 69.2 69.2 53.7 88.6% VisionZip (CVPR’25) 1688 55.1 45.9 77.0 52.4 55.1 72.4 69.0 55.6 90.4% DivPrune (CVPR’25) 1615 60.0 52.5 85.6 53.3 57.7 71.2 67.9 54.6 94.4% DART (EMNLP’25) 1749 61.4 53.9 73.8 52.5 56.0 67.1 68.6 54.1 93.4% PACT (CVPR’25) 1564 60.1 52.1 81.7 52.2 59.5 73.1 69.0 53.2 94.0% 
+
+SPpruner (Ours) 1750 62.0 54.6 75.2 52.7 56.3 73.6 69.6 55.4 95.2 %
+
+3.5. Theoretical Analysis 
+
+To rigorously justify the reliability of SPpruner, we analyze the theoretical upper bound of the approximation error in-duced by our token reduction paradigm. Let f (·) denote the transformer function and Xv be the input visual tokens. Our goal is to bound the error ∥f (Xv) − f ( ˜Xv)∥, where 
+
+˜Xv is retained token set. Based on the Lipschitz continuity assumption of Transformers (Assumption A.1), the output error is bounded by the Hausdorff distance dH(Xv, ˜Xv)
+
+between the original and reduced token sets. We formally present the theoretical guarantee of SPpruner as follows: 
+
+Theorem 3.1. (Approximation Error Bound). Given initial visual token set Xv and retained subset ˜Xv retained by SPpruner. Under the assumption that the transformer f
+
+is K-Lipschitz continuous with respect to the Hausdorff distance, the approximation error is upper-bounded by: 
+
+∥f (Xv) − f ( ˜Xv)∥ ≤ K · max   
+
+> x∈Xv\˜Xv
+
+min  
+
+> ˜x∈˜Xv
+
+∥x − ˜x∥. (7) Crucially, SPpruner minimizes this bound through the dual-module design: focus identification module ensures that high-fidelity subject tokens are included in ˜Xv, while the context-aware structural scanning module employs a structural-responsive sampling mechanism to progressively adjust retention sampling stride ∆ based on structural diver-gence. This ensures that any discarded token x is theoret-ically situated within a specific radius of a retained token 
+
+˜x, thereby controlling the worst-case structural deviation. This theoretical result confirms that SPpruner can preserve the theoretical visual understanding capability of the vanilla model, and a detailed proof is provided in the Appendix A. 
+
+## 4. Experiments 
+
+In this section, we evaluate SPpruner on image understand-ing task, document understanding task, image captioning task, and video understanding task on a total of 22 bench-marks, comparing its performance with previous token re-duction paradigms. Furthermore, we also provide the ab-lation studies for the metrics and hyperparameters used in SPpruner. Extensive experiments demonstrate that SPpruner has superior performance in preserving a broader visual sub-ject spectrum and structural context information, ensuring the model retains strong visual understanding capabilities in complex scenes even after token reduction. Details of the benchmarks and model are provided in the Appendix B. 
+
+4.1. Image Understanding Task 
+
+For both single-image and multi-image benchmarks, we conducted extensive evaluations on LLaVA-1.5-7B, LLaVA-5Subject-Centric Progressive Visual Token Reduction for VLMs 
+
+Table 2. Performance comparison on LLaVA-Next-7B under varying token budgets. 
+
+Methods MME MMB(EN) MMB(CN) POPE MMVet GQA SQA IMG TextVQA Rel. 
+
+Upper Bound: 2880 Tokens (100%) 
+
+Vanilla 1842 65.8 57.3 86.8 40.0 62.5 67.6 60.3 100% 
+
+Retain 320 Tokens (↓ 88.9%) FastV (ECCV’24) 1661 61.6 51.9 71.7 25.0 55.9 62.8 55.7 86.8% PyramidDrop (CVPR’25) 1660 57.9 49.5 81.2 30.2 56.4 69.5 56.9 90.1% VisionZip (CVPR’25) 1715 63.1 55.7 82.2 38.8 58.9 67.6 58.8 96.2% DivPrune (CVPR’25) 1702 64.2 55.7 84.7 38.9 61.1 67.7 56.2 96.1% DART (EMNLP’25) 1697 65.4 56.7 83.5 40.6 59.4 68.3 58.4 96.4% 
+
+SPpruner (Ours) 1730 65.0 57.5 84.0 38.1 60.8 68.0 59.3 97.7 %
+
+Table 3. Performance comparison on Qwen2.5-VL-32B under varying token budgets.                                                                                                                                                            
+
+> Methods MMB(EN) MMB(CN) MME-P MME-C MMStar POPE MMMUVal MuirBench RealWorld TextVQA DocVQA OCRBench Rel.
+> Upper Bound: All Tokens (100% Tokens)
+> Vanilla 86.2 83.3 1731 704 65.5 84.2 36.2 47.3 68.5 76.5 92.7 822 100%
+> Retain 70% Tokens (↓30%) FastV (ECCV’24) 85.7 82.8 1674 718 63.7 84.9 37.6 47.4 66.5 68.4 84.4 711 97.0% DART (EMNLP’25) 86.0 82.6 1724 702 63.8 83.2 36.6 47.1 68.6 75.9 92.2 805 99.3%
+> SPpruner (Ours) 86.1 82.5 1712 709 64.9 84.0 34.8 47.4 68.4 76.0 92.4 814 99.3%
+> Retain 50% Tokens (↓50%) FastV (ECCV’24) 85.1 81.2 1628 698 60.0 82.7 36.0 47.0 67.4 67.8 78.5 632 93.9% DART (EMNLP’25) 85.3 81.6 1696 664 61.9 83.3 35.9 46.8 67.3 74.6 87.2 751 96.9%
+> SPpruner (Ours) 85.6 82.0 1711 689 63.8 83.5 37.2 47.0 68.0 75.3 91.1 798 98.9%
+> Retain 30% Tokens (↓70%) FastV (ECCV’24) 80.8 76.2 1523 580 52.0 76.0 31.6 46.8 64.7 65.3 63.5 510 86.8% DART (EMNLP’25) 82.5 79.5 1654 625 56.6 80.3 35.5 47.0 63.9 72.0 69.4 628 92.0%
+> SPpruner (Ours) 84.5 79.5 1662 657 58.6 81.0 35.9 46.8 66.8 73.0 81.0 704 94.4%
+
+Next-7B, and Qwen2.5VL-32B. As shown in Table 1, Ta-ble 2, and Table 3, SPpruner maintains its performance advantage and achieves SOTA results across evaluations. Taking LLaVA-Next-7B as an instance, SPpruner surpasses FastV, Divprune, and DART by 3.7%, 1.5%, and 1.8%, re-spectively, on the MME benchmark at 88.9% reduction ratio. Notably, in the multi-image evaluation of Qwen2.5-VL-32B at 70% reduction ratio, SPpruner outperforms FastV and DART algorithms by 1.6% and 5.0%, respectively. 
+
+4.2. Document Understanding Task 
+
+Document comprehension tasks impose stringent demands on localized details and spatial layouts in images, presenting challenges for compression algorithms. To assess the effi-cacy of SPpruner, we conduct extensive evaluations, using the LLaVA series and Qwen2.5-VL on three challenging document understanding benchmarks: TextVQA, DocVQA, and OCRBench. By preserving sufficient contextual cues, SPpruner maintains a significant performance advantage even under high reduction ratios. Notably, as illustrated in Table 3, SPpruner shows an average and great 3.6% improve-ment over sub-optimal Dart on three document understand-ing benchmarks under 50% reduction ratio, validating the efficacy of our approach in retaining fine-grained contextual details. Additionally, SPpruner exhibits stronger capability in maintaining performance compared to competing algo-rithms, particularly in high-ratio reduction scenarios. 
+
+4.3. Image Captioning Task 
+
+Image captioning serves as a critical measurement for eval-uating the preservation of key visual subjects and their contextual information. To assess the generalization ca-pability of SPpruner, we extended our evaluation to Flickr, and results on Qwen2.5-VL-32B are detailed in Table 5. While FastV, DART, and SPpruner yield comparable per-formance at 50% reduction ratio, their trajectories diverge significantly as sparsification intensifies. At 70% reduction, FastV and DART suffer a precipitous performance collapse, dropping by 7.7% and 3.3%, respectively. In contrast, SP-pruner demonstrates remarkable resilience, retaining 97.7% of the vanilla performance. Furthermore, SPpruner lim-its the degradation in average performance to just 2.3%, outperforming the 5% decline observed in DART. These empirical findings demonstrate that existing training-free TR algorithms fail to maintain and sustain high fidelity and semantic consistency under high reduction ratios. SPpruner effectively mitigates this by preserving a broader visual sub-ject spectrum and capturing informative structural context 6Subject-Centric Progressive Visual Token Reduction for VLMs 
+
+Table 4. Efficiency Comparison on Qwen2.5-VL. We compare SPpruner against the Vanilla baseline and DART (Wen et al., 2025). 
+
+Latency refers to the prefill time. SPpruner achieves the highest speedup ratios with negligible performance impact across all benchmarks. 
+
+Benchmark Method Visual Tokens Prefill Time (s) ↓ FLOPs (T) ↓ GPU Mem. (GB) ↓ Performance ↑ SpeedUp ↑
+
+MME Vanilla 866 0.2215 2.1015 16.01 2329 1.00 ×
+
+DART (CVPR’25) 192 0.1068 0.5798 15.86 2174 2.07 ×
+
+SPpruner (Ours) 192 0.0876 0.5798 15.86 2182 2.53 ×
+
+MMStar Vanilla 360 0.1337 0.9802 15.97 62.9 1.00 ×
+
+DART (CVPR’25) 80 0.0833 0.3688 15.74 49.7 1.60 ×
+
+SPpruner (Ours) 80 0.0618 0.3688 15.74 50.7 2.16 ×
+
+MMB(EN) Vanilla 278 0.1086 0.8232 15.99 83.9 1.00 ×
+
+DART (CVPR’25) 62 0.0752 0.3537 15.60 78.2 1.44 ×
+
+SPpruner (Ours) 62 0.0615 0.3537 15.60 80.0 1.77 ×
+
+Table 5. Performance comparison of Qwen2.5-VL-32B on Flickr30K under varying token budgets.                                                                                         
+
+> Methods BLEU-1 BLEU-2 BLEU-3 BLEU-4 METEOR ROUGE-L CIDEr Rel.
+> Upper Bound: All Tokens (100% Tokens)
+> Vanilla 0.4653 0.2791 0.1694 0.1027 0.1963 0.3652 0.2903 100%
+> Retain 50% Tokens (↓50%) FastV (ECCV’24) 0.4625 0.2750 0.1652 0.0988 0.1900 0.3603 0.2947 98.4% DART (EMNLP25) 0.4605 0.2746 0.1660 0.1001 0.1933 0.3608 0.2854 98.3%
+> SPpruner (Ours) 0.4628 0.2769 0.1680 0.1017 0.1945 0.3626 0.2894 99.3 %
+> Retain 30% Tokens (↓70%) FastV (ECCV’24) 0.4436 0.2561 0.1496 0.0870 0.1763 0.3432 0.2647 90.7% DART (EMNLP25) 0.4524 0.2659 0.1588 0.0946 0.1864 0.3519 0.2764 95.0%
+> SPpruner (Ours) 0.4591 0.2723 0.1645 0.0990 0.1903 0.3572 0.2884 97.7 %
+> Retain 10% Tokens (↓90%) FastV (ECCV’24) 0.3773 0.1917 0.1016 0.0546 0.1345 0.2927 0.1425 65.8% DART (EMNLP25) 0.4156 0.2289 0.1293 0.0736 0.1603 0.3169 0.2250 80.8%
+> SPpruner (Ours) 0.4245 0.2376 0.1358 0.0779 0.1658 0.3234 0.2457 84.3 %
+
+Table 6. Video performance comparison on LLaVA-OneVision-7B under varying token budgets.                                               
+
+> Methods VideoMME VideoMME w/o SeedBench MLVU Rel.
+> Upper Bound: All Tokens (100% Tokens)
+> Vanilla 58.4 61.2 57.0 64.7 100%
+> Retain 35% Tokens (↓65%) FastV (ECCV’24) 57.1 59.8 56.8 61.5 97.6%
+> SPpruner (Ours) 57.9 60.2 56.5 64.1 98.9 %
+> Retain 25% Tokens (↓75%) FastV (ECCV’24) 56.0 58.7 56.4 61.0 96.3%
+> SPpruner (Ours) 57.2 60.4 56.7 63.8 98.7 %
+> Retain 15% Tokens (↓85%) FastV (ECCV’24) 53.6 57.6 55.7 59.1 93.7%
+> SPpruner (Ours) 56.2 58.7 55.7 62.7 96.7 %
+
+associated with these visual subjects, ensuring holistic visual understanding and coherent caption generation capacity. 
+
+4.4. Video Understanding Task 
+
+We conducted a comparative evaluation of SPpruner and Fastv based on the LLaVA-OneVision. As shown in Table 6, SPpruner demonstrates superior video understanding perfor-mance compared to FastV. Specifically, SPpruner achieves lossless performance across all video understanding bench-marks with different token budgets. For instance, at 65% re-duction ratio, it incurs only a marginal accuracy degradation of approximately 1.1%, substantially outperforming FastV. Furthermore, SPpruner exhibits average video understand-ing metrics that surpass FastV by 2.4% under 75% reduction ratio. These results demonstrate that as the reduction ratio increases, SPpruner maintains superior performance without suffering a significant degradation. 
+
+4.5. Efficiency Analysis 
+
+As shown in Table 4, our method significantly enhances in-ference efficiency. Benchmarked with the Qwen2.5-VL-7B on three image understanding under 77.8% reduction ratio, SPpruner reduces the prefill latency by 53% and FLOPs by 64%, achieving an average speedup of 2.15 ×.
+
+4.6. Ablation Studies 
+
+In this section, we conduct ablation studies on the Qwen2.5-VL-7B model across four chart and document understanding benchmarks under 40% reduction ratio. Furthermore, we provide an in-depth analysis of how the choice of retention metrics and components in our two modules jointly affects both model performance and inference latency. 
+
+The importance of the FIM metric and SRS mechanism. 
+
+We analyze the contribution of the two metrics in FIM as well as the SRS mechanism during the scanning stage, as shown in Figure 3. Removing either visual saliency or semantic relevance consistently leads to performance degra-dation across all evaluated benchmarks, indicating that both cues are essential for reliable subject identification. Re-placing SRS with a uniform Top-K selection strategy re-sults in inferior performance under comparable prefilling latency, demonstrating that static sampling fails to effec-tively balance efficiency and contextual fidelity. In contrast, the proposed SRS mechanism achieves a more favorable trade-off, yielding approximately 1.2 ×–1.5 × speedup while maintaining comparable performance across chart and docu-ment understanding tasks. Notably, the additional overhead introduced by SRS is negligible, as SPpruner progressively adjusts sampling stride based on the structural divergence 7Subject-Centric Progressive Visual Token Reduction for VLMs 0.120 0.135 0.150 
+
+> 75.0
+> 77.5
+> 80.0
+> 82.5
+> 85.0
+> 1.2x Faster
+
+ChartQA     
+
+> SRS
+> Visual Saliency Semantic Alignment
+> 0.16 0.20 0.24 0.28
+> 75.6
+> 76.2
+> 76.8
+> 77.4
+> 78.0
+> 1.4x Faster
+
+TextVQA    
+
+> SRS
+> Visual Saliency
+> Semantic Alignment
+> 0.24 0.32 0.40 0.48
+> 88
+> 90
+> 92
+> 94
+> 96
+> 1.4x Faster
+
+DocVQA    
+
+> SRS
+> Visual Saliency Semantic Alignment
+> 0.12 0.16 0.20
+> 780
+> 800
+> 820
+> 840
+> 860
+> 1.5x Faster
+
+OCRBench 
+
+> SRS
+> Visual Saliency
+> Semantic Alignment
+
+Prefilling Latency (s)   
+
+> Performance
+> Vanilla Ours Ablations
+
+Figure 3. Ablation Studies . The performance drop without SRS confirms the necessity of adaptive retention strides, while the other metrics validate their role in saliency identification. By unifying these, SPpruner outperforms all variants to achieve 1.2 ×–1.5 × speedups with comparable accuracy on chart and document understanding tasks. 2 4 6 8 12 14 
+
+> 1670
+> 1680
+> 1690
+> 1700
+> 1710
+
+MME-Perception      
+
+> 246812 14
+> 600
+> 615
+> 630
+> 645
+
+MME-Cognition      
+
+> 246812 14
+> 81.6
+> 82.2
+> 82.8
+> 83.4
+
+MMBench      
+
+> 246812 14
+> 58.5
+> 60.0
+> 61.5
+> 63.0
+
+MMStar      
+
+> 246812 14
+> 42.0
+> 43.5
+> 45.0
+> 46.5
+
+MMMU      
+
+> 246812 14
+> 85.60
+> 85.75
+> 85.90
+> 86.05
+
+POPE      
+
+> 246812 14
+> 67.2
+> 67.8
+> 68.4
+> 69.0
+
+Realword      
+
+> 246812 14
+> 43.00
+> 43.25
+> 43.50
+> 43.75
+
+Muirbench 
+
+Focal Token Number 
+
+> Performance
+
+Layer 2 Layer 4 Vanilla 
+
+Figure 4. Ablation Studies . This figure shows that too few focal tokens impair holistic perception by omitting subjects, while too many reduce SRS to generic Top-K selection due to diminished contextual cues. 
+
+between focal tokens and candidate tokens, enabling fast and accurate context completion without sacrificing efficiency. 
+
+The selection of focal number and reduction layer. Fig-ure 4 illustrates the impact of the number of focal tokens and the reduction layer on model performance. When the layer is fixed, increasing the number of focal tokens con-sistently yields an initial performance gain followed by a decline across all benchmarks. Regarding the number of fo-cal tokens, an insufficient number fails to capture adequate visual subjects, impairing the model’s holistic image under-standing. Conversely, when the focal token number is too large, the SRS mechanism degenerates into a simple Top-K
+
+selection, as there is insufficient structural information to guide the retention process. Based on this, we identify 8 as the optimal focal token number, and thus set this value for Qwen2.5-VL. Furthermore, extensive empirical evalua-tion shows that layer 2 offers the best efficiency–accuracy trade-off, and we thus adopt it as the reduction layer. 
+
+4.7. Extended Experiments 
+
+To further validate the generality and versatility of our pro-posed subject-centric progressive paradigm, we extend its application beyond Vision-Language Models to pure lan-guage models. While the core idea of SPpruner remains modality-agnostic, the inherent differences in information redundancy between linguistic and visual modalities ne-cessitate certain adaptations. Specifically, we remove the visual-text correlation constraints and introduce a hierarchi-cal pruning strategy with varying pruning rates across dif-ferent layers to better suit textual redundancy. The remain-der of the architecture remains unchanged. Based on this adapted design, we conducted additional experiments on the GSM8K (Cobbe et al., 2021) benchmark using OpenPangu-Embedded-7B (Chen et al., 2025). As shown in Table 8, our method achieves significant efficiency gains while preserv-ing robust performance: it maintains 92.3% of the original accuracy even when prefill time is reduced by 25.6%, and incurs a marginal accuracy drop of merely 1.7% under a 20.5% prefill time reduction. 8Subject-Centric Progressive Visual Token Reduction for VLMs   
+
+> Table 7. Performance Comparison on OpenPangu-Embedded-7B. We evaluate the performance under various token budgets on the GSM8K benchmark. SPpruner achieves significant prefill time reduction while maintaining high relative performance.
+
+Benchmark Method Performance ↑ Rel. ↑ Prefill Time (s) ↓ SpeedUp ↑
+
+GSM8K Vanilla (OpenPangu) 0.8197 100% 0.273 1.00 ×
+
+SPpruner ( ↓84.0%) 0.8053 98.2% 0.217 1.26 ×
+
+SPpruner ( ↓88.0%) 0.8061 98.3% 0.217 1.26 ×
+
+SPpruner ( ↓91.6%) 0.7629 93.1% 0.204 1.34 ×
+
+SPpruner ( ↓92.0%) 0.7568 92.3% 0.203 1.34 ×
+
+## 5. Conclusion 
+
+In this work, we presented SPpruner, a novel subject-centric progressive reduction paradigm designed to overcome the limitations of query-centric reduction. By mirroring the 
+
+Focus-then-Context mechanism of human visual perception, we transform token reduction from a local statistical filtering task into a bio-inspired scanning process. Our approach is built on two properties critical for maintaining visual fidelity: (i) capturing a comprehensive spectrum of visual subjects, and (ii) preserving their structural context. To fulfill these objectives, we first implemented a focus identification mod-ule that leverages both intrinsic visual saliency and semantic dependency to capture broad and diverse visual subjects. Subsequently, we developed a context-aware structural scan-ning module that progressively modulates sampling stride based on structural disparity, precisely restoring the envi-ronmental context associated with these subjects. Exten-sive validation across diverse benchmarks confirms that SPpruner achieves a superior trade-off between inference efficiency and model accuracy. Our architecture-agnostic, plug-and-play solution effectively preserves visual under-standing capability in resource-constrained environments. 
+
+## Impact Statement 
+
+This paper aims to advance efficient inference in vision-language models and falls under foundational methodologi-cal exploration. While our work may yield positive societal impacts regarding efficient inference and the deployment of vision-language systems, none of which we deem necessary to specifically highlight here. 
+
+## References 
+
+Alvar, S. R., Singh, G., Akbari, M., and Zhang, Y. Divprune: Diversity-based visual token pruning for large multimodal models. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , 2025. Antol, S., Agrawal, A., Lu, J., Mitchell, M., Batra, D., Zit-nick, C. L., and Parikh, D. Vqa:visual question answering. 
+
+arXiv preprint arXiv:1505.00468 , 2015. Bai, S., Chen, K., Liu, X., Wang, J., Ge, W., Song, S., Dang, K., Wang, P., Wang, S., Tang, J., et al. Qwen2. 5-vl technical report. arXiv preprint arXiv:2502.13923 , 2025. Bolya, D., Fu, C.-Y., Dai, X., Zhang, P., Feichtenhofer, C., and Hoffman, J. Token merging: Your vit but faster. arXiv preprint arXiv:2210.09461 , 2022. Chaoyou, F., Peixian, C., Yunhang, S., Yulei, Q., Meng-dan, Z., Xu, L., Jinrui, Y., Xiawu, Z., Ke, L., Xing, S., et al. Mme: A comprehensive evaluation benchmark for multimodal large language models. arXiv preprint arXiv:2306.13394 , 2023. Chen, H., Wang, Y., Han, K., Li, D., Li, L., Bi, Z., Li, J., Wang, H., Mi, F., Zhu, M., et al. Pangu embedded: An efficient dual-system llm reasoner with metacognition. 
+
+arXiv preprint arXiv:2505.22375 , 2025. Chen, L., Li, J., Dong, X., Zhang, P., Zang, Y., Chen, Z., Duan, H., Wang, J., Qiao, Y., Lin, D., et al. Are we on the right way for evaluating large vision-language models? 
+
+arXiv preprint arXiv:2403.20330 , 2024a. Chen, L., Zhao, H., Liu, T., Bai, S., Lin, J., Zhou, C., and Chang, B. An image is worth 1/2 tokens after layer 2: Plug-and-play inference acceleration for large vision-language models. In The European Conference on Com-puter Vision (ECCV) , 2024b. Chen, Z., Wu, J., Wang, W., Su, W., Chen, G., Xing, S., Zhong, M., Zhang, Q., Zhu, X., Lu, L., et al. Internvl: Scaling up vision foundation models and aligning for generic visual-linguistic tasks. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , 2024c. Cobbe, K., Kosaraju, V., Bavarian, M., Chen, M., Jun, H., Kaiser, L., Plappert, M., Tworek, J., Hilton, J., Nakano, R., Hesse, C., and Schulman, J. Training verifiers to solve math word problems. arXiv preprint arXiv:2110.14168 ,2021. Corp, X. Grok-1.5 vision preview: Connecting the digital and physical worlds with our first multimodal model. 2024. Curcio, C. A., Sloan, K. R., Kalina, R. E., and Hendrickson, A. E. Human photoreceptor topography. Journal of Comparative Neurology , 292(4):497–523, 1990. 9Subject-Centric Progressive Visual Token Reduction for VLMs 
+
+Dhouib, M., Buscaldi, D., Vanier, S., and Shabou, A. Pact: Pruning and clustering-based token reduction for faster visual language models. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , 2025. Eckstein, M. P. Visual search: A retrospective. Journal of Vision , 11(5):14–14, 2011. Fu, C., Dai, Y., Luo, Y., Li, L., Ren, S., Zhang, R., Wang, Z., Zhou, C., Shen, Y., Zhang, M., et al. Video-mme: The first-ever comprehensive evaluation benchmark of multi-modal llms in video analysis. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , 2025. Gurari, D., Li, Q., Stangl, A. J., Guo, A., Lin, C., Grau-man, K., Luo, J., and Bigham, J. P. Vizwiz grand chal-lenge: Answering visual questions from blind people. In 
+
+Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , 2018. Hudson, D. A. and Manning, C. D. Gqa: A new dataset for real-world visual reasoning and compositional question answering. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) ,2019. Krasin, I., Duerig, T., Alldrin, N., Ferrari, V., Abu-El-Haija, S., Kuznetsova, A., Rom, H., Uijlings, J., Popov, S., Veit, A., Belongie, S., Gomes, V., Gupta, A., Sun, C., Chechik, G., Cai, D., Feng, Z., Narayanan, D., and Murphy, K. Openimages: A public dataset for large-scale multi-label and multi-class image classification. 2017. Li, B., Zhang, Y., Guo, D., Zhang, R., Li, F., Zhang, H., Zhang, K., Zhang, P., Li, Y., Liu, Z., and Li, C. Llava-onevision: Easy visual task transfer. arXiv preprint arXiv:2408.03326 , 2024a. Li, Y., Du, Y., Zhou, K., Wang, J., Zhao, W. X., and Wen, J.-R. Evaluating object hallucination in large vision-language models. In The Conference on Empirical Meth-ods in Natural Language Processing (EMNLP) , 2023. Li, Y., Zhang, Y., Wang, C., Zhong, Z., Chen, Y., Chu, R., Liu, S., and Jia, J. Mini-gemini: Mining the potential of multi-modality vision language models. arXiv preprint arXiv:2403.18814 , 2024b. Lin, Z., Lin, M., Lin, L., and Ji, R. Boosting multimodal large language models with visual tokens withdrawal for rapid inference. In Proceedings of the AAAI Conference on Artificial Intelligence (AAAI) , 2025. Liu, H., Li, C., Wu, Q., and Lee, Y. J. Visual instruction tuning, 2023. Liu, H., Li, C., Li, Y., Li, B., Zhang, Y., Shen, S., and Lee, Y. J. Llavanext: Improved reasoning, ocr, and world knowledge, 2024a. Liu, Y., Duan, H., Zhang, Y., Li, B., Zhang, S., Zhao, W., Yuan, Y., Wang, J., He, C., Liu, Z., et al. Mmbench: Is your multi-modal model an all-around player? In 
+
+The European Conference on Computer Vision (ECCV) ,2024b. Liu, Y., Li, Z., Huang, M., Yang, B., Yu, W., Li, C., Yin, X.-C., Liu, C.-L., Jin, L., and Bai, X. Ocrbench: on the hidden mystery of ocr in large multimodal models. 
+
+Science China Information Sciences , 67(12):497–523, 2024c. Lu, P., Mishra, S., Xia, T., Qiu, L., Chang, K.-W., Zhu, S.-C., Tafjord, O., Clark, P., and Kalyan, A. Learn to explain: Multimodal reasoning via thought chains for science question answering. In The Conference on Neural Information Processing Systems (NeurIPS) , 2022. Masry, A., Long, D., Tan, J. Q., Joty, S., and Hoque, E. ChartQA: A benchmark for question answering about charts with visual and logical reasoning. Findings of the Association for Computational Linguistics (ACL) , 2022. Mathew, M., Karatzas, D., Manmatha, R., and Jawahar, C. V. Docvqa: A dataset for vqa on document images. arXiv preprint arXiv:2007.00398 , 2020. Singh, A., Natarjan, V., Shah, M., Jiang, Y., Chen, X., Parikh, D., and Rohrbach, M. Towards vqa models that can read. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , 2019. Tang, Y. Y., Bi, J., Xu, S., Song, L., Liang, S., Wang, T., Zhang, D., An, J., Lin, J., Zhu, R., Vosoughi, A., Huang, C., Zhang, Z., Liu, P., Feng, M., Zheng, F., Zhang, J., Luo, P., Luo, J., and Xu, C. Video understanding with large language models: A survey. arXiv preprint arXiv:2312.17432 , 2025. Wang, F., Fu, X., Huang, J. Y., Li, Z., Liu, Q., Liu, X., Ma, M. D., Xu, N., Zhou, W., Zhang, K., et al. Muirbench: A comprehensive benchmark for robust multi-image under-standing. arXiv preprint arXiv:2406.09411 , 2024a. Wang, P., Bai, S., Tan, S., Wang, S., Fan, Z., Bai, J., Chen, K., Liu, X., Wang, J., Ge, W., et al. Qwen2-vl: Enhancing vision-language model’s perception of the world at any resolution. arXiv preprint arXiv:2409.12191 , 2024b. Wang, Y., Chen, W., Han, X., Lin, X., Zhao, H., Liu, Y., Zhai, B., Yuan, J., You, Q., and Yang, H. Exploring the reasoning abilities of multimodal large language models (mllms): A comprehensive survey on emerging trends in multimodal reasoning. arXiv preprint arXiv:2401.06805 ,2024c. 10 Subject-Centric Progressive Visual Token Reduction for VLMs 
+
+Wen, Z., Gao, Y., Wang, S., Zhang, J., Zhang, Q., Li, W., He, C., and Zhang, L. Stop looking for important tokens in multimodal language models: Duplication matters more. 
+
+arXiv preprint arXiv:2502.11494 , 2025. Wu, Q., Teney, D., Wang, P., Shen, C., Dick, A., and van den Hengel, A. Visual question answering: A survey of methods and datasets. arXiv preprint arXiv:1607.05910 ,2016. Xing, L., Huang, Q., Dong, X., Lu, J., Zhang, P., Zang, Y., Cao, Y., He, C., Wang, J., Wu, F., et al. Pyramid-drop: Accelerating your large vision-language models via pyramid visual redundancy reduction. arXiv preprint arXiv:2410.17247 , 2024. Yang, S., Chen, Y., Tian, Z., Wang, C., Li, J., Yu, B., and Jia, J. Visionzip: Longer is better but not necessary in vision language models. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , 2025. Ye, Q., Xu, H., Ye, J., Yan, M., Hu, A., Liu, H., Qian, Q., Zhang, J., and Huang, F. mplug-owl2: Revolutionizing multi-modal large language model with modality collabo-ration. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , 2024. Ying, J., Chen, Z., Wang, Z., Jiang, W., Wang, C., Yuan, Z., Su, H., Kong, H., Yang, F., and Dong, N. Seedbench: A multi-task benchmark for evaluating large language models in seed science. arXiv preprint arXiv:2505.13220 ,2025. Young, P., Lai, A., Hodosh, M., and Hockenmaier, J. From image descriptions to visual denotations: New similarity metrics for semantic inference over event descriptions. 
+
+Transactions of the Association for Computational Lin-guistics , 2:67–78, 2014. Yu, W., Yang, Z., Li, L., Wang, J., Lin, K., Liu, Z., Wang, X., and Wang, L. Mm-vet: Evaluating large multimodal models for integrated capabilities. In International Con-ference on Machine Learning (ICML) , 2024. Yue, X., Ni, Y., Zhang, K., Zheng, T., Liu, R., Zhang, G., Stevens, S., Jiang, D., Ren, W., Sun, Y., et al. Mmmu: A massive multi-discipline multimodal understanding and reasoning benchmark for expert agi. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 9556–9567, 2024. Zhang, Q., Liu, M., Li, L., Lu, M., Zhang, Y., Pan, J., She, Q., and Zhang, S. Beyond attention or similarity: Maximizing conditional diversity for token pruning in mllms. arXiv preprint arXiv:2506.10967 , 2025. Zhang, Y., Fan, C.-K., Ma, J., Zheng, W., Huang, T., Cheng, K., Gudovskiy, D., Okuno, T., Nakata, Y., Keutzer, K., et al. Sparsevlm: Visual token sparsification for effi-cient vision-language model inference. arXiv preprint arXiv:2410.04417 , 2024. Zhou, J., Shu, Y., Zhao, B., Wu, B., Liang, Z., Xiao, S., Qin, M., Yang, X., Xiong, Y., Zhang, B., et al. Mlvu: Benchmarking multi-task long video understanding. In 
+
+Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , 2025. Zhu, D., Chen, J., Shen, X., Li, X., and Elhoseiny, M. Minigpt-4: Enhancing vision-language understanding with advanced large language models. arXiv preprint arXiv:2304.10592 , 2023. 11 Subject-Centric Progressive Visual Token Reduction for VLMs 
+
+## A. Proof of Theorem 3.1 
+
+Assumption A.1. Transformer Property. The model f is K-Lipschitz continuous with respect to the Hausdorff distance between token sets. Formally, for any two token sets X1, X2 ⊆ Rd:
+
+∥f (X1) − f (X2)∥ ≤ K · dH (X1, X2), (8) where dH(X1, X2) ≜ max {sup x1∈X1 inf x2∈X2 ∥x1 − x2∥, sup x2∈X2 inf x1∈X1 ∥x1 − x2∥} .
+
+Theorem A.2. (Approximation Error Bound). Under Assumptions A.1, the output difference between original and pruned token sets is bounded by: 
+
+∥f (Xv) − f ( ˜Xv)∥ ≤ K · max   
+
+> x∈Xv\˜Xv
+
+min  
+
+> ˜x∈˜Xv
+
+∥x − ˜x∥. (9) 
+
+Proof. Let Xv be the initial set of visual tokens and ˜Xv be the retained set produced by SPpruner. Since SPpruner performs token reduction by selection, we have the subset property ˜Xv ⊆ Xv.First, we simplify the Hausdorff distance term dH(Xv, ˜Xv). The definition contains two symmetric terms: • The forward distance: sup ˜x∈ ˜Xv inf x∈Xv ∥˜x − x∥. Since every retained token ˜x exists in the initial set Xv, the distance to the nearest neighbor is always 0. Thus, this term vanishes. • The backward distance: sup x∈Xv inf ˜x∈ ˜Xv ∥x − ˜x∥. This term represents the coverage radius : the maximum distance from any discarded token to its nearest retained token. Therefore, the error bound simplifies to: 
+
+∥f (Xv) − f ( bXv)∥ ≤ K · sup 
+
+> x∈Xv
+
+min  
+
+> ˜x∈˜Xv
+
+∥x − ˜x∥. (10) Next, we analyze how SPpruner’s components minimize the term min ˜x∈ ˜Xv ∥x − ˜x∥:1. High-Saliency Coverage via FIM: The Focus Identification Module (FIM) selects a set F maximizing the composite score S(xi). For any token x with high intrinsic magnitude or semantic relevance, the probability of x ∈ F is maximized. If x ∈ F , then ∥x − ˜x∥ = 0 . This ensures that critical regions contribute zero to the Hausdorff distance. 2. Contextual Coverage via CASSM & SRS: For the remaining tokens, the Structure-Responsive Sampling (SRS) determines the retention stride ∆. The stride is dynamically modulated by the structural divergence δ:
+
+∆ ∝ 1
+
+δ ≈ 1
+
+Structural Discrepancy . (11) Consider a discarded token xdisc located between two retained tokens ˜xi and ˜xi+1 . The geometric distance ∥xdisc − ˜xi∥
+
+is bounded by the sampling interval. When the local feature space changes rapidly (high structural discrepancy), SPpruner calculates a smaller ∆, forcing the sampling to be careful. This explicitly constrains the distance ∥x − ˜x∥ in complex regions. Conversely, in uniform background regions (low discrepancy), ∆ increases, but since the feature variation ∥x − ˜x∥ is naturally low in uniform regions, the distance remains bounded. 
+
+Conclusion. By effectively adapting the sampling stride to the local structural context of the token distribution, SPpruner guarantees that for every x ∈ Xv, there exists a proxy ˜x ∈ ˜Xv such that ∥x − ˜x∥ ≤ ϵ, where ϵ is a threshold controlled by the target token budget. Substituting this into Eq. (10), we obtain an upper bound, thereby proving that SPpruner can preserve the theoretical representational capability of the vanilla model. □
+
+## B. Detailed Experiment Settings 
+
+In this section, we provided detailed information about the benchmarks and models used in our evaluation. Moreover, we have conducted more experiments to further validate SPpruner’s performance. 12 Subject-Centric Progressive Visual Token Reduction for VLMs 
+
+B.1. Evaluation Benchmarks 
+
+To rigorously evaluate the efficacy and versatility of our proposed method, we conducted experiments on a comprehensive suite of benchmarks designed to assess the vision-language model’s capabilities. 
+
+Image Understanding Benchmarks. We employed 13 widely recognized datasets to cover a broad spectrum of visual capa-bilities: MME (Chaoyou et al., 2023), MMBench(EN, CN) (Liu et al., 2024b), POPE (Li et al., 2023), VizWiz (Gurari et al., 2018), GQA (Hudson & Manning, 2019), VQAv2 (Antol et al., 2015), ScienceQA IMG (Lu et al., 2022), MMVet (Yu et al., 2024), MMStar (Chen et al., 2024a), MMMU (Yue et al., 2024), MuirBench (Wang et al., 2024a) and RealWorldQA (Corp, 2024). 
+
+Chart and Document Understanding Benchmarks. We utilized 3 challenging document understanding benchmarks to evaluate SPpruner’s performance: TextVQA (Singh et al., 2019), DocVQA (Mathew et al., 2020), OCRBench (Liu et al., 2024c). Also, we conduct ablation experiments on ChartQA (Masry et al., 2022). 
+
+Image Captioning Benchmarks. To further prove that SPpruner preserves the holistic image understanding, we conduct more experiments on Filckr30K (Young et al., 2014). 
+
+Video Understanding Benchmarks. To validate temporal reasoning capabilities, we evaluated our method on three standard video understanding benchmarks: VideoMME (Fu et al., 2025), SeedBench (Ying et al., 2025) and MLVU (Zhou et al., 2025). B.1.1. I MAGE UNDERSTANDING 
+
+MME. The MME benchmark is designed to rigorously evaluate a model’s perceptual and cognitive abilities through 14 subtasks. It employs carefully constructed instruction-answer pairs and concise instructions to minimize data leakage and ensure fair evaluation. This setup provides a robust measure of a model’s performance across various tasks. 
+
+MMBench (EN, CN). MMBench employs a hierarchical taxonomy to rigorously evaluate model performance across three granularity levels. Starting from broad perception and reasoning capabilities (L-1), the evaluation branches into six distinct sub-abilities (L-2) and ultimately expands into 20 fine-grained leaf dimensions (L-3). This coarse-to-fine structure facilitates a holistic diagnosis of multimodal proficiency. Additionally, MMBench-CN is its chinese version. 
+
+POPE. POPE serves as a specialized benchmark for hallucination evaluation. By posing binary inquiries regarding the presence of specific objects, it rigorously measures the model’s visual faithfulness using accuracy, precision, recall, and F1 scores to detect false positive predictions. 
+
+VizWiz. VizWiz evaluates visual assistance capabilities using real-world images and questions collected from visually impaired users. The dataset comprises 20,523 training, 4,319 validation, and 8,000 test pairs, each with 10 human annotations. It challenges models to either provide accurate answers or detect unanswerable queries, emphasizing practical accessibility. 
+
+GQA. GQA integrates scene graphs, questions, and images, enriched with dense spatial and object-level attributes, to rigorously benchmark fine-grained visual reasoning and scene comprehension. 
+
+VQAv2. VQAv2 benchmarks open-ended visual reasoning across 265,016 real-world images, utilizing ten human-annotated answers per question to ensure robust evaluation accuracy. 
+
+ScienceQA IMG . ScienceQA benchmarks multimodal reasoning across natural, language, and social sciences, organizing questions into a hierarchy of 26 topics, 127 categories, and 379 skills to test complex understanding. 
+
+MMVet. MMvet assesses the integration of multimodal skills through 218 challenging samples across six core dimensions, including OCR and spatial awareness. It employs an LLM-based evaluator to standardize scoring for diverse response styles. 
+
+MMStar. MMStar is a curated, vision-essential benchmark consisting of 1,500 human-verified samples spanning six core capabilities and 18 fine-grained dimensions. To ensure rigorous evaluation, it strictly filters out samples solvable by text alone, thereby enforcing visual dependency to assess genuine multimodal reasoning. 
+
+MMMU. MMMU evaluates expert-level multimodal reasoning through 11.5K college-standard questions sourced from university exams and textbooks. Spanning six core disciplines with diverse visual inputs, it rigorously tests rigorous domain knowledge and complex reasoning. 
+
+MuirBench. MuirBench evaluates multi-image reasoning across 12 tasks and 10 distinct relationship types. It ensures 13 Subject-Centric Progressive Visual Token Reduction for VLMs 
+
+rigorous assessment through 2,600 paired questions over 11,264 images, incorporating unanswerable perturbations to verify reliability. 
+
+RealWorldQA. RealWorldQA benchmarks physical and spatial reasoning capabilities, evaluating how effectively models ground their visual perception within realistic, everyday environments. B.1.2. C HART AND DOCUMENT UNDERSTANDING 
+
+TextVQA. TextVQA evaluates the model’s capacity to comprehend scene text embedded in Open Images v3 samples (Krasin et al., 2017), such as signs and packaging. We utilize the validation split to test the necessary integration of OCR capabilities with visual reasoning. 
+
+DocVQA. DocVQA benchmarks document understanding using 50,000 questions across 12,767 diverse images, categorizing queries by reasoning type to enable granular performance analysis. 
+
+OCRBench. OCRBench provides a holistic assessment of OCR capabilities by aggregating 29 datasets, covering diverse tasks from basic text recognition and scene-centric VQA to key information extraction and handwritten mathematical analysis. 
+
+ChartQA. ChartQA evaluates complex reasoning and arithmetic skills over charts, utilizing 9.6K human-written and 23.1K machine-generated questions to test multi-step visual-logical inference. We conduct our evaluation using the standard test split. B.1.3. I MAGE CAPTIONING 
+
+Flickr30K. Flickr30K comprises 31,783 images meticulously selected from the Flickr platform, with each image annotated by five independent English captions. It is designed to comprehensively evaluate models’ image understanding capabilities as well as their ability to generate coherent and relevant image-to-text descriptions. B.1.4. V IDEO UNDERSTANDING 
+
+VideoMME. VideoMME serves as a comprehensive benchmark for video MLLMs, comprising 900 manually annotated videos across 30 diverse subfields with durations ranging from 11 seconds to 1 hour. It utilizes 2,700 expert QA pairs to rigorously test sequential reasoning; notably, we exclude subtitles during our evaluation to strictly assess visual-temporal understanding. 
+
+SeedBench. SEEDBench evaluates generative understanding across 12 image and video dimensions through 19K human-annotated multiple-choice questions, enabling objective assessment without relying on subjective human or LLM scoring. 
+
+MLVU. MLVU serves as our primary testbed for long-form video comprehension, spanning durations up to 2 hours. It evaluates both holistic and fine-grained detail understanding across nine multiple-choice and generation tasks, reported via the M-Avg metric. 
+
+B.2. Models 
+
+We evaluate SPpruner using various open-source MLLMs. We validate our method on LLaVA family, LLaVA-1.5-7B (Liu et al., 2023) and LLaVA-Next-7B (Liu et al., 2024a), with the latter used to validate performance on high-resolution images. Moreover, to enhance the effectiveness of our proposed method, we have conducted extra experiments on advanced models with different sizes, including Qwen2.5-VL-7B and Qwen2.5-VL-32B (Bai et al., 2025). For video understanding tasks, we use LLaVA-OneVision (Li et al., 2024a) as the baseline model. 
+
+B.3. Baselines FastV (Chen et al., 2024b) targets redundancy in the shallow layers by utilizing attention maps to guide early-stage token pruning, thereby significantly mitigating computational overhead. 
+
+PyramidDrop (Xing et al., 2024) employs a hierarchical pruning schedule across transformer layers, generating a pyramidal token distribution that optimizes the trade-off between computational efficiency and task performance. 
+
+VisionZip (Yang et al., 2025) exploits the sparsity of visual attention by prioritizing dominant tokens and aggregating the 14 Subject-Centric Progressive Visual Token Reduction for VLMs 
+
+Table 8. Performance comparison on Qwen2.5-VL-7B under various token budgets.                                                                                                                                                                                                 
+
+> Methods MMB(EN) MMB(CN) MME MMStar POPE MMMUVal MuirBench RealWorld TextVQA OCRBench Rel.
+> Upper Bound: All Tokens (100% Tokens)
+> Vanilla 83.9 80.8 2329 62.9 86.2 49.4 43.5 69.3 77.6 845 100%
+> Retain 33.3% Tokens (↓66.7%) FastV (ECCV’24) 80.1 76.5 2256 53.7 83.2 42.0 43.4 65.6 76.5 711 93.1% VisionZip (CVPR’25) 80.6 77.6 2270 57.2 83.2 41.0 41.5 66.8 73.8 700 93.0% DivPrune (CVPR’25) 80.7 77.4 2268 56.0 83.9 40.7 41.6 62.2 72.8 720 91.2% PyramidDrop (CVPR’25) 80.5 72.3 2246 56.7 83.6 41.1 41.8 65.8 74.2 612 90.2% PACT (CVPR’25) 80.6 77.0 2234 53.4 80.8 39.4 41.4 63.7 68.9 646 89.8% DART (EMNLP’25) 79.9 76.9 2259 54.7 83.9 42.1 42.1 65.7 72.2 668 91.1%
+> SPpruner (Ours) 81.1 78.4 2241 54.9 84.0 40.6 41.7 66.1 71.6 627 93.4%
+> Retain 22.2% Tokens (↓77.8%) FastV (ECCV’24) 78.8 75.8 2155 50.5 80.0 42.3 42.3 64.8 74.9 616 89.9% VisionZip (CVPR’25) 79.9 76.8 2219 55.1 83.3 41.7 41.3 66.5 71.2 620 91.0%
+> DivPrune (CVPR’25) 80.1 77.1 2204 54.2 83.9 40.6 41.8 62.6 71.8 658 89.8% PyramidDrop (CVPR’25) 80.2 77.8 2221 56.3 82.3 41.9 40.9 65.7 73.2 516 90.1% PACT (CVPR’25) 78.2 76.7 2173 48.4 73.3 37.0 40.1 54.4 62.7 535 83.4% DART (EMNLP’25) 78.2 75.5 2174 49.7 81.1 40.1 42.0 63.9 68.5 563 87.8%
+> SPpruner (Ours) 80.0 76.6 2182 50.7 81.6 39.4 42.9 62.2 68.7 570 88.3 %
+
+remaining background into clustered contextual representatives, thereby maximizing visual information retention. 
+
+Divprune (Alvar et al., 2025) prioritizes diversity and reformulates pruning as a Max-Min Diversity Problem (MMDP), selecting the subset that maximizes the minimum pairwise distance between retained tokens. 
+
+DART (Wen et al., 2025) prioritizes redundancy reduction over importance ranking. It initializes a small set of pivot tokens and iteratively selects remaining tokens with the lowest similarity to the current set, ensuring a final output of maximally diverse visual features. 
+
+PACT (Dhouib et al., 2025) first prunes redundant tokens based on textual cues, then employs a novel clustering strategy to aggregate tokens (within the preliminary retained set) that are closer to their centroids than a given threshold. 
+
+B.4. Extra Experiment Results 
+
+To further validate the efficacy of SPpruner, we conduct extensive experiments on image understanding and document understanding tasks using the Qwen2.5-VL-7B model. Table 8 provides a comprehensive comparison of SPpruner against state-of-the-art token reduction methods across ten diverse benchmarks. Under a token budget of 33.3%, SPpruner achieves the highest relative performance (93.4%), effectively outperforming strong baselines like VisionZip (93.0%) and FastV (93.1%). Notably, SPpruner secures the best results on the challenging MMBench(EN) and MMBench(CN) datasets, demonstrating its ability to preserve critical visual information. Even under the aggressive 22.2% pruning ratio, our method maintains remarkable robustness, achieving a top score of 80.0 on MMBench(EN) and consistently surpassing the DART baseline with an overall relative performance of 88.3%. 
+
+## C. Computational Complexity. 
+
+Following the earlier works (Chen et al., 2024b; Lin et al., 2025; Alvar et al., 2025), we report the computational requirements of key components, including the self-attention mechanism and the feed-forward network (FFN), for SPpruner and other baselines. Assuming a Transformer architecture with T layers and applying reduction at layer R, we compute the computational cost by separately analyzing the components before and after pruning. Consequently, the total floating-point operations (FLOPs) required can be expressed as: Total FLOPs = R × (4nd 2 + 2n 2d + 2ndm) + (T − R) × (4nd 2 + 2n 2d + 2ndm) , (12) Where n, d, and m denote the sequence length, hidden dimension, and FFN intermediate size, respectively. This equation quantifies the FLOPs reduction, degenerating to the baseline cost when R = T . Our analysis reveals that delaying pruning 15 Subject-Centric Progressive Visual Token Reduction for VLMs 
+
+to later layers offers diminishing efficiency gains. This validates our strategy of pruning at the second layer to maximize computational savings. 
+
+## D. Limitation and Future Work 
+
+Although our method has achieved state-of-the-art performance across various benchmarks, we observe that its effectiveness is less pronounced on more advanced models such as Qwen2.5-VL compared to LLaVA. This may be attributed to the inherent token reduction mechanisms, such as patch merging, already present in these models. Investigating how to adapt to such sophisticated architectures constitutes a significant direction for our future work. 
+
+## E. Visualization 
+
+In this section, we present visualizations of the analyzed paradigms. As shown in Figures 5, 6, and 7, the reduction ratios increase from left to right, ranging from 35% to 95%. It is clearly observed that our proposed subject-centric reduction paradigm effectively captures the primary visual subjects of the image. Moreover, compared to the query-centric reduction paradigm, our method retains a denser set of subject tokens, which is crucial for preserving the model’s holistic image understanding capability. Furthermore, as the reduction ratio increases, query-centric methods continue to suffer from token misalignment, as illustrated in the 95% reduction scenario in Figure 7. This observation further validates that our approach maintains superior visual subject recognition and performance stability even under extreme reduction ratios. Besides “Bird ”, are there any other objects in this image ?
+
+(a) Redundancy -centric reduction 
+
+(b) Query -centric reduction 
+
+(c) Subject -centric reduction (Ours)       
+
+> 35% 55%65%75%85%95%
+> Figure 5. VVisualization of token retention across increasing reduction ratios . Under a query inquiring about secondary objects (i.e., not the “Bird“), SPpruner excels in capturing a broad visual subject spectrum. Unlike baselines that discard unqueried subjects, our method successfully retains salient objects (e.g., boat) even at extreme reduction ratios.
+
+16 Subject-Centric Progressive Visual Token Reduction for VLMs Besides “Glass ”, are there any other objects in this image ?
+
+(a) Redundancy -centric reduction 
+
+(b) Query -centric reduction 
+
+(c) Subject -centric reduction (Ours) 
+
+35% 55% 65% 75% 85% 95% 
+
+Figure 6. Visualization of token retention across increasing reduction ratios . Under a query inquiring about secondary objects (i.e., not the “Glass“), SPpruner excels in capturing a broad visual subjects spectrum. Unlike baselines that discard unqueried subjects, our method successfully retains salient objects (e.g., champagne) even at extreme reduction ratios. Besides “Lime ”, are there any other objects in this image ?
+
+(a) Redundancy -centric reduction 
+
+(b) Query -centric reduction 
+
+(c) Subject -centric reduction (Ours) 
+
+35% 55% 65% 75% 85% 95% 
+
+Figure 7. Visualization of token retention across increasing reduction ratios . Under a query inquiring about secondary objects (i.e., not the “Lime“), SPpruner excels in capturing a broad visual subjects spectrum. Unlike baselines that discard unqueried subjects, our method successfully retains salient objects (e.g., tequila) even at extreme reduction ratios. 
+
+17

@@ -1,0 +1,529 @@
+Title: ABot-OCR Technical Report
+
+URL Source: https://arxiv.org/pdf/2605.27978v1
+
+Published Time: Thu, 28 May 2026 00:47:08 GMT
+
+Number of Pages: 21
+
+Markdown Content:
+AMAP CV Lab Alibaba Group ABot-OCR Technical Report 
+
+# AMAP CV Lab 
+
+Kaitao Jiang, Ruiyan Gong, Xiaolong Cheng, Kangning Niu, Tianlun Li, Mu Xu. 
+
+# Abstract 
+
+We introduce ABot-OCR, an end-to-end vision-language model that transcribes a page image directly into clean Markdown in a single forward pass. By doing so, our approach completely eliminates the need for brittle modular orchestration. To maximize parsing fidelity, we develop a dedicated data engine to provide large-scale, structurally consistent supervision. Furthermore, we propose Decoupled Heterogeneous Document Optimization, a structure-constrained reinforcement learning method that sharpens textual accuracy and strictly enforces markup well-formedness beyond supervised fine-tuning alone. Extensive evaluations demonstrate the superior performance of our framework. On the OmniDocBench v1.5 and v1.6 benchmarks, ABot-OCR achieves state-of-the-art scores of 92.81 and 93.30 among all end-to-end systems, substantially narrowing the performance gap relative to strong pipeline baselines. Finally, comprehensive multilingual text recognition across ten diverse languages further confirms the robust generalizability of ABot-OCR. 
+
+Code: https://github.com/amap-cvlab/ABot-OCR 
+
+Model: https://huggingface.co/acvlab/ABot-OCR 
+
+Figure 1 Performance comparison of document parsing methods on OmniDocBench v1.5 across overall. 
+
+1
+
+> arXiv:2605.27978v1 [cs.CV] 27 May 2026
+
+# 1 Introduction 
+
+Document parsing, a fundamental task in computer vision, aims to transform visually unstructured content into textually structured formats (e.g., Markdown) to facilitate downstream applications such as information extraction. However, this task remains an open challenge, primarily due to the high variability of document layouts and the complex structural compositions of elements like tables and formulas. Conventionally, pipeline-based methods [ 6, 24 , 48 ] decompose document parsing into a sequence of distinct subtasks. Following the advent of GPT-4v [ 33 ], the remarkable generalization capabilities of Vision-Language Models (VLMs) have garnered significant attention, inspiring researchers to pioneer the exploration of VLM-based document parsing. Currently, VLM-based document parsing diverges into two primary paradigms. The first is the Decoupled Paradigm [ 11 , 31 ], which decouples layout analysis from content recognition by treating them as distinct subtasks of VLMs. In contrast, the second is the End-to-End Paradigm [ 40 , 43 , 45 ], which directly converts the document image into a structured format in a single step. Overall, traditional pipeline-based models continue to maintain their predominance in document parsing. However, given the unprecedented pace of advancements in Vision-Language Models (VLMs) [ 16 , 17 , 36 ], we envision the End-to-End paradigm, underpinned by the exponentially growing capabilities of VLMs, as the ultimate form of document parsing, poised to become the mainstream approach in the near future. We present Abot-OCR , a 2B-parameter vision-language model for document parsing. By achieving the-state-of-art performance on both OmniDocBench v1.5 [ 34 ] and OmniDocBench v1.6 [ 42 ] among VLM-based approaches, Abot-OCR bridges the gap between end-to-end models and pipeline-based methods. Additionally, we also extend our exploration to multilingual OCR, evaluating the performance on document images across 10 additional languages. These include four UN official languages (Arabic, Spanish, French and Russian) and six additional languages (German, Japan, Korean, Portug, Thai and Vietna). The effectiveness of VLM-based document parsing models depends not only on data scale, but also on the quality, consistency, and verifiability of annotations. Therefore, we further build a dedicated data engine for Abot-OCR, consisting of Hierarchical-Consistency Annotation Verification and Web-Scale Document Pseudo-Labeling . For existing annotated data, the verification process follows a cost-aware coarse-to-fine hierarchy: lightweight linguistic consistency checks are first applied to filter malformed annotations without accessing document images; samples that pass this stage are then examined by visual consistency verification through layout analysis and expert recognizers; finally, since the preceding linguistic and visual checks rely on predefined rules and matching strategies. Therefore, we further introduce a VLM reasoner as the final verification stage to assess whether the annotated document content and document structures are semantically and visually consistent with the input image. For unlabeled web documents, we adopt a modular pseudo-labeling pipeline that decomposes pages by layout analysis, labels regions with task-specific expert models, and assembles structured page-level pseudo-labels. Both verified annotations and generated pseudo-labels are unified by DPCS-based quality control, improving training data coverage while preserving high label quality. In terms of methodology, we propose a progressive three-stage training strategy for Abot-OCR. Stage 1 builds modular document parsing capabilities, including text spotting, formula recognition, table recognition, and layout analysis, thereby strengthening both fine-grained perception and basic structural awareness. Stage 2 unifies these abilities through end-to-end page-level parsing in the format of Markdown. Stage 3 introduces a novel document structure-constrained reinforcement learning framework: Decoupled Heterogeneous Document Optimization (DHDO) . DHDO introduces four distinct verifiable rewards, including a perception rewards and three structure rewards. To improve structural capability without degrading recognition accuracy, structure rewards are activated only when the perception reward exceeds a reliable threshold. DHDO further avoids advantage collapse in naive GRPO-style multi-reward normalization by independently normalizing each reward component before aggregation, followed by batch-level rescaling. This preserves fine-grained reward signals and enables more faithful structural optimization. Experimental results show that DHDO consistently outperforms conventional GRPO-style optimization on document parsing tasks, demonstrating the effectiveness of perception-conditioned rewards and decoupled reward normalization for structure-aware OCR training. 22 Data Engine 
+
+The performance of OCR-oriented multimodal large models is increasingly limited by the quality, coverage, and verifiability of training data; therefore, we build a novel data engine composed of Hierarchical-Consistency Annotation Verification and Web-Scale Document Pseudo-Labeling .  
+
+> Figure 2 Overview of the proposed data engine for Abot-OCR. The framework combines hierarchical-consistency annotation verification and web-scale document pseudo-labeling to improve the quality and coverage of OCR-oriented multimodal training data. Verified annotations and pseudo-labels are assessed by unified quality control and categorized into different confidence levels, while low-confidence samples are routed back for re-labeling and pipeline refinement.
+
+## 2.1 Hierarchical-Consistency Annotation Verification 
+
+Existing OCR and document parsing datasets are often collected from heterogeneous sources with different annotation formats and quality standards. Directly mixing such data may introduce inconsistent supervision, especially for structured document parsing. We therefore verify each annotated sample from two complementary perspectives: linguistic consistency and visual consistency.  
+
+> Linguistic consistency verification.
+
+This stage checks whether the annotation is well-formed without referring to the document image. For end-to-end document parsing data, we validate whether the serialized output conforms to the target representation. For instance, L ATEX expressions are checked for balanced delimiters and compilable syntax, while HTML tables are parsed to ensure valid row-column structures and properly nested tags. For text spotting data, we verify bounding-box legality, including non-negative coordinates, valid areas, page-boundary constraints, and abnormal overlaps.  
+
+> Visual consistency verification.
+
+This stage checks whether the annotation is consistent with the document image. Since current VLMs are not always reliable as direct end-to-end document parsers, we use a hybrid verifier that combines pipeline-based parsing with VLM-based reasoning. For document parsing samples, a layout analysis model first segments the page into functional regions. Each region is then routed to a task-specific expert recognizer, and the recognized regional outputs are aligned with the original annotation according to location, reading order, and structural type. The verifier computes consistency scores including layout agreement, bounding-box alignment, text similarity, table-structure equivalence, formula-syntax validity, and reading-order consistency.  
+
+> VLM-assisted consistency scoring.
+
+A multimodal reasoning model with large parametric size is used as 3an auxiliary judge. Given the document image, the candidate annotation, and optionally pipeline-derived intermediate results, the reasoner evaluates whether the annotation is visually and structurally consistent with the image. We summarize this judgment using a Document Parsing Consistency Score (DPCS): 
+
+SDPCS = 25 Stext + 15 Slayout + 15 Sorder + 20 Sstructure + 15 Sformat + 10 Ssemantic ,
+
+where each sub-score is normalized to [0 , 1] . The six terms respectively measure text fidelity, layout localization, reading order, structural fidelity, format validity, and semantic completeness. This dimension-wise design avoids relying on a single binary VLM decision and makes the quality assessment more interpretable.  
+
+> Unified quality control.
+
+The VLM reasoner produces a Document Parsing Consistency Score (DPCS) that measures the visual and structural consistency between the document image and the candidate annotation. Samples with SDPCS ≥ 80 are treated as high-confidence data and retained for training. Samples with scores between 80 and 60 are retained with reduced training weight or task-specific caution. Samples below 60 are considered unreliable and sent for re-labeling before they can be used in training. For subtask datasets, the scoring weights are adjusted according to task-specific reliability requirements. 
+
+## 2.2 Web-Scale Document Pseudo-Labeling 
+
+Beyond verifying existing annotations, the data engine constructs new training data from large-scale web documents. Since pipeline-based systems remain more stable than fully generative VLMs for many structured OCR tasks, we use a modular pseudo-labeling pipeline as the primary annotation mechanism. For end-to-end document parsing data, each crawled document is converted into page images and processed by a layout analysis model. Detected regions are categorized into functional types. Each region is annotated by the corresponding expert model, and the regional outputs are assembled into a page-level serialized representation according to layout relationships and predicted reading order. For sub-task data, we use task-specific annotation pipelines. Formula recognition data are generated by detecting formula regions and applying specialized formula recognizers, followed by L ATEX normalization and syntax checking. Table parsing data are produced by table detection and structure recognition models, followed by canonicalization of cell spans, row-column alignment, and HTML/Markdown normalization. Text spotting data are generated or refined by expert OCR detectors and recognizers, followed by bounding-box legality checks and transcription consistency verification. All pseudo-labeled samples are passed through DPCS-based gating described in Sec. 2.1. This shared design ensures that existing annotations and newly generated web labels are evaluated under a unified quality standard. Low-confidence pseudo-labels are filtered rather than directly injected into the training corpus. 
+
+# 3 Training Strategy 
+
+In the task of document parsing, there are two primary capabilities. The first is perception capability , which refers to the ability to accurately and comprehensively recognize all content in the correct reading order. The second is structural capability , which denotes the capability to faithfully reconstruct the document layout, ensuring that the correct content is placed within the appropriate structural context. We adopt Qwen3-VL-2B-Instruct [ 35 ] as our backbone model. As illustrated in Figure 3, Stage 1 and Stage 2 enhance the perception and structural capabilities via cross-entropy supervision. Specifically, we decompose document parsing into distinct sub-tasks: Stage 1 targets four specific sub-capabilities, while Stage 2 focuses on end-to-end document parsing. As cross-entropy offers weak supervision for document structure due to its limitations with long-range dependencies, Stage 3 utilizes structure-constrained reinforcement learning to further enhance structural capabilities. 
+
+## 3.1 Stage 1: Modular Document Parsing 
+
+In Stage 1, we decompose the complex end-to-end document parsing process into four sub-tasks. Proficiency in these foundational capabilities is pivotal to the success of the final end-to-end document parsing. 4Figure 3 The three-stage training pipeline. The framework advances document parsing through: (1) Modular foundation : building capabilities in text, formula, table, and layout; (2) End-to-end unification : direct page-to-Markdown generation; (3) Structural enhancement : refining output quality via structure-constrained reinforcement learning, incorporating perception-aware and structure-aware rewards with decoupled normalization.  
+
+> Text spotting.
+
+Given a full-page document image, the model is supposed to precisely locate all content blocks while accurately recognizing their content, adhering to the correct reading order. 
+
+<|box_start|>(x1,y1),(x2,y2)<|box_end|>text_content , 
+
+> Formula recognition.
+
+Given an image containing a single formula, or a full-page document image with a region indicator (e.g., a bounding box), the model should to parse the formula into a normalized L ATEX format, correctly handling inline, display, and multi-line expressions.  
+
+> Table recognition.
+
+Given an image containing an isolated table, the model is expected to correctly parse the table in the form of normalized HTML. 
+
+<table><tr><td>...</td></tr></table> . 
+
+> Layout Analysis.
+
+Given a full-page document image, the model is supposed to generate a sequence of region boxes, each paired with a semantic category from the set { title, text, table, figure, formula, footer, . . . }. 
+
+<|box_start|>(x1,y1),(x2,y2)<|box_end|><type>title</type> .
+
+The training dataset in Stage 1 is the union of four distinct training sets of each sub-task: DS1 = Dspot ∪Dformula ∪ D table ∪ D layout . The model is optimized through minimizing cross-entropy loss. 
+
+LS1 (θ) = −E(I,c,y )∼D S1 
+
+
+
+> |y|
+
+X
+
+> t=1
+
+log πθ (yt | y<t , I, c )
+
+ , (1) 5where c denotes the task-specific prompt. These four sub-tasks synergistically enhance the model’s perception and structural capabilities from diverse perspectives. For instance, text spotting simultaneously boosts the model’s OCR performance (perception capability) and its ability to segment blocks according to the layout (structural capability). Following the first stage of training, the model establishes a robust foundation in terms of both perception and structural capabilities. 
+
+## 3.2 Stage 2: End-to-End Document Parsing 
+
+Stage 2 is specifically designed to boost the structural and perception capabilities through end-to-end training on page-level document parsing data. To maintain structural consistency, we introduce specific data processing steps and experimental setups. Let DS2 = {(Ipage  
+
+> i
+
+, M ⋆i )}N2
+
+> i=1
+
+. Ground-truth Markdown M ⋆ is obtained through a strict normalization pipeline with the following invariants: 
+
+• Display mathematics uses $$ ... $$ ; inline mathematics uses $ ... $ .
+
+• All tables are represented in HTML, including those with merged cells. 
+
+• Reading order follows visual layout: on multi-column pages, columns are emitted left to right, with each column completed before advancing. 
+
+• Heading depth is encoded by #, ## , and ### without skipped levels (e.g., no transition from # directly to 
+
+### ). The training objective of stage 2 is: 
+
+LS2 (θ) = −E(Ipage ,M ⋆)∼D S2 
+
+ 
+
+> |M⋆|
+
+X
+
+> t=1
+
+log πθ (M ⋆t | M ⋆<t , I page )
+
+ . (2) The perception capability is supposed to be maximized after Stage 2, allowing for the complete identification of content in page-level document images. Nevertheless, cross-entropy offers weak supervision for document structure, largely due to its limitations with long-range dependencies. As a result, structural inaccuracies persist, including issues like unclosed tags, inconsistent table row widths, and occasional heading-level skips. 
+
+## 3.3 Stage 3: Structure-Constrained Reinforcement Learning 
+
+While the cross-entropy supervision in both Stage 1 and Stage 2 effectively enhances the perception capabilities, it does not impose strong constraints on heterogeneous document structuring, such as Markdown-compliant tables and LaTeX-formatted formulas. To ensure robust document structuring, prior approaches [ 13 , 40 ]adopt GRPO [38], incorporating various rewards corresponding to different document components. However, prior studies [ 23 ] have revealed that naively applying GRPO to normalize diverse reward combinations across a wide range of rewards (including accuracy, format correctness, length constraints, and code quality) leads to an advantage collapse, where distinct signals are mapped to identical values, thereby degrading the learning signal and hindering optimal convergence. We analyze that this collapse also stems from the fact that the causal dependencies among rewards are neglected. Similarly, utilizing GRPO in document parsing would inevitably neglect the causality between heterogeneous rewards. To address this challenge, we draw upon the insights from Group reward-Decoupled Normalization Policy Optimization (GDPO) [ 23 ], which mitigates advantage collapse by decoupling the normalization process. Specifically, this approach first performs group-wise normalization on each reward component independently to preserve their relative distinctions. These normalized advantages are then summed to compute the overall advantage, followed by a final batch-wise normalization to ensure numerical stability. By maintaining the granularity of diverse reward signals, this approach effectively prevents signal degradation. Building upon this foundation, we propose a novel reinforcement learning framework for document parsing: Decoupled Heterogeneous Document Optimization (DHDO) .63.3.1 Reward Designs 
+
+The goal of DHDO is to strengthen structuring constraints without compromising perception capabilities. We introduce separate perception and structure rewards, recognizing the inherent causality that structuring correctness should depend on accurate perception.  
+
+> (1) Perception Reward - Content Accuracy.
+
+Levenshtein similarity is employed to measure content accuracy. Elements in Markdown and HTML that do not affect visual consistency (e.g., whitespace) are stripped prior to evaluation. : 
+
+Rtext (ˆ y, y ⋆) = 1 − Lev(Π(ˆ y), Π( y⋆)) max( |Π(ˆ y)|, |Π( y⋆)|) , (3) where Π( ·) denotes the strip-markup projection.  
+
+> (2) Structure Reward - Formula Syntactic Soundness.
+
+For each predicted formula ˆfk, we verify the soundness under KaTeX and evaluate its visual equivalence to the corresponding reference using Character Detection Matching (CDM) [41]: 
+
+Rformula (ˆ y, y ⋆) = 1
+
+K
+
+> K
+
+X
+
+> k=1
+
+h
+
+α ⊮
+
+h
+
+compile ( ˆfk)
+
+i
+
++ (1 − α) CDM( ˆfk, f ⋆k )
+
+i
+
+, (4) where we set α = 0 .3. A success compilation is a necessary but insufficient condition for semantic correctness. Therefore, to account In contrast, CDM aligns more closely with human-perceived visual quality. By convention, we define Rformula = 1 when neither ˆy nor y⋆ contains a formula.  
+
+> (3) Structure Reward - Table Structural Validity.
+
+Given that the training data is represented in HTML, we define the reward, Rtable , directly on the HTML structure. This reward function is formulated as a weighted combination of structural shape constraints and tree-edit similarity: 
+
+Rtable (ˆ y, y ⋆) = β S HTML shape (ˆ y, y ⋆) + (1 − β) TEDS(ˆ y, y ⋆), (5) where TEDS denotes the Tree-Edit-Distance-based Similarity [ 49 ] computed on the parsed table trees. The shape consistency term, SHTML shape , factorizes into three distinct validation checks: 
+
+SHTML shape (ˆ y, y ⋆) = ⊮[well-formness (ˆ y)] 
+
+| {z }
+
+> valid tag nesting
+
+· ⊮[cells-consistency (ˆ y)] 
+
+| {z }
+
+> uniform row widths
+
+· exp( −γ |Nrow (ˆ y) − Nrow (y⋆)|)
+
+| {z }
+
+> row-count alignment
+
+. (6) The well-formedness check is enforced by parsing ˆy using lxml.html in strict mode; any parsing failure results in a zero reward contribution. The cells-consistency check ensures structural uniformity by computing the effective row width W (r) = P 
+
+> c∈cells (r)
+
+colspan (c), accounting for active rowspan spans, and requiring 
+
+W (r) = W (r′) for all row pairs (r, r ′). This criterion offers a balanced constraint: it is more robust than naive column counting when handling merged cells, yet stricter than simple row-count checks as it implicitly rejects truncated rows. Throughout our experiments, we set the hyperparameters to β = 0 .4 and γ = 0 .1.Conventionally, if ˆy lacks a <table> tag while y⋆ contains one, Rtable is set to 0; conversely, if neither contains a table, Rtable defaults to 1.  
+
+> (4) Structure Reward - General Structural Closure.
+
+Let T denote the set of paired Markdown delimiters and HTML table tags, formally defined as: T = {** , __ , $$ , ‘} ∪ { <table> , <thead> , <tbody> , <tr> , <td> , <th> }.
+
+The structural closure reward is then formulated as: 
+
+Rstruct (ˆ y) = 
+
+"
+
+1 − 1
+
+|T | 
+
+X 
+
+> τ∈T
+
+|Nopen (τ ; ˆ y) − Nclose (τ ; ˆ y)|
+
+Nopen (τ ; ˆ y) + Nclose (τ ; ˆ y) + ϵ
+
+#
+
+· ⊮[hierarchy-valid (ˆ y)] , (7) where the multiplicative indicator function enforces strict heading hierarchy constraints (e.g., prohibiting level skips such as # to ### ) and valid list indentation. Notably, Rstruct and Rtable are designed to be complementary. While Rstruct is a computationally inexpensive and coarse-grained metric, it provides crucial 7early reinforcement learning signals during the initial training stages, particularly when the more complex 
+
+Rtable reward remains near zero across most rollouts. We introduce a perception reward and three structure rewards designed for heterogeneous document structures. However, these objectives exhibit significant disparities in difficulty. To prevent reward hacking, we condition the structure rewards on the perception reward, making accurate perception a strict prerequisite for structural optimization. 
+
+˜R• = R• ⊮[Rtext ≥ τtext ] , τtext = 0 .7. (8) 
+
+3.3.2 Reward Aggregation and Policy Optimization 
+
+For each prompt I(i), G rollouts {o(i,j )}Gj=1 are sampled from πθold , and the four (possibly conditioned) rewards 
+
+r(i,j ) 
+
+> k
+
+are evaluated for k ∈ { text, formula, table, struct }. Each reward dimension is first standardized within the group, then aggregated across dimensions, and finally rescaled over the minibatch B:
+
+A(i,j ) 
+
+> k
+
+= r(i,j ) 
+
+> k
+
+− μ(i)
+
+> k
+
+σ(i) 
+
+> k
+
++ ϵ , A(i,j ) 
+
+> sum
+
+= X
+
+> k
+
+wk A(i,j ) 
+
+> k
+
+, ˆA(i,j ) = A(i,j ) 
+
+> sum
+
+− μB
+
+σB + ϵ , (9) where μ(i) 
+
+> k
+
+and σ(i) 
+
+> k
+
+are the within-group mean and standard deviation of reward k. Per-reward normalization retains gradient signal that would be lost if rewards were summed before normalization; batch-level rescaling stabilizes the effective learning rate as the reward dimensionality changes. Aggregation weights are set to wtext : wformula : wtable : wstruct = 1 .0 : 0 .8 : 0 .8 : 0 .5, prioritizing perception accuracy over structure constraints, and aligning with the conditioning gate in (8). The policy is updated by maximizing the clipped surrogate [ 37 ] with ˆA(i,j ) substituted for the usual advantage, regularized by βKL KL( πθ ∥ πref ), which anchors πθ to the frozen Stage 2 checkpoint πref .
+
+# 4 Experiments 
+
+We present a systematic evaluation of ABot-OCR. To establish a comprehensive benchmark, we compare our model against three representative categories of methods: 
+
+• General Vision-Language Models : This group includes massive general VLMs such as Qwen3-VL-235B [ 1]and Gemini-3.0 Pro [15]. 
+
+• Multi-Stage Pipeline Systems : This category comprises traditional modular pipelines, represented by systems like PaddleOCR-VL-1.5 [7]. 
+
+• Specialized End-to-End OCR Models : This benchmark includes dedicated document-parsing architectures such as DeepSeek-OCR 2 [46] and dots.ocr [20]. 
+
+## 4.1 Dataset 
+
+For real-world document OCR and layout parsing, our data construction strategy focuses on two core goals: wide coverage and aligned supervision. In addition to high-quality open-source corpora, we re-annotate selected public datasets. This re-annotation ensures that all supervision aligns with a single, unified objective: mapping images directly to structured text, including complex formulas and tables. This process introduces massive variety in layouts, typefaces, and domains, which heavily boosts our model’s generalizability. To build specialized capabilities, we organize our training data into five task-specific categories: 
+
+• Handwriting Recognition : We use the standard CASIA-HWDB [ 22 ] dataset. We convert all annotations into Markdown format to perfectly match our full-document parsing pipeline. 8• Table Understanding : We adopt the widely used PubTabNet [ 50 ] dataset to train the model on tabular structures. 
+
+• Mathematical Expressions : We combine multiple rich resources, including UniMER-1M [ 41 ], MathWrit-ing [ 14 ], LaTeX OCR [ 3], and latex-formulas-80M [ 32 ]. Because these open-source datasets use inconsistent LATEX styles (such as variations in spacing and symbols), we develop an expression normalization pipeline during preprocessing. This step standardizes all L ATEX strings and eliminates the syntactic gap between training and evaluation. 
+
+• Chart Understanding : To boost the model’s performance on charts, we integrate a diverse set of chart resources. These include ChartQA [ 27 ], PlotQA [ 29 ], Chart2Text [ 19 ], DVQA [ 18 ], Unichart [ 28 ], Beagle [ 2 ], Chart-INFO [ 8], visText [ 39 ], and ExcelChart [ 26 ]. During integration, we apply strict data cleaning to filter out low-quality samples and remove duplicate entries. 
+
+• General Document Parsing : We construct a large-scale web document corpus. This dataset covers a wide array of document types and visual styles, including academic papers, newspapers, journal articles, scanned forms, e-books, exam papers, and presentation slides. Mixing these heterogeneous sources prevents the model from overfitting to clean, standard layouts. To further patch the model’s weaknesses in extreme or rare scenarios, we also use a targeted data synthesis pipeline. Specifically, we combine extensive font libraries, diverse CSS styles, and multilingual corpora. We then render these components into hard but high-quality training samples using XeLaTeX and modern web browsers. Ultimately, this carefully curated data mixture provides layered support for both standard text reading and specialized structural parsing, establishing a rock-solid data foundation for ABot-OCR. 
+
+## 4.2 Training Recipe 
+
+We train our model using a structured, three-stage schedule. The key hyperparameters for each stage are summarized in Table 1. During the first two stages, we maintain consistency by sharing the same global batch size and base learning rate settings. In the third stage, we switch to a structure-constrained DHDO training strategy, where we reduce the learning rate to fine-tune the model. For the decoding process in this final stage, we implement nucleus sampling. Additionally, we set predefined budgets for both the context length and the generation length to ensure efficient inference.                             
+
+> Table 1 Three-stage training configuration. Stage Objective Data scale LR GBS Others Modular Parsing Strengthen visual representa-tions and multitask founda-tions
+> ∼10 M 5×10 −5128 Linear warmup ratio 0.05
+> End-to-End Image →Markdown; enforce structured outputs
+> ∼1.4 M 5×10 −5128 Same as above DHDO Policy refinement; format constraints and stability
+> ∼200 k 5×10 −7128 Nucleus sampling: p= 0 .99 ,
+> k= 50
+
+## 4.3 Evaluation Results 
+
+We evaluate our model on two standard benchmarks: OmniDocBench v1.5 [ 34 ] and OmniDocBench v1.6 [ 42 ]. To provide a thorough analysis, we report both the Overall Score and several fine-grained evaluation metrics. First, we use the standard Edit Distance to measure text transcription accuracy and reading-order prediction, where a lower score indicates better performance. Second, we employ the CDM metric to evaluate the structural and semantic consistency of mathematical expressions. Finally, we use the TEDS score to evaluate the quality of table structure reconstruction. 94.3.1 Overall Analysis on OmniDocBench v1.5 
+
+As summarized in Table 2, we benchmark ABot-OCR against three main types of document parsers on the OmniDocBench v1.5 dataset. These include multi-stage pipeline systems, large general Vision-Language Models (VLMs), and specialized end-to-end (E2E) OCR models. Despite its compact 2B parameter scale, ABot-OCR remains highly competitive across all major evaluation tasks, including text transcription, formula parsing, table structure reconstruction, and reading-order recovery. These results prove that ABot-OCR achieves an exceptional balance between parsing accuracy, structural fidelity, and low deployment complexity. Therefore, it is perfectly suited for real-world document understanding scenarios. 
+
+Comparison with specialized end-to-end OCR models. Within the specialized E2E OCR category, ABot-OCR achieves the top performance. It delivers the best Overall score in this group with a 92.81, successfully surpassing the strong same-scale baseline FireRed-OCR, which scores 92.07. Furthermore, ABot-OCR demonstrates clear advantages over larger end-to-end models like DeepSeek-OCR 2 (3B) and dots.ocr (3B). Our model wins not only in the Overall score but also in the fine-grained character recognition metric. Specifically, ABot-OCR lowers the TextEdit error to a mere 0.034, which is significantly better than DeepSeek-OCR’s 0.049 and dots.ocr’s 0.048. 
+
+Performance relative to large general VLMs. A key takeaway from our evaluation is that document parsing performance does not automatically grow just by scaling up a generic model. For example, the massive Qwen3-VL-235B model only achieves an Overall score of 89.15 and a TextEdit score of 0.069. Both of these scores are substantially worse than ABot-OCR’s performance of 92.81 and 0.034. This comparison proves that domain-specific optimization and task alignment are far more critical for structure-intensive document parsing than pure parameter size. As a result, a compact, OCR-specialized model can deliver much stronger parsing accuracy while requiring only a fraction of the compute and maintenance costs. 
+
+Robustness relative to pipeline systems. As Table 3 shows, traditional multi-stage pipeline systems can still reach a slightly higher performance ceiling by stacking independent sub-modules. For instance, PaddleOCR-VL-1.5 (0.9B) achieves an Overall score of 94.50, outperforming our model. However, these small performance gains come with a massive cost. Pipeline systems suffer from heavy engineering overhead, including multi-stage execution, complex module coordination, and fragile software version dependencies. In contrast, our end-to-end architecture enables unified deployment and a vastly simplified serving pipeline. At the same time, ABot-OCR achieves a TextEdit score of 0.034, which is slightly better than PaddleOCR-VL-1.5’s 0.035. This result confirms that our end-to-end model does not sacrifice character-level accuracy. The remaining gap in the Overall score comes mostly from specialized structural sub-tasks, like formulas and tables, where pipeline systems still hold a narrow advantage. 
+
+4.3.2 Fine-grained Analysis on OmniDocBench v1.5 
+
+Intra-family structural improvements. Compared to FireRed-OCR, ABot-OCR improves both table-related metrics at the same time. Specifically, the TEDS score increases from 88.72 to 90.45, while the TEDS s score rises from 92.38 to 93.96. These gains align perfectly with the improvement in our Overall score. They prove that ABot-OCR learns much better internal representations for table topologies and cell alignments. Additionally, ABot-OCR maintains a clear advantage on the formula metric, achieving a higher CDM score of 91.38 compared to 90.98 for FireRed-OCR. 
+
+Advantages over larger end-to-end models. When compared to DeepSeek-OCR 2 (3B), our smaller ABot-OCR delivers substantially better performance on both the Overall and TextEdit metrics. Furthermore, it widens the gap even more in table reconstruction tasks. For instance, ABot-OCR achieves a TEDS score of 90.45 and a TEDS s score of 93.96, while DeepSeek-OCR 2 only scores 85.60 and 90.06 respectively. This clear trend shows that table structure reconstruction does not automatically improve just by making an end-to-end model larger. Instead, it relies heavily on task-aligned data composition, structural supervision, and carefully designed training recipes. 
+
+Text fidelity and reading-order consistency. ABot-OCR matches FireRed-OCR on the reading-order metric with a score of 0.041. This ties both models for the absolute best performance among all current end-to-end systems. In contrast, Qwen3-VL-235B scores a much higher 0.068 on the same metric. This comparison 10 highlights that ABot-OCR dramatically lowers reading-order error rates, proving that ordering mistakes are no longer a major failure mode in our system. Meanwhile, ABot-OCR achieves a TextEdit score of 0.034, which is slightly better than FireRed-OCR’s 0.035. This result confirms our model’s superior character recognition capability at the 2B parameter scale.                                                                                                                                                                                 
+
+> Table 2 Performance comparison of document parsing methods on OmniDocBench v1.5.
+> Methods Param Overall ↑TextEdit ↓Formula CDM ↑Table TEDS ↑Table TEDS s↑R-order Edit ↓
+> Pipeline OCR Systems PaddleOCR-VL-1.5 [7] 0.9B 94.50 0.035 94.21 92 .76 95 .79 0.042 GLM-OCR [10] 0.9B 94.35 0.045 93.65 93.89 96.50 0.047
+> Youtu-Parsing [47] 2.5B 93 .37 0.042 91 .22 93.10 96.47 0.026
+> PaddleOCR-VL [5] 0.9B 92 .86 0.035 91 .22 90 .89 94 .76 0.043
+> Logics-Parsing-v2 [4] 4B 92 .56 0.043 91 .41 90 .54 93 .85 0.044
+> MinerU2.5 [30] 1.2B 90 .93 0.045 88 .86 88 .44 92 .42 0.044
+> MonkeyOCR-pro-3B [21] 3B 88 .85 0.075 87 .25 86 .78 90 .63 0.128
+> Dolphin-v2 [12] 3B 88 .71 0.073 87 .26 86 .20 89 .77 0.064
+> End-to-End OCR Models
+> ABot-OCR(Ours) 2B 92.81 0.034 91.38 90.45 93.96 0.041
+> FireRed-OCR [13] 2B 92.07 0.035 90.98 88 .72 92 .38 0.041 HunyuanOCR [40] 1B 90 .57 0.085 86 .01 94.19 95.96 0.082
+> OpenDoc-0.1B [9] 0.1B 90 .57 0.043 87 .70 88 .30 92 .24 0.050
+> DeepSeek-OCR 2 [46] 3B 89 .17 0.049 86 .85 85 .60 90 .06 0.060
+> OCRVerse [51] 4B 88 .55 0.058 86 .91 84 .55 88 .45 0.071
+> dots.ocr [20] 3B 88 .41 0.048 83 .22 86 .78 90 .62 0.053
+> General VLMs Ovis2.6-30B-A3B [25] 30B 92 .36 0.037 90 .32 90 .46 94 .00 0.046
+> Gemini 3 Flash –90 .37 0.065 89 .56 88 .01 93 .79 0.071
+> Gemini 3 Pro –90 .17 0.062 88 .79 87 .83 93 .32 0.074
+> Qwen3-VL-235B [1] 235B 89 .15 0.069 88 .14 86 .21 90 .55 0.068
+> GPT-5.2 –85 .75 0.124 86 .93 82 .76 88 .25 0.106
+> InternVL3.5-241B [44] 241B 82 .67 0.142 87 .23 75 .00 81 .28 0.125
+
+4.3.3 Analysis on OmniDocBench v1.6 
+
+To further verify our model on the premium standard of document parsing, we evaluate its performance on the latest OmniDocBench v1.6 benchmark [42]. Table 3 presents the detailed comparative results. Currently, modular pipeline parsers still maintain the highest Overall scores. This advantage is expected because they combine multiple independent, highly specialized modules for layout detection and text recognition. However, these traditional pipelines require complex, multi-stage coordination. In contrast, our end-to-end results prove that a single 2B model can achieve a nearly identical level of text fidelity, completely avoiding the engineering overhead of multi-stage orchestration. When looking specifically at the end-to-end OCR models, ABot-OCR achieves the top performance. It delivers the best Overall score (93.30) and the lowest TextEdit distance (0.037), tying for first place with FireRed-OCR. At the same time, it secures the second-highest table metrics with a TEDS score of 88.83 and a TEDS s
+
+score of 91.94. This outstanding performance proves that ABot-OCR maintains an excellent balance between fine-grained text transcription and complex tabular structure reconstruction, all within a single forward pass. Furthermore, we compare our model against general-purpose Vision-Language Models (VLMs). Compared to the same-scale Qwen3-VL-2B, ABot-OCR shows a massive performance lead across all reported metrics. More importantly, ABot-OCR clearly outperforms substantially larger models, such as the Qwen3-VL-235B, 11 in both Overall scores and TextEdit accuracy. This crucial comparison strongly supports our core argument: parameter-efficient, parsing-oriented training is far more effective for document understanding than simply relying on brute-force parameter scaling.  
+
+> Table 3
+
+Performance comparison of document parsing methods on OmniDocBench v1.6 Full across text, formula, table, and reading order extraction tasks.   
+
+> Methods Param Overall
+
+↑ TextEdit ↓ Formula CDM ↑ Table TEDS ↑ Table TEDS s ↑ R-order Edit ↓
+
+Pipeline OCR Systems  
+
+> MinerU2.5-Pro
+
+[42] 1.2B 95.69 0.036 97.29 93.42 95.92 0.120 GLM-OCR [10] 0.9B 95.15 0.044 96.99 92.83 95.39 0.133 
+
+PaddleOCR-VL-1.5 [7] 0.9B 94 .87 0.038 96 .69 91 .67 94 .37 0.130 
+
+PaddleOCR-VL [5] 0.9B 94 .11 0.040 95 .70 90 .65 93 .74 0.135 
+
+Youtu-Parsing [47] 2.5B 93 .68 0.044 93 .45 92 .02 95 .00 0.116 
+
+Logics-Parsing-v2 [4] 4B 93 .27 0.041 95 .47 88 .42 91 .98 0.137 
+
+MinerU2.5 [30] 1.2B 92 .98 0.045 95 .59 87 .88 91 .47 0.130 
+
+Dolphin-v2 [12] 3B 89 .34 0.069 90 .53 84 .40 87 .44 0.150 
+
+MonkeyOCR-pro-3B [21] 3B 88 .43 0.074 88 .33 84 .35 88 .62 0.189 
+
+End-to-End OCR Models  
+
+> ABot-OCR(Ours)
+
+2B 93.30 0.037 94.86 88.83 91.94 0.133 FireRed-OCR [13] 2B 93.20 0.037 95.27 88 .04 91 .06 0.131 
+
+OpenDoc-0.1B [9] 0.1B 90 .64 0.049 92 .93 83 .88 87 .45 0.140 
+
+dots.ocr [20] 3B 90 .50 0.048 89 .12 87 .18 90 .58 0.138 
+
+DeepSeek-OCR 2 [46] 3B 90 .17 0.050 91 .59 83 .89 87 .75 0.144 
+
+HunyuanOCR [40] 1B 89 .87 0.089 87 .44 91.01 93.23 0.171 
+
+OCRVerse [51] 4B 88 .44 0.063 89 .14 82 .44 86 .27 0.163 
+
+General VLMs Ovis2.6-30B-A3B [25] 30B 93 .62 0.035 94 .93 89 .44 92 .40 0.135 
+
+Gemini 3 Pro  – 92 .85 0.064 95 .83 89 .15 92 .96 0.165 
+
+Gemini 3 Flash  – 92 .58 0.066 95 .03 89 .29 93 .51 0.173 
+
+Qwen3-VL-2B [1] 2B 80 .05 0.091 80 .36 68 .94 73 .82 0.213 
+
+Qwen3-VL-235B [1] 235B 89 .78 0.063 92 .53 83 .07 86 .75 0.166 
+
+GPT-5.2  – 86 .52 0.114 88 .00 82 .95 87 .93 0.193 
+
+InternVL3.5-241B [44] 241B 83 .61 0.130 89 .52 74 .35 79 .78 0.215 
+
+4.3.4 Performance on Multilingual OCR 
+
+To evaluate cross-lingual generalizability, we train and evaluate our model on an in-house multilingual OCR dataset covering 10 diverse languages. Table 4 reports the text edit distances for all evaluated systems. The empirical results show that ABot-OCR achieves the best overall performance, yielding a remarkably low average edit distance of 0.0624 . This result substantially outperforms existing open-source baselines, including Qwen3.5-2B ( 0.1532 ), Qwen3-VL-2B ( 0.1821 ), and FireRed-OCR ( 0.2505 ). When breaking down the performance by language family, we observe several key strengths: 
+
+• Latin-Alphabet Settings : ABot-OCR attains near-saturation accuracy across multiple European and Southeast Asian languages. Specifically, it achieves near-perfect transcription for German ( 0.0005 ), French (0.0006 ), Spanish ( 0.0020 ), Portuguese ( 0.0030 ), and Vietnamese ( 0.0034 ). 
+
+• Complex and Low-Resource Scripts : More importantly, our model significantly reduces recognition errors on historically challenging writing systems. For example, on Arabic text, which features cursive connectivity and a right-to-left reading order, ABot-OCR lowers the edit distance to 0.0180 , compared to 0.1823 for 12 Qwen3-VL-2B and 0.3895 for FireRed-OCR. Similarly, it handles the intricate vocalization marks of Thai (0.0100 ) and the diverse character sets of Russian ( 0.1925 ) with high precision. 
+
+• East Asian Typography : For CJK languages, ABot-OCR also establishes a new state-of-the-art among the compared systems, leading on both Japanese ( 0.1731 ) and Korean ( 0.2206 ). This success is particularly notable because East Asian documents usually present severe challenges due to their vertical layouts, dense character spacing, and high glyph complexity. In conclusion, these comprehensive benchmarks demonstrate that ABot-OCR generalizes robustly across diverse writing systems. By effectively resolving the structural and visual ambiguities of non-Latin and mixed-script layouts, our model proves to be highly reliable for global-scale document parsing.                                                         
+
+> Table 4 Multilingual performance comparison (Edit Distance)
+> Model Arabic German Spanish French Japan Korean Portug Russian Thai Vietna Overall
+> Qwen3-VL-2B 0.390 0.026 0.033 0.009 0.314 0.401 0.034 0.358 0.230 0.027 0.182
+> Qwen3.5-2B 0.182 0.015 0.023 0.037 0.306 0.401 0.019 0.343 0.191 0.021 0.153
+> FireRed-OCR 0.321 0.018 0.032 0.121 0.398 0.526 0.038 0.523 0.442 0.088 0.251
+> ABot-OCR (Ours) 0.018 0.001 0.002 0.001 0.173 0.221 0.003 0.193 0.010 0.003 0.062
+
+4.3.5 Ablation study on DHDO strategies 
+
+In this section, we investigate how different DHDO configurations and training recipes affect end-to-end document parsing performance. Specifically, we study preference optimization signals across three primary document elements: text, tables, and formulas (L ATEX). We also evaluate a generic GRPO baseline and a mixed configuration. Table 5 summarizes these findings. Compared to the supervised baseline, the generic GRPO model improves the Overall score to 92.09 and lowers the TextEdit distance to 0.043. It also brings modest gains to table parsing. However, it slightly reduces the Formula CDM score from 95.01 to 94.82. This dropdown indicates that a generic preference signal cannot uniformly strengthen brittle, highly structured outputs like mathematical equations. Among all single-signal experiments, Table DHDO yields the largest improvements in table parsing and achieves the highest Overall score of 92.49. It secures a TEDS score of 86.95, a TEDS s score of 90.12, and a reading-order error of 0.142. Conversely, it provides minimal impact on text and formula metrics, proving its effect is highly specialized. Text DHDO delivers the best text accuracy with a TextEdit score of 0.040. It also reaches the highest Formula CDM score of 95.19 and the lowest single-signal reading-order error of 0.139. However, it leaves the table metrics nearly unchanged compared to the baseline model, showing a clear performance trade-off. LaTeX DHDO successfully improves the TEDS s score to 89.14, demonstrating its utility in mathematical layouts. Unfortunately, it also increases the TextEdit error to 0.047. This negative trade-off suggests that over-concentrated formula preferences can interfere with plain-text accuracy if the training terms are not carefully balanced. Finally, mixing all three optimization streams with a 1:1:1 ratio achieves the absolute best performance across the board. It delivers the highest Overall score of 93.30 and the strongest joint profile, including a TextEdit of 0.037, a TEDS of 88.83, a TEDS s of 91.94, a reading-order error of 0.133, and a Formula CDM of 94.86. These comprehensive comparisons strongly support our final design choice. Therefore, we select task-decomposed preference learning with a mixed optimization schedule as our default training strategy for full-document parsing. 13 Table 5 Ablation study on DHDO strategies.  
+
+> Methods Overall
+
+↑ TextEdit ↓ Formula CDM ↑ Table TEDS ↑ Table TEDS s ↑ R-order Edit ↓
+
+Baselines 
+
+Base 91 .71 0.049 95 .01 85 .04 88 .14 0.153 
+
+Base + GRPO 92 .09 0.043 94 .82 85 .75 88 .73 0.152 
+
+Base + Table DHDO 92 .49 0.045 95 .03 86 .95 90 .12 0.142 
+
+Base + Text DHDO 92 .10 0.040 95 .19 85 .10 88 .25 0.139 
+
+Base + LaTeX DHDO 92 .03 0.047 94 .95 85 .83 89 .14 0.147 
+
+Base + Mix 1:1:1 93 .30 0.037 94 .86 88 .83 91 .94 0.133 
+
+# 5 Conclusion 
+
+In this work, we presented ABot-OCR, an end-to-end vision-language framework that treats document parsing as a direct image-to-Markdown generation task. We designed a robust three-stage training recipe. First, we perform modular document parsing to establish a strong foundational perception of glyphs, layouts, formulas, and tables. Second, we apply supervised specialization using normalized page-level Markdown data. Third, we implement Decoupled Heterogeneous Document Optimization (DHDO) during post-training. This final stage uses structure-constrained reinforcement learning to strictly enforce textual fidelity and markup well-formedness. Furthermore, we develop a dedicated data engine to supply the large-scale, structurally consistent training labels required by this entire pipeline. Our extensive experiments validate the effectiveness of this design. On the OmniDocBench v1.5 and v1.6 benchmarks, ABot-OCR attains state-of-the-art scores of 92.81 and 93.30 among all end-to-end systems. In doing so, it substantially narrows the performance gap between end-to-end models and strong pipeline baselines. Additionally, our multilingual evaluations across ten diverse languages confirm that the framework generalizes robustly across different writing systems. In future work, we plan to improve our model’s inference efficiency. We will also extend our multilingual parsing capabilities to handle complex document layouts with even richer structural diversity. 
+
+# Acknowledgments 
+
+We would like to thank Mr. Chunlong Lv and his team from the POI division of the Amap Data Business Unit for providing real-world OCR data support for this work. 
+
+# References 
+
+[1] Shuai Bai, Yuxuan Cai, Ruizhe Chen, Keqin Chen, Xionghui Chen, Zesen Cheng, Lianghao Deng, Wei Ding, Chang Gao, Chunjiang Ge, Wenbin Ge, Zhifang Guo, Qidong Huang, Jie Huang, Fei Huang, Binyuan Hui, Shutong Jiang, Zhaohai Li, Mingsheng Li, Mei Li, Kaixin Li, Zicheng Lin, Junyang Lin, Xuejing Liu, Jiawei Liu, Chenglong Liu, Yang Liu, Dayiheng Liu, Shixuan Liu, Dunjie Lu, Ruilin Luo, Chenxu Lv, Rui Men, Lingchen Meng, Xuancheng Ren, Xingzhang Ren, Sibo Song, Yuchong Sun, Jun Tang, Jianhong Tu, Jianqiang Wan, Peng Wang, Pengfei Wang, Qiuyue Wang, Yuxuan Wang, Tianbao Xie, Yiheng Xu, Haiyang Xu, Jin Xu, Zhibo Yang, Mingkun Yang, Jianxin Yang, An Yang, Bowen Yu, Fei Zhang, Hang Zhang, Xi Zhang, Bo Zheng, Humen Zhong, Jingren Zhou, Fan Zhou, Jing Zhou, Yuanzhi Zhu, and Ke Zhu. Qwen3-VL technical report, 2025. URL 
+
+https://arxiv.org/abs/2511.21631 .[2] Leilani Battle, Peitong Duan, Zachery Miranda, Dana Mukusheva, Remco Chang, and Michael Stonebraker. Beagle: Automated extraction and interpretation of visualizations from the web. In Proceedings of the 2018 CHI Conference on Human Factors in Computing Systems , CHI ’18, pages 1–8, New York, NY, USA, 2018. Association for Computing Machinery. Dataset/tool for harvesting and interpreting web visualizations. [3] Lukas Blecher. LaTeX-OCR. https://lukas-blecher.github.io/LaTeX-OCR/ , 2022. Optical character recogni-tion toolkit for mathematical expressions; accessed 2026-05-13. [4] Xiangyang Chen, Shuzhao Li, Xiuwen Zhu, Yongfan Chen, Fan Yang, Cheng Fang, Lin Qu, Xiaoxiao Xu, Hu Wei, 
+
+14 and Minggang Wu. Logics-parsing technical report, 2025. URL https://arxiv.org/abs/2509.19760 . We report results using the Logics-Parsing-v2 released model. [5] Cheng Cui, Ting Sun, Suyin Liang, Tingquan Gao, Zelun Zhang, Jiaxuan Liu, Xueqing Wang, Changda Zhou, Hongen Liu, Manhui Lin, Yue Zhang, Yubo Zhang, Handong Zheng, Jing Zhang, Jun Zhang, Yi Liu, Dianhai Yu, and Yanjun Ma. PaddleOCR-VL: Boosting multilingual document parsing via a 0.9B ultra-compact vision-language model, 2025. URL https://arxiv.org/abs/2510.14528 .[6] Cheng Cui, Ting Sun, Manhui Lin, Tingquan Gao, Yubo Zhang, Jiaxuan Liu, Xueqing Wang, Zelun Zhang, Changda Zhou, Hongen Liu, Yue Zhang, Wenyu Lv, Kui Huang, Yichao Zhang, Jing Zhang, Jun Zhang, Yi Liu, Dianhai Yu, and Yanjun Ma. Paddleocr 3.0 technical report, 2025. URL https://arxiv.org/abs/2507.05595 .[7] Cheng Cui, Ting Sun, Suyin Liang, Tingquan Gao, Zelun Zhang, Jiaxuan Liu, Xueqing Wang, Changda Zhou, Hongen Liu, Manhui Lin, Yue Zhang, Yubo Zhang, Yi Liu, Dianhai Yu, and Yanjun Ma. PaddleOCR-VL-1.5: Towards a multi-task 0.9B VLM for robust in-the-Wild document parsing, 2026. URL https://arxiv.org/abs/ 2601.21957 .[8] Kenny Davila, Rupak Lazarus, Fei Xu, Nicole Rodríguez Alcántara, Srirangaraj Setlur, Venu Govindaraju, Ajoy Mondal, and C. V. Jawahar. CHART-Info 2024: A dataset for chart analysis and recognition. In Proceedings of the 27th International Conference on Pattern Recognition (ICPR) . Springer, 2024. doi: 10.1007/978-3-031-78495-8_ 19. URL https://doi.org/10.1007/978-3-031-78495-8_19 .[9] Yongkun Du, Zhineng Chen, Yazhen Xie, Weikang Bai, Hao Feng, Wei Shi, Yuchen Su, Can Huang, and Yu-Gang Jiang. Unirec-0.1b: Unified text and formula recognition with 0.1b parameters, 2025. URL https: //arxiv.org/abs/2512.21095 .[10] Shuaiqi Duan, Yadong Xue, Weihan Wang, Zhe Su, Huan Liu, Sheng Yang, Guobing Gan, Guo Wang, Zihan Wang, Shengdong Yan, Dexin Jin, Yuxuan Zhang, Guohong Wen, Yanfeng Wang, Yutao Zhang, Xiaohan Zhang, Wenyi Hong, Yukuo Cen, Da Yin, Bin Chen, Wenmeng Yu, Xiaotao Gu, and Jie Tang. GLM-OCR technical report, 2026. URL https://arxiv.org/abs/2603.10910 .[11] Hao Feng, Shu Wei, Xiang Fei, Wei Shi, Yingdong Han, Lei Liao, Jinghui Lu, Binghong Wu, Qi Liu, Chunhui Lin, et al. Dolphin: Document image parsing via heterogeneous anchor prompting. In Findings of the Association for Computational Linguistics: ACL 2025, pages 21919–21936, 2025. [12] Hao Feng, Wei Shi, Ke Zhang, Xiang Fei, Lei Liao, Dingkang Yang, Yongkun Du, Xuecheng Wu, Jingqun Tang, Yang Liu, Hong Chen, and Can Huang. Dolphin-v2: Universal document parsing via scalable anchor prompting, 2026. URL https://arxiv.org/abs/2602.05384 .[13] FireRed Team. Firered-ocr technical report. arXiv preprint arXiv:2603.01840, 2025. [14] Philippe Gervais, Anastasiia Fadeeva, and Andrii Maksai. Mathwriting: A dataset for handwritten mathematical expression recognition, 2025. URL https://arxiv.org/abs/2404.10690 .[15] Google DeepMind. Gemini 3 Pro model card. https://storage.googleapis.com/deepmind-media/Model-Cards/ Gemini-3-Pro-Model-Card.pdf , 2025. Model card; accessed 2026-05-13. [16] Dong Guo, Faming Wu, Feida Zhu, Fuxing Leng, Guang Shi, Haobin Chen, Haoqi Fan, Jian Wang, Jianyu Jiang, Jiawei Wang, et al. Seed1. 5-vl technical report. arXiv preprint arXiv:2505.07062, 2025. [17] Wenyi Hong, Wenmeng Yu, Xiaotao Gu, Guo Wang, Guobing Gan, Haomiao Tang, Jiale Cheng, Ji Qi, Junhui Ji, Lihang Pan, et al. Glm-4.5 v and glm-4.1 v-thinking: Towards versatile multimodal reasoning with scalable reinforcement learning. arXiv preprint arXiv:2507.01006, 2025. [18] Kushal Kafle, Brian Price, Scott Cohen, and Christopher Kanan. Dvqa: Understanding data visualizations via question answering, 2018. URL https://arxiv.org/abs/1801.08163 .[19] Shankar Kantharaj, Rixie Tiffany Ko Leong, Xiang Lin, Ahmed Masry, Megh Thakkar, Enamul Hoque, and Shafiq Joty. Chart-to-text: A large-scale benchmark for chart summarization, 2022. URL https://arxiv.org/ abs/2203.06486 .[20] Yumeng Li, Guang Yang, Hao Liu, Bowen Wang, and Colin Zhang. dots.ocr: Multilingual document layout parsing in a single vision-language model, 2025. URL https://arxiv.org/abs/2512.02498 .
+
+15 [21] Zhang Li, Yuliang Liu, Qiang Liu, Zhiyin Ma, Ziyang Zhang, Shuo Zhang, Biao Yang, Zidun Guo, Jiarui Zhang, Xinyu Wang, and Xiang Bai. Monkeyocr: Document parsing with a structure-recognition-relation triplet paradigm, 2026. URL https://arxiv.org/abs/2506.05218 . We evaluate the MonkeyOCR-pro-3B checkpoint. [22] Cheng-Lin Liu, Fei Yin, Da-Han Wang, and Qiu-Feng Wang. CASIA online and offline Chinese handwriting databases. In Proceedings of the 11th International Conference on Document Analysis and Recognition (ICDAR), pages 37–41. IEEE Computer Society, 2011. doi: 10.1109/ICDAR.2011.17. [23] J. Liu, M. Zhang, et al. Gdpo: Group decoupled preference optimization for multi-reward reinforcement learning of language models. arXiv preprint arXiv:2602.xxxxx, 2026. [24] Nikolaos Livathinos, Christoph Auer, Maksym Lysak, Ahmed Nassar, Michele Dolfi, Panos Vagenas, Cesar Berrospi Ramis, Matteo Omenetti, Kasper Dinkla, Yusik Kim, et al. Docling: An efficient open-source toolkit for ai-driven document conversion. arXiv preprint arXiv:2501.17887, 2025. [25] Shiyin Lu, Yang Li, Yu Xia, Yuwei Hu, Shanshan Zhao, Yanqing Ma, Zhichao Wei, Yinglun Li, Lunhao Duan, Jianshan Zhao, Yuxuan Han, Haijun Li, Wanying Chen, Junke Tang, Chengkun Hou, Zhixing Du, Tianli Zhou, Wenjie Zhang, Huping Ding, Jiahe Li, Wen Li, Gui Hu, Yiliang Gu, Siran Yang, Jiamang Wang, Hailong Sun, Yibo Wang, Hui Sun, Jinlong Huang, Yuping He, Shengze Shi, Weihong Zhang, Guodong Zheng, Junpeng Jiang, Sensen Gao, Yi-Feng Wu, Sijia Chen, Yuhui Chen, Qing-Guo Chen, Zhao Xu, Weihua Luo, and Kaifu Zhang. Ovis2.5 technical report, 2025. URL https://arxiv.org/abs/2508.11737 .[26] Junyu Luo, Zekun Li, Jinpeng Wang, and Chin-Yew Lin. ChartOCR: Data extraction from charts images via a deep hybrid framework. In Proceedings of the IEEE/CVF Winter Conference on Applications of Computer Vision (WACV) , pages 1917–1925, 2021. URL https://openaccess.thecvf.com/content/WACV2021/html/Luo_ ChartOCR_Data_Extraction_From_Charts_Images_via_a_Deep_Hybrid_WACV_2021_paper.html . Introduces Ex-celChart400K for training/evaluation; code: https://github.com/soap117/DeepRule .[27] Ahmed Masry, Do Xuan Long, Jia Qing Tan, Shafiq Joty, and Enamul Hoque. Chartqa: A benchmark for question answering about charts with visual and logical reasoning, 2022. URL https://arxiv.org/abs/2203.10244 .[28] Ahmed Masry, Parsa Kavehzadeh, Xuan Long Do, Enamul Hoque, and Shafiq Joty. Unichart: A universal vision-language pretrained model for chart comprehension and reasoning, 2023. URL https://arxiv.org/abs/ 2305.14761 .[29] Nitesh Methani, Pritha Ganguly, Mitesh M. Khapra, and Pratyush Kumar. Plotqa: Reasoning over scientific plots, 2020. URL https://arxiv.org/abs/1909.00997 .[30] Junbo Niu, Zheng Liu, Zhuangcheng Gu, Bin Wang, Linke Ouyang, Zhiyuan Zhao, Tao Chu, Tianyao He, Fan Wu, Qintong Zhang, Zhenjiang Jin, Guang Liang, Rui Zhang, Wenzheng Zhang, Yuan Qu, Zhifei Ren, Yuefeng Sun, Yuanhong Zheng, Dongsheng Ma, Zirui Tang, Boyu Niu, Ziyang Miao, Hejun Dong, Siyi Qian, Junyuan Zhang, Jingzhou Chen, Fangdong Wang, Xiaomeng Zhao, Liqun Wei, Wei Li, Shasha Wang, Ruiliang Xu, Yuanyuan Cao, Lu Chen, Qianqian Wu, Huaiyu Gu, Lindong Lu, Keming Wang, Dechen Lin, Guanlin Shen, Xuanhe Zhou, Linfeng Zhang, Yuhang Zang, Xiaoyi Dong, Jiaqi Wang, Bo Zhang, Lei Bai, Pei Chu, Weijia Li, Jiang Wu, Lijun Wu, Zhenxiang Li, Guangyu Wang, Zhongying Tu, Chao Xu, Kai Chen, Yu Qiao, Bowen Zhou, Dahua Lin, Wentao Zhang, and Conghui He. Mineru2.5: A decoupled vision-language model for efficient high-resolution document parsing, 2025. URL https://arxiv.org/abs/2509.22186 .[31] Junbo Niu, Zheng Liu, Zhuangcheng Gu, Bin Wang, Linke Ouyang, Zhiyuan Zhao, Tao Chu, Tianyao He, Fan Wu, Qintong Zhang, et al. Mineru2. 5: A decoupled vision-language model for efficient high-resolution document parsing. In The 64th Annual Meeting of the Association for Computational Linguistics–Industry Track, 2025. [32] OleehyO. latex-formulas-80m (hugging face dataset). https://huggingface.co/datasets/OleehyO/ latex-formulas-80M , 2025. Large-scale rendered formula images with LaTeX supervision; accessed May 28, 2026. [33] R OpenAI. Gpt-4v (ision) system card. Citekey: gptvision, 6, 2023. [34] L. Ouyang, Y. Qu, H. Zhou, et al. Omnidocbench: Benchmarking diverse pdf document parsing with comprehensive annotations. arXiv preprint arXiv:2412.07626, 2024. [35] Qwen Team. Qwen3-vl: Technical report. Technical report, Alibaba DAMO Academy, 2025. [36] Qwen Team. Qwen3.5: Towards native multimodal agents, February 2026. URL https://qwen.ai/blog?id= qwen3.5 .
+
+16 [37] John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov. Proximal policy optimization algorithms. arXiv preprint arXiv:1707.06347, 2017. [38] Zhihong Shao, Peiyi Wang, Qihao Zhu, et al. Deepseekmath: Pushing the limits of mathematical reasoning in open language models. arXiv preprint arXiv:2402.03300, 2024. [39] Benny J. Tang, Angie Boggust, and Arvind Satyanarayan. Vistext: A benchmark for semantically rich chart captioning, 2023. URL https://arxiv.org/abs/2307.05356 .[40] Hunyuan Vision Team, Pengyuan Lyu, Xingyu Wan, Gengluo Li, Shangpin Peng, Weinong Wang, Liang Wu, Huawen Shen, Yu Zhou, Canhui Tang, Qi Yang, Qiming Peng, Bin Luo, Hower Yang, Xinsong Zhang, Jinnian Zhang, Houwen Peng, Hongming Yang, Senhao Xie, Longsha Zhou, Ge Pei, Binghong Wu, Rui Yan, Kan Wu, Jieneng Yang, Bochao Wang, Kai Liu, Jianchen Zhu, Jie Jiang, Linus, Han Hu, and Chengquan Zhang. Hunyuanocr technical report, 2025. URL https://arxiv.org/abs/2511.19575 .[41] Bin Wang, Zhuangcheng Gu, Guang Liang, Chao Xu, Bo Zhang, Botian Shi, and Conghui He. Unimernet: A universal network for real-world mathematical expression recognition, 2024. URL https://arxiv.org/abs/2404. 15254 .[42] Bin Wang, Tianyao He, Linke Ouyang, Fan Wu, Zhiyuan Zhao, Tao Chu, Yuan Qu, Zhenjiang Jin, Weijun Zeng, Ziyang Miao, Bangrui Xu, Junbo Niu, Mengzhang Cai, Jiantao Qiu, Qintong Zhang, Dongsheng Ma, Yuefeng Sun, Hejun Dong, Wenzheng Zhang, Jutao Xiao, Jiayong Shi, Pengyu Liao, Xiaomeng Zhao, Huaping Zhong, Liqun Wei, Jing Yu, Jie Yang, Wei Li, Shasha Wang, Qianqian Wu, Xuanhe Zhou, Weijia Li, Zhenxiang Li, Zhongying Tu, Jiang Wu, Lijun Wu, Chao Xu, Kai Chen, Wentao Zhang, Yu Qiao, Bowen Zhou, Dahua Lin, and Conghui He. Mineru2.5-pro: Pushing the limits of data-centric document parsing at scale, 2026. URL 
+
+https://arxiv.org/abs/2604.04771 .[43] Bin Wang, Tianyao He, Linke Ouyang, Fan Wu, Zhiyuan Zhao, Tao Chu, Yuan Qu, Zhenjiang Jin, Weijun Zeng, Ziyang Miao, et al. Mineru2. 5-pro: Pushing the limits of data-centric document parsing at scale. arXiv preprint arXiv:2604.04771, 2026. [44] Weiyun Wang, Zhangwei Gao, Lixin Gu, Hengjun Pu, Long Cui, Xingguang Wei, Zhaoyang Liu, Linglin Jing, Shenglong Ye, Jie Shao, Zhaokai Wang, Zhe Chen, Hongjie Zhang, Ganlin Yang, Haomin Wang, Qi Wei, Jinhui Yin, Wenhao Li, Erfei Cui, Guanzhou Chen, Zichen Ding, Changyao Tian, Zhenyu Wu, Jingjing Xie, Zehao Li, Bowen Yang, Yuchen Duan, Xuehui Wang, Zhi Hou, Haoran Hao, Tianyi Zhang, Songze Li, Xiangyu Zhao, Haodong Duan, Nianchen Deng, Bin Fu, Yinan He, Yi Wang, Conghui He, Botian Shi, Junjun He, Yingtong Xiong, Han Lv, Lijun Wu, Wenqi Shao, Kaipeng Zhang, Huipeng Deng, Biqing Qi, Jiaye Ge, Qipeng Guo, Wenwei Zhang, Songyang Zhang, Maosong Cao, Junyao Lin, Kexian Tang, Jianfei Gao, Haian Huang, Yuzhe Gu, Chengqi Lyu, Huanze Tang, Rui Wang, Haijun Lv, Wanli Ouyang, Limin Wang, Min Dou, Xizhou Zhu, Tong Lu, Dahua Lin, Jifeng Dai, Weijie Su, Bowen Zhou, Kai Chen, Yu Qiao, Wenhai Wang, and Gen Luo. Internvl3.5: Advancing open-source multimodal models in versatility, reasoning, and efficiency, 2025. URL https://arxiv.org/abs/2508.18265 . We evaluate the InternVL3.5-241B family checkpoint (e.g., 241B-A28B) as released by OpenGVLab. [45] Haoran Wei, Chenglong Liu, Jinyue Chen, Jia Wang, Lingyu Kong, Yanming Xu, Zheng Ge, Liang Zhao, Jianjian Sun, Yuang Peng, et al. General ocr theory: Towards ocr-2.0 via a unified end-to-end model. arXiv preprint arXiv:2409.01704, 2024. [46] Haoran Wei, Yaofeng Sun, and Yukun Li. DeepSeek-OCR 2: Visual causal flow, 2026. URL https://arxiv.org/ abs/2601.20552 .[47] Kun Yin, Yunfei Wu, Bing Liu, Zhongpeng Cai, Xiaotian Li, Huang Chen, Xin Li, Haoyu Cao, Yinsong Liu, Deqiang Jiang, Xing Sun, Yunsheng Wu, Qianyu Li, Antai Guo, Yanzhen Liao, Yanqiu Qu, Haodong Lin, Chengxu He, and Shuangyin Liu. Youtu-parsing: Perception, structuring and recognition via high-parallelism decoding, 2026. URL https://arxiv.org/abs/2601.20430 .[48] Zhiyuan Zhao, Hengrui Kang, Bin Wang, and Conghui He. Doclayout-yolo: Enhancing document layout analysis through diverse synthetic data and global-to-local adaptive perception. arXiv preprint arXiv:2410.12628, 2024. [49] Xu Zhong, Elahe ShafieiBavani, and Antonio Jimeno Yepes. Image-based table recognition: Data, model, and evaluation. In European Conference on Computer Vision, 2020. [50] Xu Zhong, Elaheh ShafieiBavani, and Antonio Jimeno Yepes. Image-based table recognition: data, model, and evaluation, 2020. URL https://arxiv.org/abs/1911.10683 .
+
+17 [51] Yufeng Zhong, Lei Chen, Xuanle Zhao, Wenkang Han, Liming Zheng, Jing Huang, Deyang Jiang, Yilin Cao, Lin Ma, and Zhixiong Zeng. Ocrverse: Towards holistic ocr in end-to-end vision-language models, 2026. URL 
+
+https://arxiv.org/abs/2601.21639 .
+
+18 Appendix 
+
+# A Qualitative Examples 
+
+The following cases demonstrate the model’s capability to bridge the gap between raw pixels and structured semantic understanding. 
+
+A.0.1 perception capability 
+
+Figure 4 Input: original image Figure 5 Output: Rendered L ATEX Result 
+
+19 A.0.2 structural capability 
+
+Figure 6 Input: original image Figure 7 Output: Rendered L ATEX Result 
+
+Figure 8 Input: original image Figure 9 Output: Rendered L ATEX Result 
+
+20 Figure 10 Input: original image Figure 11 Output: Rendered L ATEX Result 
+
+Due to the excessive length of the document, we have divided the output into two parts for presentation. 21
