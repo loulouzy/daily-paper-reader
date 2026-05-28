@@ -1,0 +1,168 @@
+{
+  "version": 2,
+  "extractor": "papercropper",
+  "figures": [
+    {
+      "url": "assets/figures/openreview/openreview-neurips-2025-vaxgugmsho/fig-001.webp",
+      "caption": "",
+      "page": 0,
+      "index": 1,
+      "width": 738,
+      "height": 672,
+      "label": "Figure"
+    },
+    {
+      "url": "assets/figures/openreview/openreview-neurips-2025-vaxgugmsho/fig-002.webp",
+      "caption": "",
+      "page": 0,
+      "index": 2,
+      "width": 1441,
+      "height": 563,
+      "label": "Figure"
+    },
+    {
+      "url": "assets/figures/openreview/openreview-neurips-2025-vaxgugmsho/fig-003.webp",
+      "caption": "",
+      "page": 0,
+      "index": 3,
+      "width": 685,
+      "height": 531,
+      "label": "Figure"
+    },
+    {
+      "url": "assets/figures/openreview/openreview-neurips-2025-vaxgugmsho/fig-004.webp",
+      "caption": "",
+      "page": 0,
+      "index": 4,
+      "width": 696,
+      "height": 554,
+      "label": "Figure"
+    },
+    {
+      "url": "assets/figures/openreview/openreview-neurips-2025-vaxgugmsho/fig-005.webp",
+      "caption": "",
+      "page": 0,
+      "index": 5,
+      "width": 1323,
+      "height": 876,
+      "label": "Figure"
+    },
+    {
+      "url": "assets/figures/openreview/openreview-neurips-2025-vaxgugmsho/fig-006.webp",
+      "caption": "",
+      "page": 0,
+      "index": 6,
+      "width": 1461,
+      "height": 768,
+      "label": "Figure"
+    },
+    {
+      "url": "assets/figures/openreview/openreview-neurips-2025-vaxgugmsho/fig-007.webp",
+      "caption": "",
+      "page": 0,
+      "index": 7,
+      "width": 426,
+      "height": 613,
+      "label": "Figure"
+    },
+    {
+      "url": "assets/figures/openreview/openreview-neurips-2025-vaxgugmsho/fig-008.webp",
+      "caption": "",
+      "page": 0,
+      "index": 8,
+      "width": 432,
+      "height": 603,
+      "label": "Figure"
+    },
+    {
+      "url": "assets/figures/openreview/openreview-neurips-2025-vaxgugmsho/fig-009.webp",
+      "caption": "",
+      "page": 0,
+      "index": 9,
+      "width": 428,
+      "height": 602,
+      "label": "Figure"
+    },
+    {
+      "url": "assets/figures/openreview/openreview-neurips-2025-vaxgugmsho/fig-010.webp",
+      "caption": "",
+      "page": 0,
+      "index": 10,
+      "width": 439,
+      "height": 610,
+      "label": "Figure"
+    },
+    {
+      "url": "assets/figures/openreview/openreview-neurips-2025-vaxgugmsho/fig-011.webp",
+      "caption": "",
+      "page": 0,
+      "index": 11,
+      "width": 498,
+      "height": 621,
+      "label": "Figure"
+    },
+    {
+      "url": "assets/figures/openreview/openreview-neurips-2025-vaxgugmsho/fig-012.webp",
+      "caption": "",
+      "page": 0,
+      "index": 12,
+      "width": 497,
+      "height": 632,
+      "label": "Figure"
+    },
+    {
+      "url": "assets/figures/openreview/openreview-neurips-2025-vaxgugmsho/fig-013.webp",
+      "caption": "",
+      "page": 0,
+      "index": 13,
+      "width": 497,
+      "height": 620,
+      "label": "Figure"
+    },
+    {
+      "url": "assets/figures/openreview/openreview-neurips-2025-vaxgugmsho/fig-014.webp",
+      "caption": "",
+      "page": 0,
+      "index": 14,
+      "width": 499,
+      "height": 620,
+      "label": "Figure"
+    },
+    {
+      "url": "assets/figures/openreview/openreview-neurips-2025-vaxgugmsho/fig-015.webp",
+      "caption": "",
+      "page": 0,
+      "index": 15,
+      "width": 567,
+      "height": 557,
+      "label": "Figure"
+    },
+    {
+      "url": "assets/figures/openreview/openreview-neurips-2025-vaxgugmsho/fig-016.webp",
+      "caption": "",
+      "page": 0,
+      "index": 16,
+      "width": 563,
+      "height": 771,
+      "label": "Figure"
+    },
+    {
+      "url": "assets/figures/openreview/openreview-neurips-2025-vaxgugmsho/fig-017.webp",
+      "caption": "",
+      "page": 0,
+      "index": 17,
+      "width": 567,
+      "height": 556,
+      "label": "Figure"
+    },
+    {
+      "url": "assets/figures/openreview/openreview-neurips-2025-vaxgugmsho/fig-018.webp",
+      "caption": "",
+      "page": 0,
+      "index": 18,
+      "width": 568,
+      "height": 558,
+      "label": "Figure"
+    }
+  ]
+}

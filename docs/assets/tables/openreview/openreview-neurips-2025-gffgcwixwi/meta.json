@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "extractor": "papercropper",
+  "tables": [
+    {
+      "url": "assets/tables/openreview/openreview-neurips-2025-gffgcwixwi/table-001.webp",
+      "caption": "",
+      "page": 0,
+      "index": 1,
+      "width": 1498,
+      "height": 336,
+      "label": "Table"
+    },
+    {
+      "url": "assets/tables/openreview/openreview-neurips-2025-gffgcwixwi/table-002.webp",
+      "caption": "",
+      "page": 0,
+      "index": 2,
+      "width": 972,
+      "height": 213,
+      "label": "Table"
+    }
+  ]
+}
