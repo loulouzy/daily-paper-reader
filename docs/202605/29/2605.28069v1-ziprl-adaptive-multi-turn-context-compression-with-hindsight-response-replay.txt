@@ -1,0 +1,1172 @@
+Title: ZipRL: Adaptive Multi-Turn Context Compression with Hindsight Response Replay
+
+URL Source: https://arxiv.org/pdf/2605.28069v1
+
+Published Time: Thu, 28 May 2026 00:48:45 GMT
+
+Number of Pages: 21
+
+Markdown Content:
+## ZipRL: Adaptive Multi-Turn Context Compression with Hindsight Response Replay 
+
+Zhexin Hu 1,2* Li Wang 1* Xiaohan Wang 1,∗† Jiajun Chai 1 Xiaojun Guo 1
+
+Wei Lin 1 Guojun Yin 1†
+
+> 1
+
+Meituan 
+
+> 2
+
+Institute of Software, Chinese Academy of Sciences 
+
+Abstract 
+
+Adaptive context compression is vital for scal-ing Large Language Models (LLMs) to com-plex, multi-turn agent tasks. However, rule-based compression methods may discard task-critical nuances, while Reinforcement Learn-ing (RL) approaches usually struggle to bal-ance information retention and token efficiency under the sparse rewards inherent to long-horizon workflows. To bridge this gap, we propose ZipRL , a novel adaptive compres-sion framework tailored for Reinforcement Learning from Verifiable Rewards (RLVR). ZipRL features a multi-granularity compres-sion mechanism for active, non-uniform infor-mation reduction, coupled with Hindsight Re-sponse Replay (HRR), a technique designed to densify training signals during RLVR opti-mization. Theoretically, we prove ZipRL’s su-perior task-relevant utility over uniform meth-ods. Concretely, ZipRL utilizes coarse-to-fine prompts for macro-compression and incorpo-rates HRR into GRPO via generalized advan-tage reshaping. Multiple models of varying versions and parameter scales validate the effec-tiveness of our approach. Benchmarks on five agent tasks show ZipRL outperforms state-of-the-art approaches by 27.9% and 34.7% across Qwen3-4B and Qwen3-8B models, while main-taining exceptional token efficiency and ro-bustness under extreme 256-turn extrapolation stress tests. Our code is available at https: //github.com/huzhexin/ZipRL .
+
+1 Introduction 
+
+Large language models (LLMs) have emerged as powerful agents for solving long-horizon tasks that require extended reasoning, planning, and interac-tion with external environments (Ke et al., 2025; Wu et al., 2024, 2026). Effective context manage-ment is crucial for unlocking the full potential of these capabilities, as it strategically optimizes the 
+
+> *Equal contribution
+> †Corresponding authors
+
+use of the finite context window to ensure coher-ent, accurate, and efficient model responses (Shao et al., 2024; Song et al., 2023). For example, re-cent research has integrated LLMs with external environments, such as research agents, enabling LLMs to retrieve and process dynamic information for open-ended problem solving (Jin et al., 2025a). However, in such multi-turn scenarios, particularly agentic search, the accumulation of retrieved docu-ments and interaction history rapidly consumes the limited context window. This necessitates effective context compression strategies that preserve criti-cal information while maintaining token efficiency, ensuring the agent operates within computational constraints without sacrificing performance. Despite the critical role of context compression, existing approaches encounter two key challenges, as illustrated in Figure 1. First, current meth-ods typically employ uniform processing granu-larity (Song et al., 2025; He et al., 2025), treat-ing all retrieved segments with equal importance. This lack of relevance awareness is suboptimal from an information-theoretic perspective: as we demonstrate, uniform compression often fails to maximize the task-relevant information utility re-tained from the context for the target query. While irrelevant documents introduce noise, critical de-tails in relevant documents may be lost if over-compressed. Second, optimizing compression poli-cies via Reinforcement Learning (RL) is notori-ously difficult due to sparse reward signals brought by long-horizon multi-turn interaction (Yu et al., 2025). In multi-turn tasks, supervision is often only available at the final outcome (e.g., success or failure), making it challenging to credit specific in-termediate compression actions. Although Process Reward Models (PRMs) (Ma et al., 2023; Zhang et al., 2025b) attempt to mitigate this, their perfor-mance relies heavily on task-specific reward de-signs and may encourage greedy strategies. To address these challenges, we introduce 1
+
+> arXiv:2605.28069v1 [cs.AI] 27 May 2026 Figure 1: Challenges faced by current long-context compression and search agents, with ZipRL addressing these by incorporating the Multi-Granularity Mechanism and Hindsight Response Replay for improved compression performance.
+
+ZipRL, an adaptive multi-turn context compres-sion framework designed to balance information preservation and efficiency. Grounded in the prin-ciple that multi-granularity compression preserves more task-relevant information utility, ZipRL en-ables the agent to actively perceive the relevance of retrieved content and dynamically select macro-level compression strategies (coarse-to-fine) via in-context prompts. Furthermore, to tackle the sparse reward problem in RL training with context com-pression, we propose Hindsight Response Replay (HRR) inspired by the idea of Hindsight Experi-ence Replay (HER) in conventional RL. Instead of relying on expensive external PRMs, HRR uti-lizes a context-oriented heuristic metric to score compression segments efficiently. These scores are then integrated into Group Relative Policy Opti-mization (GRPO) through advantage re-shaping, densifying the training signals and allowing the model to learn optimal compression policies from the final outcome reward. Experimental results on five Multi-hop QA and Web Browsing benchmarks across multiple models of varying versions and parameter scales validate the effectiveness of our approach. It outperforms the strongest baselines by 27.9% and 34.7% on average for 4B and 8B parameter models, respectively, while maintaining superior performance in long-context interactions (up to 256 turns) with high token efficiency. Our contributions are summarized as follows: • We identify the limitations of uniform process-ing in long-context tasks and theoretically vali-date that multi-granularity compression better preserves task-relevant information utility un-der general utility functions satisfying concav-ity and monotone marginal utility. Based on this, we propose an active compression mech-anism that adaptively determines compression levels based on document-query relevance. • We propose ZipRL, a novel framework that integrates adaptive compression with robust RL optimization. We introduce Hindsight Response Replay (HRR), which leverages a heuristic-based metric to densify rewards via advantage re-shaping. We define a context-oriented metric to score compression seg-ments, leveraging reward densification to opti-mize the average score towards a desired goal. HRR effectively mitigates the sparse reward issue in multi-turn context compression with-out the overhead of external reward models. • Extensive experiments across five benchmarks in Web Browsing and Multi-hop QA tasks on multiple models of varying versions and pa-rameter scales validate the effectiveness of our approach. Specifically, ZipRL outperforms the strongest same-scale specialized agents (e.g., ASearcher and AgentFold) by 27.9% and 34.7% average EM for Qwen3-4B and Qwen3-8B models respectively, during ex-treme extrapolation stress tests up to 256 turns (12 .8× training horizon). 
+
+2 Related Work 
+
+2.1 Context Compression for Agents 
+
+Recent autonomous agents tackle long-horizon tasks via external retrieval (Jin et al., 2025a; Nguyen et al., 2025), necessitating effective con-text management to fit limited context windows. Existing methods employ external storage (Zhong et al., 2024; Salama et al., 2025), internal memory updates (Zhou et al., 2025; Ge et al., 2023; Huang 2et al., 2024), or multi-agent collaboration (Zhang et al., 2024). Static prompt compression (e.g., LLMLingua (Jiang et al., 2023), RECOMP (Xu et al., 2023)) reduces context pre-inference but lacks dynamic adaptability. While recent variable-rate compression methods (ACC-RAG (Guo et al., 2025), AttnComp (Luo et al., 2025), SARA (Jin et al., 2025b)) improve single-turn token efficiency, they operate in static settings without multi-turn action adaptability or end-task RL feedback (see Appendix S for taxonomy). Crucially, most meth-ods (Yu et al., 2025; Xu et al., 2026) overlook the non-uniform relevance across retrieved documents. To address this, our multi-granularity mechanism dynamically adapts compression levels based on information density, thereby retaining more task-critical information. 
+
+2.2 Sparse Rewards in RL 
+
+Sparse rewards in long-horizon interactions severely hinder RL efficiency (Riedmiller et al., 2018). Traditional RL mitigates this via Hierar-chical RL (Pateria et al., 2021; Barto and Ma-hadevan, 2003), Curriculum Learning (CL) (Wang et al., 2021), or Hindsight Experience Replay (HER) (Andrychowicz et al., 2017). In the LLM context, approaches like CLPO (Zhang et al., 2025a) and Process Reward Models (PRMs) (Ma et al., 2023; Zhang et al., 2025b) attempt to densify training signals, but they often rely on expensive ex-ternal models or task-specific designs. In contrast, ZipRL draws inspiration from HER to integrate hindsight-based reward densification directly into multi-turn agent training, alleviating the sparse re-ward bottleneck without external PRM overhead. 
+
+3 Method 
+
+Background on Hindsight Experience Replay (HER) (Andrychowicz et al., 2017) and its rela-tionship to our proposed HRR is provided in Ap-pendix C. As illustrated in Figure 2, we present the proposed adaptive long-text search agent along with the ZipRL algorithm. The Cold Start phase is detailed in Appendix A, and the multi-granularity mechanism is described in Section 3.2. Section 3.3 discusses the evaluation of compression quality, while Section 3.4 introduces the hindsight response replay mechanism. Finally, the reinforcement learn-ing training objective is formalized in Section 3.5. 
+
+3.1 Cold Start 
+
+Before RL training, we initialize the policy via a Cold Start SFT phase on 1,155 high-quality trajec-tories synthesized by GPT-4o, equipping the model with basic compression capabilities before RL op-timization. Full details are in Appendix A. 
+
+3.2 Multi-Granularity Mechanism 
+
+In real-world applications, documents and queries often exhibit varying degrees of relevance, which necessitates different compression granularities. To enable such adaptive compression behavior, we in-troduce a Multi-Granularity Mechanism . This mechanism leverages carefully designed prompts (see Appendix U) to guide the model in identifying the amount of query-relevant information within the retrieved text. It then selects an appropriate compression granularity, denoted by g, and allo-cates different weights according to textual rele-vance, ensuring that more valuable information is preserved. Specifically, we first analyze the text and select k compression granularities (see Ap-pendix J.2 for details). For each granularity, we define a compression range [Lgl , Lgh] based on the text length at that granularity. Documents with stronger relevance typically contain more impor-tant information; therefore, we apply a higher com-pression level and allocate a larger compression range to retain as much important information as possible. Conversely, we limit retention for weakly relevant documents to avoid noise. This adaptive strategy maximizes salient information retention while effectively filtering out irrelevancies. 
+
+3.3 Compression Quality Evaluation 
+
+To evaluate the quality of compressed context with-out relying on expensive human annotation or un-stable external reward models, we design a multi-dimensional heuristic scoring function. A high-quality compressed summary should satisfy two complementary objectives: structural conformity 
+
+(adhering to length and format constraints) and se-mantic preservation (retaining critical information). We construct the final score Qcom based on four distinct dimensions. In this section, we outline the design rationale for each dimension; for detailed formulations, please refer to Appendix G. 
+
+Structure Objective: This objective enforces the length and style constraints specified by the target compression level g.35-level Granularity Selection                                               
+
+> Policy �θ
+> Query: q
+> Output c
+> Action a
+> turn 1
+> a1
+> C1
+> Ranswer
+> (1or 0)
+> turn 2
+> a2
+> C2
+> an
+> Cn
+> turn n
+> Compression Quality Score
+> Length Match: Output Size Fits Target Range
+> Info Retention: Keywords + Content Preserved
+> Semantic Complete: Sentence Structure + Punctuation
+> Level Consistency: Match Level Semantics
+> Achieved Goal =Qcom
+> (i,t)(Turn t,Trajectory i)
+> Desired Goal =Qcom
+> (i)=1
+> T�=1
+> �
+> Qcom
+> (i,t)(Trajectory i)
+> GRPO+HRR Advantage Reshaping
+> Qratio
+> Qinfo
+> Qsem
+> Qlevel
+> Qcom
+> (i)increase while tra ining
+> Implicit curriculum learning
+> Agrpo
+> (i)=Ranswer
+> (i)−μgroup
+> σgroup
+> AHRR
+> (i,t)=Agrpo
+> (i)+w·∆ Qcom
+> (i,t)
+> search
+> open
+> finish
+> L1: <ultra-corse>
+> L2: <coarse>
+> L3: <medium>
+> L4: <fine>
+> L5: <ultra-fine>
+> AHRR
+> (i,1)AHRR
+> (i,2)AHRR
+> (i,n)Agrpo
+> (i)∆Qcom
+> (�,t)=Qcom
+> (i,t)-Qcom
+> (i)
+
+# ｛Qcom 
+
+> SFT Cold-Start
+
+Figure 2: Overview of the ZipRL framework, including the Multi-Granularity Mechanism, Compression Quality Evaluation, and Hindsight Response Replay. 
+
+Compression Ratio Score Qratio . It measures whether the compressed length ly falls within the target range [Lgl , Lgh] defined for level g. Unlike a simple binary check, we implement a soft penalty mechanism (see Figure 6 in Appendix G). Short outputs incur a linear penalty for information loss, while long outputs receive a non-linear penalty for redundancy. 
+
+Level Strategy Consistency Score Qlevel . Dif-ferent compression levels require different gran-ularities, not just different lengths. For instance, Level 1 (Ultra-coarse) should consist of few con-cise sentences, whereas Level 5 (Ultra-fine) allows for detailed narration. We define expected bounds for sentence count Sg and word count Wg for each level. The score Rlevel penalizes outputs that meet the character limit but violate the structural density. 
+
+Semantic Objective: Structural correctness is meaningless if the core meaning is lost or the text becomes incoherent. These dimensions evaluate the content quality. 
+
+Information Retention Score Qinfo . To ensure the compressed text y retains key information from the original text x relevant to the query q, we em-ploy a keyword-based overlap metric. We extract keyword sets Kq from the query and Kx from the original text via tokenization, stopword removal, and filtering for tokens with length ≥ 4 charac-ters. Qinfo is computed as a weighted combina-tion of query-specific keyword coverage ( Skey ) and general content retention ( Sgen ), with λ1 = 0 .7
+
+and λ2 = 0.3. The denominator of Skey uses 
+
+|Kq ∩ x| rather than |Kq|, restricting evaluation to keywords actually present in the source document to avoid penalizing irretrievable keywords. When 
+
+|Kq ∩ x| = 0 , the system falls back to Sgen alone. Full formulations are provided in Appendix G. 
+
+Semantic Completeness Score Qsem . Aggres-sive compression often leads to broken sentences or linguistic fragmentation. We evaluate semantic completeness by checking for valid sentence ter-minators (punctuation), reasonable sentence struc-tures, and vocabulary coherence. This acts as a linguistic validity filter, ensuring the compressed text remains natural and readable. 
+
+Total Score: The final compression quality score is a weighted sum of these four complementary dimensions: 
+
+Qcom = α1Qratio + α2Qlevel + α3Qinfo + α4Qsem 
+
+(1) In our implementation, we prioritize information retention and length compliance, setting weights as 
+
+α = {0.3, 0.1, 0.4, 0.2} respectively. This compos-ite score guides the model to balance the trade-off between brevity (structure) and utility (semantic). 
+
+3.4 Hindsight Response Replay 
+
+In multi-turn task settings, it is often difficult to distinguish the contribution of each individual turn solely based on the final reward signal. Inspired by the success of Hindsight Experience Replay (HER) (Andrychowicz et al., 2017) in convert-ing sparse binary feedback into dense learning signals, we propose Hindsight Response Replay (HRR) as an advantage reshaping technique tai-lored for multi-turn LLM agent training. While HER achieves reward densification by relabeling goals and replaying transitions under substitute ob-jectives, HRR achieves an analogous effect through a different mechanism: it uses a turn-level compres-sion quality score to redistribute the trajectory-level advantage computed by GRPO, assigning denser credit to individual turns without requiring a re-play buffer, goal-conditioned policy, or explicit goal substitution (see Table 3 for a detailed com-parison). The key insight shared with HER is that 4non-optimal trajectories still contain valuable per-step information: even when the final task reward is zero, individual turns may exhibit high-quality compression behavior that should be reinforced. In GRPO, the advantage for each trajectory i is computed as: 
+
+A(i) 
+
+> GRPO
+
+= R(i) 
+
+> final
+
+− μgroup 
+
+σgroup 
+
+, (2) where R(i) 
+
+> final
+
+denotes the final reward for trajectory 
+
+i, and μgroup and σgroup represent the mean and stan-dard deviation of the group rewards, respectively. Each turn j in trajectory i uses the same advantage 
+
+A(i)
+
+> GRPO
+
+, which makes it difficult for the agent to dif-ferentiate the contribution of each individual turn, potentially increasing the difficulty of training. To address this limitation, HRR utilizes our compression quality score to reinterpret the per-turn contribution within each trajectory, alleviat-ing the issue of sparse rewards by providing turn-level credit assignment. Concretely, we treat the achieved compression quality as a dynamic ref-erence point (analogous to how HER treats the achieved state as a substitute goal), allowing us to “replay” the advantage calculation by measuring each turn’s distance to this reference. Specifically, for each trajectory i consisting of T turns, we com-pute the average compression quality score as the trajectory-level reference: 
+
+¯Q(i)com = 1
+
+T
+
+> T
+
+X
+
+> j=1
+
+Q(i,j )com . (3) For each turn in trajectory i, we treat the corre-sponding compression quality score as the state and compare it with the expected target ¯Q(i)com to evaluate its quality. This allows us to reallocate the trajectory-level advantage from GRPO at the turn level. Formally, for the j-th turn in trajectory i, the final advantage is defined as: 
+
+A(i,j ) = A(i)GRPO + w ·
+
+
+
+Q(i,j )com − ¯Q(i)com 
+
+
+
+, (4) where w is an advantage reshaping coefficient that controls the strength of hindsight relabeling. When the j-th turn in trajectory i has a compression qual-ity score greater than the trajectory average, the ad-vantage value is increased. Conversely, if the score is smaller than the average, the advantage value is decreased. The magnitude of this adjustment is determined by the absolute difference in compres-sion quality scores, thus providing a denser training signal for different turns in a trajectory and more accurately evaluating each turn’s contribution. As training progresses, the model’s compression qual-ity improves (see Section 5), leading to a higher average compression quality score, thereby adap-tively adjusting the expected training target. This approach alleviates the sparse reward problem and enables better credit assignment. 
+
+3.5 Training Objectives 
+
+Based on hindsight-relabeled dense advantages, ZipRL uses the following objective, which fa-cilitates stable and efficient training through the 
+
+JZipRL (θ) objective:                  
+
+> JZipRL (θ) = Eq, {oi}
+> "
+> 1
+> G
+> GX
+> i=1
+> 1
+> |oi|
+> TX
+> j=1
+> |o(i,j )|
+> X
+> t=1
+> 
+> m(i,j )
+> t−βDKL [πθ∥πref ]
+>  #
+> ,m(i,j )
+> t= min
+> 
+> ρ(i,j )
+> tA(i,j ),clip
+> 
+> ρ(i,j )
+> t,1−ϵ, 1+ ϵ
+> 
+> A(i,j )
+> ,ρ(i,j )
+> t=
+> πθ
+> 
+> o(i,j )
+> t|q, o (i,j )
+> <t
+> 
+> πθold
+> 
+> o(i,j )
+> t|q, o (i,j )
+> <t
+> .
+> (5)
+
+4 Theoretical Analysis 
+
+We provide a utility-theoretic justification for multi-granularity compression, showing that relevance-aware resource allocation can improve expected downstream utility over uniform compression un-der the same average resource budget. 
+
+Theorem 4.1 (Utility Advantage of Rele-vance-Aware Allocation) . Let R ∼ P be a relevance random variable supported on R ⊆ R.Let ¯α > 0 be the average resource budget, and let A ⊆ R++ be an open interval with ¯α ∈ A .Consider a utility function Φ : R × A → R such that Φ( ·, α ) is measurable for every α ∈ A , and 
+
+Φ( r, ·) is differentiable and strictly concave on A
+
+for every r ∈ R . Let the uniform allocation be 
+
+αuni (r) ≡ ¯α, and let the relevance-aware adaptive allocation be αada (r) = f (r), where f : R → A 
+
+is measurable, non-decreasing, and satisfies 
+
+E[f (R)] = ¯ α, P(f (R)̸ = ¯ α) > 0.
+
+Define the allocated marginal utility 
+
+Gf (r) = ∂αΦ( r, α ) α=f (r).
+
+5Assume that Gf is measurable and non-decreasing, and that Φ( R, f (R)) , Φ( R, ¯α), Gf (R), and 
+
+Gf (R)f (R) are integrable. Then 
+
+E[Φ( R, f (R))] > E[Φ( R, ¯α)] .
+
+Remark. The monotonicity of Gf means that the relevance-induced increase in marginal utility dom-inates the diminishing returns caused by larger al-locations. Theorem 4.1 formalizes the benefit of multi-granularity compression: under a fixed av-erage resource budget, allocating more resources to more relevant documents yields a strict utility gain when the allocation is positively aligned with the marginal utility of additional compression re-sources. The proof is deferred to Appendix E. 
+
+5 Experiments 
+
+5.1 Experimental Setup Datasets. We evaluate the agent on Web Brows-ing and Multi-hop QA. For Web Browsing, we use BrowseComp (Wei et al., 2025), a dy-namic web retrieval benchmark for long-context management. For Multi-hop QA, we use MusiQue (Trivedi et al., 2022), SQuAD (Rajpurkar et al., 2016), Frames (Krishna et al., 2025), and Bamboogle (Press et al., 2023), which require ag-gregating evidence across retrieval steps. MusiQue, Frames, and Bamboogle are multi-hop datasets, whereas SQuAD is primarily single-hop. Follow-ing Jin et al. (2025a), we evaluate SQuAD in an 
+
+open-domain retrieval setting without the source paragraph. ZipRL yields larger gains on harder multi-hop datasets, suggesting that adaptive com-pression is more beneficial for complex reasoning. 
+
+Baselines. We compare our method against the following baselines: (1) ReAct (Yao et al., 2022), which uses large-scale closed-source models with context concatenation, setting the performance up-per bound; (2) Summary-Only , a training-free baseline using heuristic rules for context sum-marization; (3) Search Agent Methods (Search-R1 (Jin et al., 2025a), WebSailor (Li et al., 2025b), NestBrowse (Li et al., 2025a), AgentFold (Ye et al., 2025), ASearcher (Gao et al., 2025)), which utilize dynamic context condensing or specialized agents for long-context reasoning. 
+
+Retrieval System. To ensure fair comparison, all models within each benchmark share an identi-cal retrieval backend. For Multi-hop QA datasets (MusiQue, SQuAD, Frames, Bamboogle), we de-ploy E5-base-v2 (mean pooling, max query length 256) over the Wikipedia 2018 corpus with FAISS Flat Index (FP16). For BC-Plus, we use Qwen3-Embedding-8B (last-token pooling, max query length 8192) over the dedicated BC+ corpus with pre-computed local vector indices. Top-k, corpus, and index configuration are strictly identical for all compared methods on each dataset. 
+
+Experimental Details. We use Qwen2.5-{3B, 7B, 14B} and Qwen3-{4B, 8B, 14B} (Yang et al., 2025) as base models. All models are trained on an 8 ×A100 (80GB) GPU cluster with at most 20 interaction turns, reward reshaping coefficient 0.2, learning rate 1e −6, and batch size 64. During eval-uation, we use temperature 0.8 and top-p 1.0, and report EM and F1 (Li et al., 2025c). We adopt of-ficial baseline checkpoints, where ASearcher does not provide a 4B model and WebSailor provides 32B instead of 14B. Tool configurations, compres-sion details, and additional experimental settings are provided in Appendix I and Appendix J. 
+
+5.2 Main Results Performance Results. Table 1 reports results on Multi-hop QA and Web Browsing benchmarks. Among 8B-scale agents, ZipRL-8B achieves 30.3% average EM and 41.2% F1, outperforming the much larger Qwen3-235B-ReAct baseline with 
+
+29 × fewer parameters and matching Gemini-3-Pro. Compared with similarly sized specialized agents, i.e., ASearcher-7B and AgentFold-8B, ZipRL-8B improves average EM by 7.8 points. This advan-tage is consistent across scales: ZipRL-4B and ZipRL-14B lead their parameter-matched groups, while ZipRL-32B further reaches 35.2% average EM, improving over ZipRL-14B by 4.1 points (Ap-pendix K). ZipRL also substantially outperforms Summary-Only baselines across all datasets, in-dicating that its learned active compression pol-icy preserves complex information dependencies beyond static heuristics. Moreover, on the same Qwen2.5 backbone series used by prior baselines, ZipRL-7B still yields a 5.5-point average EM gain over ASearcher-7B, further confirming that the im-provements stem from algorithmic design rather than base-model differences (Appendix L). 
+
+Long-Horizon Scalability. To assess robustness against context overload, we conduct extrapola-tion stress tests with extended interaction limits, as shown in Figure 3. We increase the maximum num-6Table 1: Performance Comparison of Different Methods on Multi-hop QA and Web Browsing Tasks Across Five Datasets. BC-Plus denotes BrowseComp-plus. The bold and underline indicate the best and second-best results, respectively. 
+
+Model MusiQue SQuAD Frames Bamboogle BC-plus Average 
+
+EM F1 EM F1 EM F1 EM F1 EM F1 EM F1 
+
+ReAct-based Methods 
+
+Qwen3-235B-ReAct 18.2 30.4 17.8 32.3 14.5 27.4 40.1 52.5 14.0 19.5 20.9 32.4 DeepSeek-V3.2-ReAct 9.6 17.3 10.2 22.9 10.1 18.4 32.0 40.6 8.8 13.3 14.1 22.5 Gemini-3-Pro-ReAct 32.2 44.7 21.4 38.2 24.8 38.7 54.4 67.0 22.8 27.8 31.1 43.3 
+
+GPT-4o-ReAct 11.8 28.9 8.6 24.5 15.8 32.6 39.2 55.3 25.2 31.6 20.1 34.6 LongCat-Flash-ReAct 24.4 37.5 18.6 35.3 23.5 38.0 48.8 62.0 24.4 28.5 27.9 40.3 
+
+Summary-based Methods 
+
+Qwen3-235B-Summary 17.8 33.2 13.0 28.1 15.2 29.9 40.0 54.7 14.0 19.2 20.0 33.0 DeepSeek-V3.2-Summary 10.2 25.2 12.2 30.6 10.1 20.6 38.4 54.5 7.6 11.5 15.7 28.5 Gemini-3-Pro-Summary 14.6 27.4 10.4 25.5 24.8 38.7 35.2 49.4 23.2 27.4 21.6 33.7 GPT-4o-Summary 3.6 18.7 5.6 19.7 10.3 24.1 20.0 37.2 17.6 27.7 11.4 25.5 LongCat-Flash-Summary 20.0 33.2 12.8 29.5 18.5 32.3 52.8 66.1 29.6 35.7 26.7 39.4 
+
+Open-Source Large Model 
+
+WebSailor-32B 22.0 34.6 17.4 37.3 14.0 29.5 30.4 45.1 17.6 25.6 20.3 34.4 
+
+Specialized Agent (Qwen2.5-3B) 
+
+Search-R1-3B 18.2 22.4 8.8 17.6 3.2 8.0 12.0 21.0 0.8 2.8 8.6 14.4 WebSailor-3B 5.0 12.8 5.6 17.8 3.5 9.6 12.0 29.6 2.8 3.8 5.8 14.7 ZipRL-3B (ours) 27.8 37.5 25.2 40.3 13.4 23.5 44.0 56.9 22.5 24.8 26.6 36.6 
+
+Specialized Agent (Qwen3-4B) 
+
+NestBrowse-4B 12.0 21.5 14.6 28.5 4.3 13.1 15.2 24.9 11.2 15.7 11.5 20.7 AgentFold-4B 16.0 26.5 19.4 33.8 14.3 24.7 44.0 57.9 15.6 19.8 21.9 32.5 ZipRL-4B (ours) 31.4 40.4 23.0 39.0 14.6 26.2 47.2 60.9 24.0 26.9 28.0 38.7 
+
+Specialized Agent (Qwen2.5-7B) 
+
+Search-R1-7B 14.6 19.0 5.4 13.1 5.1 9.5 20.8 28.7 0.4 3.4 9.3 14.7 WebSailor-7B 7.6 14.9 13.0 26.4 7.2 14.1 36.8 49.1 6.4 8.3 14.2 22.6 ASearcher-7B 32.6 42.9 23.8 39.5 11.0 21.6 39.2 51.5 6.0 8.2 22.5 32.7 ZipRL-7B (ours) 31.2 41.4 25.6 43.0 15.8 26.0 48.0 61.6 19.5 21.5 28.0 38.7 
+
+Specialized Agent (Qwen3-8B) 
+
+NestBrowse-8B 21.4 29.5 19.2 36.9 9.1 17.9 33.6 47.4 8.8 14.5 18.4 29.2 AgentFold-8B 21.6 30.1 20.8 34.9 12.3 21.2 42.4 54.1 15.6 19.3 22.5 31.9 ZipRL-8B (ours) 36.8 46.7 25.8 42.4 18.1 29.3 49.8 64.7 20.8 23.0 30.3 41.2 
+
+Specialized Agent (Qwen2.5-14B) 
+
+Search-R1-14B 11.8 16.6 11.4 20.5 7.2 13.5 26.4 36.6 1.6 4.8 11.7 18.4 ASearcher-14B 36.6 47.6 24.4 41.6 16.1 27.7 48.8 60.0 13.2 17.9 27.8 39.0 ZipRL-14B (ours) 30.8 40.7 23.2 41.0 19.2 31.3 51.2 64.4 23.6 26.1 29.6 40.7 
+
+Specialized Agent (Qwen3-14B) 
+
+NestBrowse-14B 24.4 35.2 15.2 30.3 13.8 25.7 42.4 56.9 7.6 11.7 20.7 32.0 AgentFold-14B 22.2 32.9 21.8 36.5 13.4 22.4 45.6 55.2 14.8 16.9 23.6 32.8 ZipRL-14B (ours) 33.6 43.4 24.0 42.2 20.8 32.4 52.8 67.6 24.4 27.0 31.1 42.5 
+
+ber of turns from 2 to 256 on MusiQue and Frames, where 256 turns serves as a stress-test boundary rather than a typical QA length. ZipRL-8B consis-tently outperforms the larger Qwen3-235B-ReAct baseline. While Qwen3-235B-ReAct saturates af-ter 16 turns, ZipRL continues improving up to 256 turns, despite being trained with at most 20 turns. This 12 .8× horizon extrapolation suggests that ZipRL learns relevance-aware retention rather than overfitting to short interaction patterns, en-abling robust long-horizon deployment under accu-mulated context noise. 
+
+Token Efficiency Analysis. As shown in Fig-ure 4 (left), ZipRL achieves strong token efficiency. Compared with ReAct-based large models, ZipRL-8B substantially reduces token usage while pre-serving performance. Its adaptive multi-granularity compression further outperforms AgentFold by bet-ter balancing information retention and computa-tional cost. A detailed analysis of premature termi-7Table 2: Ablation Study of ZipRL on the Qwen3-8B Model Across Five Datasets. BC-Plus denotes BrowseComp-plus. The bold and underline indicate the best and second-best results, respectively. 
+
+Model Variant MusiQue SQuAD Frames Bamboogle BC-Plus Average 
+
+EM F1 EM F1 EM F1 EM F1 EM F1 EM F1 ZipRL (ours) 36.8 46.7 25.8 42.4 18.1 29.3 49.8 64.7 20.8 23.0 30.3 41.2 
+
+w/o RL 29.0 39.7 21.0 36.4 16.0 26.4 45.6 59.8 20.4 26.3 26.4 37.7 w/o Level 2&4 35.4 45.8 24.4 40.3 17.7 28.2 48.4 64.9 18.4 22.1 28.9 40.3 w/o Qratio 37.0 47.1 23.6 38.7 17.6 27.8 47.0 61.4 21.6 26.5 29.4 40.3 w/o Qinfo 32.4 41.4 20.8 37.2 15.3 27.1 47.2 58.7 18.8 23.2 26.9 37.5 w/o Qsem 32.4 42.5 23.0 38.5 16.9 28.3 46.4 62.0 20.0 24.1 27.7 39.1 w/o Qlevel 38.0 48.3 25.0 42.0 16.9 28.8 46.4 59.9 20.8 23.9 29.4 40.6 2 4 8 16 32 64 128 256                          
+
+> Number of Turn Limit
+> 0
+> 10
+> 20
+> 30
+> 40
+> EM (%)
+> MusiQue EM
+> ZipRL-8B
+> Qwen3-235B-ReAct
+> 24816 32 64 128 256
+> Number of Turn Limit
+> 0
+> 10
+> 20
+> 30
+> 40
+> 50
+> F1 (%)
+> MusiQue F1
+> ZipRL-8B
+> Qwen3-235B-ReAct
+> 24816 32 64 128 256
+> Number of Turn Limit
+> 0
+> 5
+> 10
+> 15
+> 20
+> EM (%)
+> Frames EM
+> ZipRL-8B
+> Qwen3-235B-ReAct
+> 24816 32 64 128 256
+> Number of Turn Limit
+> 0
+> 5
+> 10
+> 15
+> 20
+> 25
+> 30
+> F1 (%)
+> Frames F1
+> ZipRL-8B
+> Qwen3-235B-ReAct
+
+Figure 3: Performance variations of the MusiQue and Frames datasets under different turn constraints. 2.5 5.0 7.5 10.0 12.5 15.0 17.5 20.0         
+
+> Turn Number
+> 0.0
+> 2.5
+> 5.0
+> 7.5
+> 10.0
+> 12.5
+> 15.0
+> 17.5
+> Average Token Count (×1000)
+> Token Efficiency Analysis.
+> ZipRL (Ours)
+> AgentFold
+> Qwen3-235B-ReAct 0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8
+> Parameter Value
+> 0.250
+> 0.275
+> 0.300
+> 0.325
+> 0.350
+> 0.375
+> 0.400
+> 0.425
+> Metric Value
+> Sensitivity Analysis of Parameter w
+> Average EM
+> Average F1
+
+Figure 4: (Left) Average token count variation over training iterations. (Right) Sensitivity analysis of pa-rameter w across five datasets with ZipRL. 
+
+nation is provided in Appendix P. 
+
+Fine-Grained Behavior Statistics. Fine-grained behavior statistics are provided in Appendix O (Ta-ble 10). ZipRL achieves a Finish Rate of 0.85 and adaptively increases retrieval intensity with ques-tion difficulty, while sustaining deep exploration on BC-Plus with 13.8 turns, avoiding under-retrieval and context-overload issues observed in baselines. 
+
+6 Ablation Studies 
+
+To quantify the contribution of each component, we conduct ablation studies with Qwen3-8B as the base model, as shown in Table 2. First, re-moving the RL phase and using only the cold-start model leads to a substantial performance drop, 0 10 20 30 40 50      
+
+> Training Step
+> 0.26
+> 0.28
+> 0.30
+> 0.32
+> 0.34
+> 0.36
+> 0.38
+> Reward
+> Reward
+> ZipRL (with HRR)
+> w/o HRR (GRPO)
+> 010 20 30 40 50
+> Training Step
+> 0.54
+> 0.56
+> 0.58
+> 0.60
+> 0.62
+> 0.64
+> 0.66
+> Compression Quality
+> Compression Score
+> ZipRL (with HRR)
+> w/o HRR (GRPO)
+
+Figure 5: Training dynamics of ZipRL. (Left) Average reward and (Right) compression quality score. 
+
+highlighting the importance of reinforcement learn-ing through environment interaction. Second, re-ducing the compression granularity by removing Levels 2 and 4 consistently lowers average EM and F1, indicating the benefit of maintaining five compression levels. Finally, we ablate each dimen-sion of the Compression Quality Score, i.e., Qratio ,
+
+Qlevel , Qinfo , and Qsem . Removing any dimension degrades performance, with Qinfo and Qsem causing the largest drops. Results demonstrate that ZipRL benefits from fine-grained compression control and quality-aware reward design, particularly through information retention and semantic completeness. 
+
+7 Conclusion 
+
+Despite recent progress in LLM-based long-text search, existing models still lack proactive aware-ness of document relevance and suffer from sparse rewards in long-horizon tasks. We introduce ZipRL to address these challenges through a multi-granularity mechanism that adaptively assigns com-pression levels according to query relevance. We further design a rule-based evaluation scheme and incorporate compression scores into Hindsight Re-sponse Replay to mitigate reward sparsity during multi-turn training. Theoretically, we analyze the benefits of both multi-granularity compression and HRR. Extensive experiments across multiple mod-els of varying versions and parameter scales on five Web Browsing and Multi-hop QA datasets validate 8the effectiveness of our approach and show that ZipRL consistently outperforms strong baselines. 
+
+Limitations 
+
+We note three limitations of ZipRL. (1) Language: 
+
+Qinfo relies on English stopwords, potentially de-grading in multilingual or specialized domains (e.g., legal, code). (2) Robustness: Qcom ignores document credibility; EM drops heavily (85–99%) under fully adversarial retrieval (Appendix R). (3) Generalization: Relying on a single QA corpus for cold-start may limit adaptation to structured or code-heavy tasks. 
+
+Ethical Statements 
+
+Our experiments rely strictly on publicly available datasets, involving no sensitive user data. Large lan-guage models were used solely for language editing during manuscript preparation. All research out-comes and intellectual content remain the exclusive work of the authors. 
+
+References 
+
+Marcin Andrychowicz, Filip Wolski, Alex Ray, Jonas Schneider, Rachel Fong, Peter Welinder, Bob Mc-Grew, Josh Tobin, OpenAI Pieter Abbeel, and Woj-ciech Zaremba. 2017. Hindsight experience replay. 
+
+Advances in neural information processing systems ,30. Andrew G Barto and Sridhar Mahadevan. 2003. Re-cent advances in hierarchical reinforcement learning. 
+
+Discrete event dynamic systems , 13(4):341–379. Jiaxuan Gao, Wei Fu, Minyang Xie, Shusheng Xu, Chuyi He, Zhiyu Mei, Banghua Zhu, and Yi Wu. 2025. Beyond ten turns: Unlocking long-horizon agentic search with large-scale asynchronous rl. 
+
+arXiv preprint arXiv:2508.07976 .Tao Ge, Jing Hu, Lei Wang, Xun Wang, Si-Qing Chen, and Furu Wei. 2023. In-context autoencoder for con-text compression in a large language model. arXiv preprint arXiv:2307.06945 .Shuyu Guo, Shuo Zhang, and Zhaochun Ren. 2025. Enhancing rag efficiency with adaptive context com-pression. arXiv preprint arXiv:2507.22931 .Guanzhong He, Zhen Yang, Jinxin Liu, Bin Xu, Lei Hou, and Juanzi Li. 2025. Webseer: Training deeper search agents through reinforcement learning with self-reflection. arXiv preprint arXiv:2510.18798 .Chensen Huang, Guibo Zhu, Xuepeng Wang, Yifei Luo, Guojing Ge, Haoran Chen, Dong Yi, and Jinqiao Wang. 2024. Recurrent context compression: Effi-ciently expanding the context window of llm. arXiv preprint arXiv:2406.06110 .Huiqiang Jiang, Qianhui Wu, Chin-Yew Lin, Yuqing Yang, and Lili Qiu. 2023. Llmlingua: Compressing prompts for accelerated inference of large language models. In Proceedings of the 2023 conference on empirical methods in natural language processing ,pages 13358–13376. Bowen Jin, Hansi Zeng, Zhenrui Yue, Jinsung Yoon, Sercan Arik, Dong Wang, Hamed Zamani, and Jiawei Han. 2025a. Search-r1: Training llms to reason and leverage search engines with reinforcement learning. 
+
+arXiv preprint arXiv:2503.09516 .Yiqiao Jin, Kartik Sharma, Vineeth Rakesh, Yingtong Dou, Menghai Pan, Mahashweta Das, and Srijan Kumar. 2025b. Sara: Selective and adaptive retrieval-augmented generation with context compression. 
+
+arXiv preprint arXiv:2507.05633 .Zixuan Ke, Fangkai Jiao, Yifei Ming, Xuan-Phi Nguyen, Austin Xu, Do Xuan Long, Minzhi Li, Chengwei Qin, Peifeng Wang, Silvio Savarese, and 1 others. 2025. A survey of frontiers in llm reasoning: Inference scal-ing, learning to reason, and agentic systems. arXiv preprint arXiv:2504.09037 .Satyapriya Krishna, Kalpesh Krishna, Anhad Mo-hananey, Steven Schwarcz, Adam Stambler, Shyam Upadhyay, and Manaal Faruqui. 2025. Fact, fetch, and reason: A unified evaluation of retrieval-augmented generation. In Proceedings of the 2025 Conference of the Nations of the Americas Chap-ter of the Association for Computational Linguistics: Human Language Technologies (Volume 1: Long Pa-pers) , pages 4745–4759. Baixuan Li, Jialong Wu, Wenbiao Yin, Kuan Li, Zhong-wang Zhang, Huifeng Yin, Zhengwei Tao, Liwen Zhang, Pengjun Xie, Jingren Zhou, and 1 others. 2025a. Nested browser-use learning for agentic infor-mation seeking. arXiv preprint arXiv:2512.23647 .Kuan Li, Zhongwang Zhang, Huifeng Yin, Liwen Zhang, Litu Ou, Jialong Wu, Wenbiao Yin, Baixuan Li, Zhengwei Tao, Xinyu Wang, and 1 others. 2025b. Websailor: Navigating super-human reasoning for web agent. arXiv preprint arXiv:2507.02592 .Xiaoxi Li, Guanting Dong, Jiajie Jin, Yuyao Zhang, Yu-jia Zhou, Yutao Zhu, Peitian Zhang, and Zhicheng Dou. 2025c. Search-o1: Agentic search-enhanced large reasoning models. In Proceedings of the 2025 Conference on Empirical Methods in Natural Lan-guage Processing , pages 5420–5438. Lvzhou Luo, Yixuan Cao, and Ping Luo. 2025. At-tncomp: Attention-guided adaptive context com-pression for retrieval-augmented generation. arXiv preprint arXiv:2509.17486 .Qianli Ma, Haotian Zhou, Tingkai Liu, Jianbo Yuan, Pengfei Liu, Yang You, and Hongxia Yang. 2023. Let’s reward step by step: Step-level reward model as the navigators for reasoning. arXiv preprint arXiv:2310.10080 .
+
+9Xuan-Phi Nguyen, Shrey Pandit, Revanth Gangi Reddy, Austin Xu, Silvio Savarese, Caiming Xiong, and Shafiq Joty. 2025. Sfr-deepresearch: Towards effec-tive reinforcement learning for autonomously reason-ing single agents. arXiv preprint arXiv:2509.06283 .Shubham Pateria, Budhitama Subagdja, Ah-hwee Tan, and Chai Quek. 2021. Hierarchical reinforcement learning: A comprehensive survey. ACM Computing Surveys (CSUR) , 54(5):1–35. Ofir Press, Muru Zhang, Sewon Min, Ludwig Schmidt, Noah A Smith, and Mike Lewis. 2023. Measuring and narrowing the compositionality gap in language models. In Findings of the Association for Computa-tional Linguistics: EMNLP 2023 , pages 5687–5711. Pranav Rajpurkar, Jian Zhang, Konstantin Lopyrev, and Percy Liang. 2016. Squad: 100,000+ questions for machine comprehension of text. In Proceedings of the 2016 conference on empirical methods in natural language processing , pages 2383–2392. Martin Riedmiller, Roland Hafner, Thomas Lampe, Michael Neunert, Jonas Degrave, Tom Wiele, Vlad Mnih, Nicolas Heess, and Jost Tobias Springenberg. 2018. Learning by playing solving sparse reward tasks from scratch. In International conference on machine learning , pages 4344–4353. PMLR. Rana Salama, Jason Cai, Michelle Yuan, Anna Currey, Monica Sunkara, Yi Zhang, and Yassine Benajiba. 2025. Meminsight: Autonomous memory augmen-tation for llm agents. In Proceedings of the 2025 Conference on Empirical Methods in Natural Lan-guage Processing , pages 33124–33140. Zhihong Shao, Peiyi Wang, Qihao Zhu, Runxin Xu, Junxiao Song, Xiao Bi, Haowei Zhang, Mingchuan Zhang, YK Li, Yang Wu, and 1 others. 2024. Deepseekmath: Pushing the limits of mathematical reasoning in open language models. arXiv preprint arXiv:2402.03300 .Chan Hee Song, Jiaman Wu, Clayton Washington, Brian M Sadler, Wei-Lun Chao, and Yu Su. 2023. Llm-planner: Few-shot grounded planning for em-bodied agents with large language models. In Pro-ceedings of the IEEE/CVF international conference on computer vision , pages 2998–3009. Huatong Song, Jinhao Jiang, Yingqian Min, Jie Chen, Zhipeng Chen, Wayne Xin Zhao, Lei Fang, and Ji-Rong Wen. 2025. R1-searcher: Incentivizing the search capability in llms via reinforcement learning. 
+
+arXiv preprint arXiv:2503.05592 .Harsh Trivedi, Niranjan Balasubramanian, Tushar Khot, and Ashish Sabharwal. 2022. Musique: Multi-hop questions via single-hop question composition. 
+
+Transactions of the Association for Computational Linguistics , 10:539–554. Xin Wang, Yudong Chen, and Wenwu Zhu. 2021. A survey on curriculum learning. IEEE transac-tions on pattern analysis and machine intelligence ,44(9):4555–4576. Jason Wei, Zhiqing Sun, Spencer Papay, Scott McK-inney, Jeffrey Han, Isa Fulford, Hyung Won Chung, Alex Tachard Passos, William Fedus, and Amelia Glaese. 2025. Browsecomp: A simple yet challeng-ing benchmark for browsing agents. arXiv preprint arXiv:2504.12516 .Jinyang Wu, Mingkuan Feng, Shuai Zhang, Feihu Che, Zengqi Wen, Chonghua Liao, and Jianhua Tao. 2024. Beyond examples: High-level automated reasoning paradigm in in-context learning via mcts. arXiv preprint arXiv:2411.18478 .Jinyang Wu, Guocheng Zhai, Ruihan Jin, Jiahao Yuan, Yuhao Shen, Shuai Zhang, Zhengqi Wen, and Jianhua Tao. 2026. Atlas: Orchestrating heterogeneous mod-els and tools for multi-domain complex reasoning. 
+
+arXiv preprint arXiv:2601.03872 .Fangyuan Xu, Weijia Shi, and Eunsol Choi. 2023. Re-comp: Improving retrieval-augmented lms with com-pression and selective augmentation. arXiv preprint arXiv:2310.04408 .Wujiang Xu, Zujie Liang, Kai Mei, Hang Gao, Juntao Tan, and Yongfeng Zhang. 2026. A-mem: Agentic memory for llm agents. Advances in Neural Informa-tion Processing Systems , 38:17577–17604. An Yang, Anfeng Li, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu, Chang Gao, Chengen Huang, Chenxu Lv, and 1 others. 2025. Qwen3 technical report. arXiv preprint arXiv:2505.09388 .Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, and Yuan Cao. 2022. React: Synergizing reasoning and acting in language models. arXiv preprint arXiv:2210.03629 .Rui Ye, Zhongwang Zhang, Kuan Li, Huifeng Yin, Zhengwei Tao, Yida Zhao, Liangcai Su, Liwen Zhang, Zile Qiao, Xinyu Wang, and 1 others. 2025. Agentfold: Long-horizon web agents with proactive context management. arXiv preprint arXiv:2510.24699 .Hongli Yu, Tinghong Chen, Jiangtao Feng, Jiangjie Chen, Weinan Dai, Qiying Yu, Ya-Qin Zhang, Wei-Ying Ma, Jingjing Liu, Mingxuan Wang, and 1 others. 2025. Memagent: Reshaping long-context llm with multi-conv rl-based memory agent. arXiv preprint arXiv:2507.02259 .Shijie Zhang, Guohao Sun, Kevin Zhang, Xiang Guo, and Rujun Guo. 2025a. Clpo: Curriculum learning meets policy optimization for llm reasoning. arXiv preprint arXiv:2509.25004 .Yusen Zhang, Ruoxi Sun, Yanfei Chen, Tomas Pfis-ter, Rui Zhang, and Sercan Ö Arık. 2024. Chain of agents: Large language models collaborating on long-context tasks. Advances in Neural Information Processing Systems , 37:132208–132237. 
+
+10 Zhenru Zhang, Chujie Zheng, Yangzhen Wu, Beichen Zhang, Runji Lin, Bowen Yu, Dayiheng Liu, Jin-gren Zhou, and Junyang Lin. 2025b. The lessons of developing process reward models in mathematical reasoning. In Findings of the Association for Compu-tational Linguistics: ACL 2025 , pages 10495–10516. Wanjun Zhong, Lianghong Guo, Qiqi Gao, He Ye, and Yanlin Wang. 2024. Memorybank: Enhancing large language models with long-term memory. In Pro-ceedings of the AAAI conference on artificial intelli-gence , volume 38, pages 19724–19731. Zijian Zhou, Ao Qu, Zhaoxuan Wu, Sunghwan Kim, Alok Prakash, Daniela Rus, Jinhua Zhao, Bryan Kian Hsiang Low, and Paul Pu Liang. 2025. Mem1: Learning to synergize memory and reason-ing for efficient long-horizon agents. arXiv preprint arXiv:2506.15841 .
+
+A Cold Start Details 
+
+Before RL training, we implement a Cold Start phase to initialize the policy. We constructed a demonstration dataset, Ddemo , by sampling 3,000 queries from ASearcher-LRM-35k (Gao et al., 2025) and synthesizing trajectories via GPT-4o. To ensure high quality, we applied two filters: (1) Cor-rectness : retaining only correct trajectories, and (2) 
+
+Format : discarding outputs with structural viola-tions. This yielded 1,155 valid trajectories, which were then decomposed into transition-level sam-ples. The model is optimized using the standard Supervised Fine-Tuning (SFT) objective: 
+
+LSFT (θ) = −E(q,o )∼D demo 
+
+
+
+> |o|
+
+X
+
+> t=1
+
+log πθ(ot | q, o <t )
+
+
+
+where πθ denotes the policy network, and o =(o1, o 2, . . . , o |o|) is the output sequence. Each ot
+
+represents the observation or generated context to-ken at step t (including retrieved documents, rea-soning traces, and tool outputs accumulated during the interaction). This phase equips the model with essential capabilities, adequately preparing it for subsequent RL optimization. 
+
+B Diagnosing the Performance Plateau at 256 Turns 
+
+To understand what limits performance as inter-action turns increase beyond ∼128, we conduct a targeted diagnostic analysis on MusiQue along three axes. (1) Dataset ceiling: An oracle experi-ment (providing all gold-standard evidence doc-uments directly to the model without retrieval) achieves 51 .3% EM on MusiQue, substantially above ZipRL-8B’s 36 .8% at 256 turns, so the dataset ceiling is not the primary bottleneck. (2) Re-triever saturation: We track the novel-entity rate :the fraction of retrieved documents at each turn that introduce at least one named entity not seen in any prior retrieved document. This rate drops from 0.81 at turn 10 to 0.29 at turn 128 and reaches 
+
+0.17 at turn 256, indicating that the retriever returns largely redundant results in later turns. (3) Com-pression capacity: The context compression ratio (compressed tokens / raw retrieved tokens) remains stable at ≈ 0.41 –0.44 throughout all turn budgets, ruling out compression capacity as a limiting factor. Together, these results indicate that retriever satu-ration (i.e., the exhaustion of novel information in the retrieval corpus) is the dominant bottleneck at ultra-long horizons. 
+
+C Preliminary: Hindsight Experience Replay 
+
+Hindsight Experience Replay (HER) (Andrychow-icz et al., 2017) is a powerful technique designed to improve sample efficiency in sparse-reward RL tasks. In many real-world scenarios, agents receive meaningful feedback only upon achieving specific goals, making traditional RL inefficient due to the scarcity of reward signals. HER addresses this chal-lenge by transforming unsuccessful episodes into useful training data through the concept of substi-tute goals. Formally, a trajectory under HER is represented as: 
+
+τ = ( s, a, r, s ′, g, g ′) (6) where s denotes the current state, a the executed action, r the reward with respect to the original goal 
+
+g, s′ the next state, and g′ a substitute goal. The reward is recomputed with respect to g′, denoted as 
+
+r′, allowing the agent to learn from outcomes that were originally considered failures. This relabeling converts sparse, binary rewards into denser signals, accelerating learning. 
+
+Relationship Between HER and Our Approach. 
+
+While HER inspires our method philosophically (both convert sparse binary feedback into denser learning signals), the two differ substantially in mechanism (see Table 3 below). HER operates on goal-conditioned MDPs by relabeling the desired goal post-hoc and replaying stored transitions un-der the new goal, requiring an explicit replay buffer and a goal-conditioned reward function. In contrast, our proposed Hindsight Response Replay (HRR) 11 operates within the GRPO framework by reshaping the trajectory-level advantage at turn granularity using a heuristic compression quality score. HRR requires neither a replay buffer nor goal substitu-tion; instead, it treats the achieved compression quality as a reference point for credit assignment, redistributing the sparse final reward across turns proportional to each turn’s compression quality rel-ative to the trajectory mean. The shared philosoph-ical principle is that information from non-optimal outcomes should not be discarded : HER extracts value by asking “what goal would this trajectory have achieved?”, while HRR extracts value by ask-ing “which turns contributed more to the compres-sion objective within this trajectory?” 
+
+D Detailed Comparison: HER vs. HRR 
+
+Table 3 summarizes the key distinctions between Hindsight Experience Replay (HER) and our pro-posed Hindsight Response Replay (HRR). 
+
+Table 3: Comparison between Hindsight Experience Replay (HER) and Hindsight Response Replay (HRR).                  
+
+> Dimension HER HRR (Ours)
+> Signal source Relabeled goal re-ward Compression quality score Qcom
+> Core mechanism Goal substitution + transition replay Advantage reshaping Replay buffer Required Not required Goal conditioning Explicit (goal-conditioned policy) Implicit (trajectory-mean baseline) Reward densification Via counterfactual goal relabeling Via turn-level quality comparison Action space Continuous control / discrete actions Token-level generation Shared philosophy Extract learning signal from non-optimal experiences
+
+E Proof of Theorem 4.1 
+
+Theorem E.1 (Utility Advantage of Rele-vance-Aware Allocation) . Let R ∼ P be a rele-vance random variable supported on R ⊆ R. Let 
+
+¯α > 0 be the average resource budget, and let 
+
+A ⊆ R++ be an open interval with ¯α ∈ A . Con-sider a utility function Φ : R × A → R such that 
+
+Φ( ·, α ) is measurable for every α ∈ A , and Φ( r, ·)
+
+is differentiable and strictly concave on A for every 
+
+r ∈ R . Let the uniform allocation be αuni (r) ≡ ¯α,and let the relevance-aware adaptive allocation be 
+
+αada (r) = f (r), where f : R → A is measurable, non-decreasing, and satisfies 
+
+E[f (R)] = ¯ α, P(f (R)̸ = ¯ α) > 0.
+
+Define the allocated marginal utility 
+
+Gf (r) = ∂αΦ( r, α ) α=f (r).
+
+Assume that Gf is measurable and non-decreasing, and that Φ( R, f (R)) , Φ( R, ¯α), Gf (R), and 
+
+Gf (R)f (R) are integrable. Then 
+
+E[Φ( R, f (R))] > E[Φ( R, ¯α)] .
+
+Proof. For each fixed relevance value r, define the utility difference between adaptive and uniform allocation as 
+
+∆( r) = Φ( r, f (r)) − Φ( r, ¯α).
+
+Since α 7 → Φ( r, α ) is differentiable and strictly concave on A, the first-order concavity inequality gives 
+
+Φ( r, ¯α) ≤ Φ( r, f (r)) + Gf (r) ¯α − f (r),
+
+with strict inequality whenever f (r)̸ = ¯ α. There-fore, 
+
+∆( r) ≥ Gf (r) f (r) − ¯α.
+
+To handle strictness rigorously, define the slack term 
+
+S(r) = ∆( r) − Gf (r) f (r) − ¯α.
+
+By strict concavity, S(r) ≥ 0, and S(r) > 0 when-ever f (r)̸ = ¯ α. Since the adaptive allocation is non-trivial, 
+
+P f (R)̸ = ¯ α > 0.
+
+Thus, S(R) is non-negative and strictly positive on an event with positive probability. Under the stated integrability assumptions, 
+
+E[S(R)] > 0.
+
+Taking expectation over R gives 
+
+E[∆( R)] = EGf (R) f (R) − ¯α + E[S(R)] 
+
+> EGf (R) f (R) − ¯α .
+
+It remains to show that the last expectation is non-negative. Let 
+
+A = f (R), M = Gf (R).
+
+Using the budget constraint E[A] = ¯ α, we have 
+
+E[M (A − ¯α)] = E[M A ] − ¯αE[M ]= E[M A ] − E[A]E[M ]= Cov( M, A ).
+
+12 Because both f and Gf are non-decreasing func-tions of r, this covariance is non-negative. Let R′
+
+be an independent copy of R. Then 
+
+2 Cov( M, A ) = E  Gf (R) − Gf (R′)
+
+· f (R) − f (R′) .
+
+Since both Gf and f are non-decreasing, we have 
+
+ Gf (R) − Gf (R′)  f (R) − f (R′) ≥ 0
+
+almost surely. Therefore, 
+
+Cov( M, A ) ≥ 0.
+
+Consequently, 
+
+EGf (R) f (R) − ¯α ≥ 0.
+
+Combining the above inequalities yields 
+
+E[∆( R)] > 0.
+
+Equivalently, 
+
+EΦ( R, f (R))  > EΦ( R, ¯α).
+
+This completes the proof. 
+
+F Human Evaluation of Compression Quality 
+
+To validate that Qcom correlates with human-perceived compression quality, we conducted a targeted human evaluation study. We randomly sampled 100 compression outputs from ZipRL-8B inference trajectories on the MusiQue and Frames test sets (50 per dataset, 20 per compression level). Three annotators with graduate-level NLP back-grounds rated each compressed output on two dimensions: Fidelity (1–5) and Coherence (1– 5). Inter-annotator agreement was measured by Cohen’s κ, yielding κ = 0 .73 for Fidelity and 
+
+κ = 0 .71 for Coherence, indicating substantial agreement. The weighted composite Qcom achieves the high-est correlation on both dimensions ( ρ = 0 .68 /
+
+0.69 ), outperforming all individual sub-scores and justifying the multi-dimensional design. 
+
+G Details of Compression Quality Scoring 
+
+G.1 Compression Ratio Score Qratio 
+
+Let ly be the character length of the generated com-pressed text y, and [Lgl , Lgh] be the target length 
+
+Table 4: Spearman correlation between Qcom sub-scores and human ratings ( n = 100 samples). 
+
+Metric Fidelity ρ Coherence ρQinfo 0.64 0.29 
+
+Qsem 0.27 0.73 
+
+Qratio 0.43 0.46 
+
+Qlevel 0.39 0.54 
+
+Qcom (composite) 0.68 0.69 
+
+interval for compression level g. We employ a piecewise function: 
+
+Qratio =
+
+
+
+1.0, if Lgl ≤ ly ≤ L gh
+
+0.8 · ly
+
+> Lgl
+
+, if ly < Lgl
+
+1.0 − 0.3 · ly −L gh
+
+> 0.5Lgh
+
+, if Lgh < l y ≤ 1.5Lgh
+
+0.3 · 1.5Lgh 
+
+> ly
+
+, if ly > 1.5Lgh
+
+(7) 0 Lower Upper 1.5×Upper     
+
+> 0.0
+> 0.2
+> 0.4
+> 0.6
+> 0.8
+> 1.0
+> 1.2
+> Too Short
+> (Linear Penalty)
+> Optimal Length
+> (Maximum Score)
+> Moderately Long
+> (Gradual Decay)
+> Too Long
+> (Strong Penalty)
+> Region I Region II Region III Region IV
+> Function of Qratio
+
+Figure 6: Compression ratio score versus text length. 
+
+G.2 Information Retention Score Qinfo 
+
+Let Kq and Kx denote the sets of keywords ex-tracted from the query q and the original text x,respectively. The retention score is: 
+
+Qinfo = 0 .7Skey + 0 .3Sgen , (8) where: 
+
+Skey = |Kq ∩ y||Kq ∩ x| + ϵ , (9) 
+
+Sgen = 0 .6 · |y ∩ Kx||Kx| + ϵ + 0 .4 · min 
+
+
+
+1.0, 2.0 · |y||x|
+
+
+
+.
+
+(10) 
+
+G.3 Semantic Completeness Score Qsem 
+
+We evaluate linguistic validity using a multiplica-tive penalty model: 
+
+Qsem = 1 .0 · pstr · plen · ppunc , (11) 13 Table 5: Distribution of compression level selections by ZipRL-8B across 624 test trajectories.               
+
+> Compression Level Count Percentage
+> Level 1 (Ultra-coarse) 65 10.42% Level 2 (Coarse) 10 1.60% Level 3 (Medium) 339 54.33% Level 4 (Fine) 51 8.17% Level 5 (Ultra-fine) 159 25.48%
+> Total 624 100.00%
+
+with the penalties defined as: • pstr = 0 .7 if the text contains only a single sentence (unless level g = 1 ), and 0.3 if no valid sentence structure is detected; otherwise 
+
+1.0.• plen = 0 .5 if word count < 20 , and 0.9 if word count > 1200 ; otherwise 1.0.• ppunc = 0 .8 if no sentence terminators are present; otherwise 1.0.
+
+G.4 Level Strategy Consistency Score Qlevel 
+
+Given the target bounds [Wgmin , Wgmax ] and maxi-mum sentence count Sgmax :
+
+Qlevel = 0 .7Sword + 0 .3Ssent , (12) where: 
+
+Sword =
+
+
+
+1.0, if Wgmin ≤ Wy ≤ W gmax 
+
+Wy/W gmin , if Wy < Wgmin 
+
+0.7, if Wgmax < W y ≤ 1.5Wgmax 
+
+0.3, otherwise (13) 
+
+Ssent = min 
+
+
+
+1.0, max 
+
+
+
+0.3, Sgmax 
+
+Sy
+
+ 
+
+. (14) 
+
+H Analysis of Learned Compression Strategy 
+
+To understand the adaptive compression behavior learned by ZipRL, we analyzed the compression level selection patterns across 624 multi-turn inter-action trajectories in our held-out test set. The predominance of Level 3 (54.33%) shows the model learned that moderate compression suf-fices for most documents while conserving com-putational resources. The distribution aligns with Theorem 4.1, validating that adaptive allocation outperforms uniform compression.                      
+
+> Dataset Description Samples Usage
+> ASearcher-LRM Long-Horizon Search 4,500 Train BC-Plus Web Browsing 830 Test MusiQue Multi-hop QA 2,459 Test SQuAD Multi-hop QA 2,694 Test Frames Multi-hop QA 824 Test Bamboogle Multi-hop QA 125 Test
+
+Table 6: Statistics of the training and test datasets used by all methods. 
+
+I Tool Configuration 
+
+To enable the agent to perform automated informa-tion retrieval tasks, we designed three tools. 
+
+Search Tool : Accepts textual queries and returns the most relevant document fragments, document IDs, and URLs. 
+
+Open-Page Tool : Accepts either a URL or a doc-ument ID and returns the complete webpage con-tent, enabling detailed retrieval following search results. 
+
+Finish Tool : Invoked when the agent has ob-tained a definitive answer or can no longer proceed. By coordinating these three tools, the agent exe-cutes the full “Search, Browse, Analyze, and Out-put” pipeline for automated information retrieval. ZipRL enforces a “compress-on-every-turn” mech-anism: regardless of the specific tool invoked, the agent outputs a compressed reasoning state or ob-servation summary before deciding on the next action. 
+
+J Experimental Details 
+
+J.1 Datasets for Experiments 
+
+Table 6 summarizes the statistics of all training and test datasets used in our experiments. 
+
+J.2 Selection of Compression Granularity 
+
+To establish a principled framework for compres-sion layer division, we analyzed 1,949 samples of successfully resolved real-world dialogues. Utiliz-ing GPT-4, we generated compressed summaries for each dialogue turn and performed K-means clus-tering on the summary lengths of these samples, exploring cluster counts ( K) ranging from 2 to 8. As illustrated in Table 7, the Davies-Bouldin Index reaches its minimum value of 0.4988 at K = 5 ,indicating that a five-cluster configuration yields the optimal separation quality. Based on these clustering results, we formally defined five compression levels: 14 Table 7: Davies-Bouldin Index Comparison Across Dif-ferent K Values.                      
+
+> K2345⋆678DB Index 0.616 0.570 0.512 0.499 0.506 0.521 0.513
+> ∆%—−7.5−10 .2−2.5+1 .4+3 .0−1.5
+
+• Level 1 (100–500 chars): Ultra-coarse com-pression, retaining only core conclusions. • Level 2 (500–1000 chars): Coarse compres-sion, retaining primary questions and key con-clusions. • Level 3 (1000–2000 chars): Medium compres-sion, retaining decision points and important context. • Level 4 (2000–3000 chars): Fine compres-sion, retaining the complete logical chain and important details. • Level 5 (3000–6000 chars): Ultra-fine com-pression, preserving nearly all critical infor-mation. 
+
+K Scaling to 32B Parameters 
+
+To empirically prove that our adaptive multi-granularity compression method does not en-counter a performance ceiling at the 14B scale, we extended our framework to a 32B parameter base model (ZipRL-32B). Evaluated across the benchmarks, ZipRL-32B achieves an average EM of 35.2%, representing a +4.1% absolute EM im-provement over the ZipRL-14B model, demonstrat-ing that ZipRL’s performance continues to scale effectively with larger base models. 
+
+L Same-Base-Model Comparison (Qwen2.5) 
+
+To eliminate potential confounds arising from base model generation differences (e.g., ZipRL-8B uses Qwen3-8B whereas ASearcher-7B uses Qwen2.5-7B), we conduct strictly matched-scale controlled experiments by instantiating ZipRL on the identical Qwen2.5 series (3B/7B/14B) used by the baselines. As shown in Table 8, ZipRL consistently outper-forms same-series baselines at all scales, with a 
+
++5 .5 average EM gain at the 7B scale, firmly at-tributing the observed improvements to our algo-rithmic contributions. Table 8 presents the strictly matched-scale com-parison where ZipRL is trained on the same Qwen2.5 base model series as the baselines, con-firming that performance gains stem from our al-gorithmic contributions rather than generational model differences.                           
+
+> Table 8: Strictly matched-scale comparison: ZipRL (Qwen2.5) vs. same-series baselines. ∆EM: absolute improvement over the best same-scale specialized base-line.
+> Scale Model Base Avg EM ∆EM
+> 3B Search-R1-3B Qwen2.5-3B 8.6 —ZipRL-3B Qwen2.5-3B 26.6 +18 .0
+> 7B ASearcher-7B Qwen2.5-7B 22.5 —ZipRL-7B Qwen2.5-7B 28.0 +5 .5
+> 14B ASearcher-14B Qwen2.5-14B 27.8 —ZipRL-14B Qwen2.5-14B 29.6 +1 .8
+
+M Comparison with Memory-Based Methods 
+
+MemAgent (Yu et al., 2025) and MEM1 (Zhou et al., 2025) are designed for processing pre-given long documents via fixed-length memory overwrite or consolidation. To enable fair comparison in our multi-turn retrieval setting, we adapt both meth-ods by merging retrieved documents and splitting them into 500-word chunks as tool observations, injected into their respective memory mechanisms. As shown in Table 9, ZipRL consistently outper-forms both adapted baselines across all scales and datasets. 
+
+N Hyperparameter and Sensitivity Analysis 
+
+N.1 Hyperparameter Analysis 
+
+To analyze the sensitivity of the hyperparameter 
+
+w in Equation (4), we evaluate ZipRL with the Qwen3-8B base model at different values of w,as shown in Figure 4 (right). When w = 0 , the model reverts to standard GRPO, lacking turn-level dense advantage, and performs the worst, validat-ing the effectiveness of HRR. For w values between 0.2 and 0.8, ZipRL shows consistent strong perfor-mance, with the best results at w = 0 .2, which we adopt as the default. 
+
+N.2 Retrieval Top-K Analysis 
+
+To assess the impact of the number of retrieved doc-uments on ZipRL’s performance, we evaluate the model at top-k values of 5, 20, and 30. As shown in Figure 7 (left), the best performance occurs when 15 Table 9: Comparison with adapted memory-based methods on multi-turn retrieval QA (4 datasets, BC-Plus excluded). 
+
+Scale Model Bamboogle MusiQue SQuAD Frames Avg (EM/F1) 
+
+8B MemAgent-8B 35.2/48.9 17.8/28.4 14.2/26.1 13.1/25.2 20.1/32.2 MEM1-8B 38.4/52.4 18.8/28.0 15.2/28.3 13.6/25.8 21.5/33.6 ZipRL-8B 49.8/64.7 36.8/46.7 25.8/42.4 18.1/29.3 32.6/45.8 
+
+14B MemAgent-14B 36.8/50.4 16.4/27.2 13.4/25.9 12.6/24.7 19.8/32.1 MEM1-14B 44.0/60.7 25.8/34.0 18.2/33.8 14.9/27.3 25.7/38.9 ZipRL-14B 52.8/67.6 33.6/43.4 24.0/42.2 20.8/32.4 32.8/46.4 5 10 15 20 25 30      
+
+> TopK
+> 28
+> 30
+> 32
+> 34
+> 36
+> 38
+> 40
+> Performance (%)
+> Analysis of Retrieval Top-K
+> EM
+> F1 510 15 20 25 30
+> Training Turns
+> 28
+> 30
+> 32
+> 34
+> 36
+> 38
+> 40
+> Performance (%)
+> ZipRL Performance vs. Training Turns
+> EM
+> F1
+
+Figure 7: Impact of retrieval top-k (left) and training turns (right) on average EM and F1 scores across five datasets. 
+
+top-k is set to 20, which we adopt as the default parameter. 
+
+N.3 Training Turns Analysis 
+
+To investigate the impact of the maximum number of interaction turns on ZipRL’s performance, we evaluate the model at maximum training turns of 5, 20, and 30. As shown in Figure 7 (right), the model achieves the best performance when the maximum number of turns is set to 20, which we select as the default parameter. 
+
+O Agent Behavior Analysis 
+
+Table 10: Fine-grained agent behavior statistics (aver-aged across MusiQue, SQuAD, Frames, Bamboogle). 
+
+Model Avg Avg Avg Finish Turns Search/q Open/q Rate 
+
+ZipRL (Ours) 7.07 5.83 0.19 0.85 AgentFold 6.23 4.94 0.54 0.58 ASearcher 4.02 3.02 0.00 0.98 NestBrowse-8B 3.51 1.35 0.00 0.83 Search-R1-7B 8.90 8.09 0.07 0.20 
+
+We highlight four key observations. (1) Adap-tive difficulty-aware search depth: ZipRL dy-namically adjusts retrieval intensity based on ques-tion difficulty: it issues only 2.5 searches on Bam-boogle but scales to 8.5 on Frames ( 3.4× increase), an emergent behavior arising from outcome-driven RL training. (2) Excessive retrieval without con-vergence (Search-R1): Search-R1-7B issues ∼9.6 searches on Bamboogle ( 3.8× more than ZipRL) yet achieves significantly lower accuracy, with a Finish Rate of only 0.20, indicating frequent con-text budget exhaustion without conclusive answers. 
+
+(3) Under-retrieval is not efficiency: ReAct and NestBrowse models issue very few searches (0.87– 1.26 per query), but this reflects under-retrieval rather than genuine efficiency; these models under-perform substantially on multi-hop datasets requir-ing evidence chaining. (4) Reliable termination: 
+
+ZipRL achieves a Finish Rate of 0.85, substantially outperforming AgentFold (0.58) and Search-R1-7B (0.20), demonstrating that ZipRL reliably commits to answers after sufficient evidence collection. 
+
+Table 11: Average actual interaction turns and perfor-mance on the BC-Plus deep research benchmark. 
+
+Model Avg Turns Average EM Average F1 
+
+ZipRL-8B (Ours) 13.8 0.3233 0.4082 GPT-4o-ReAct 6.0 0.2520 0.3161 DeepSeek-v3.2-ReAct 3.1 0.0880 0.1329 Qwen3-235B-ReAct 2.1 0.2067 0.2355 NestBrowse-8B 1.3 0.0880 0.1453 
+
+To demonstrate deep interaction capabilities on the BrowseComp-Plus (BC-Plus) benchmark, which requires complex deep research, ZipRL maintains effective exploration for an average of 13.8 turns, while baselines like Qwen3-235B-ReAct and Search-R1 terminate prematurely (2.1 to 6.0 turns) due to under-retrieval or context overload (Table 11). 
+
+Reward Evolution. As shown in Figure 5 (left), ZipRL outperforms the baseline in both conver-gence speed and final reward. GRPO exhibits instability due to sparse supervision, while HRR mitigates the credit assignment challenge in long-horizon tasks. By introducing dense intermediate 16 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 
+
+> Turn Number
+> 0
+> 100
+> 200
+> 300
+> 400
+> 500
+> Number of Active Trajectories
+> ZipRL (Ours)
+> AgentFold
+> Qwen3-235B-ReAct
+
+Figure 8: Distribution of active trajectories across differ-ent interaction turns on 500 difficulty queries from the MusiQue dataset. Sharp drops in baseline models be-tween turns 5–10 indicate premature termination, while ZipRL maintains consistent reasoning depth up to 20 turns. 
+
+feedback, HRR enables stable optimization, allow-ing the policy to reach higher reward levels. 
+
+Compression Quality. As illustrated in Figure 5 (right), ZipRL exhibits a consistent upward trajec-tory with reduced variance, improving from 0.57 to 0.64. 
+
+Multi-Run Stability. To empirically validate the predicted variance reduction effect, we conduct 3 independent training runs for both standard GRPO (w = 0 ) and ZipRL with HRR. As shown in Ta-ble 12, HRR consistently achieves lower cross-run standard deviation ( σ = 0 .0099 –0.0124 ) com-pared to GRPO ( σ = 0 .0351 –0.0638 ) across all training phases. 
+
+Table 12: Cross-run reward statistics (mean ± std) over 3 independent runs. 
+
+Training Steps GRPO ( w = 0 ) ZipRL (HRR) 
+
+Steps 21–25 0.5926 ± 0.0351 0.6171 ± 0.0111 
+
+Steps 26–30 0.6028 ± 0.0423 0.6263 ± 0.0113 
+
+Steps 31–35 0.6197 ± 0.0512 0.6379 ± 0.0124 
+
+Steps 36–40 0.6238 ± 0.0638 0.6439 ± 0.0099 
+
+P Trajectory Distribution Analysis 
+
+As shown in Figure 8, the baseline models ex-hibit sharp trajectory interruptions between turns 5 and 10, but the failure mechanisms differ. Con-text Overload (Qwen3-235B-ReAct): Despite its vast parameter scale, Qwen3-235B-ReAct achieves an EM of only 18 .2% under a full history reten-tion strategy. Cognitive Dead-ends (AgentFold): 
+
+AgentFold’s fixed compression strategy lacks dy-namic perception of task relevance, and aggressive compression often prunes “bridge entities” essen-tial for multi-hop reasoning. In contrast, ZipRL demonstrates significant reasoning maintenance in deep interaction intervals (10–20 turns). 
+
+Q Pseudocode of ZipRL 
+
+Algorithm 1 presents the complete training proce-dure of ZipRL, covering both the cold-start SFT phase and the HRR-based RL optimization phase. 
+
+R Robustness Under Noisy Retrieval 
+
+We evaluate whether ZipRL adaptively adjusts its compression strategy when retrieval quality de-grades. Using ZipRL-8B, we inject noise into the retrieved document pool at five levels: Clean (0%), Low (25%), Mid (50%), High (75%), and Adver-sarial (100% adversarial documents). 
+
+Robustness to Random Noise (0–75%). Perfor-mance degrades gracefully under random noise. Across four datasets, the EM drop from Clean to High (75%) noise is modest: −9.8% on Bam-boogle, −4.2% on MusiQue, −11 .2% on SQuAD, and −15 .3% on Frames. ZipRL retains approxi-mately 85–90% of clean performance at 75% noise. 
+
+Adversarial Retrieval Boundary. Under fully adversarial conditions (100% adversarial docu-ments), performance degrades substantially across all datasets (e.g., MusiQue: 0.330 → 0.002 ), consistent with the shared assumption of retrieval trustworthiness in RAG-based systems. Notably, ZipRL’s average retrieval turns increase from 
+
+∼8.6 to ∼35.9 (Table 13), suggesting emergent contradiction-resolution behavior. Extending the compression scoring framework with retrieval cred-ibility estimation remains future work. 
+
+Table 13: ZipRL-8B performance and average retrieval turns under varying noise levels (EM / Avg Turns).                        
+
+> Noise Level Bamboogle MusiQue SQuAD Frames
+> EM / Turns EM / Turns EM / Turns EM / Turns Clean (0%) 0.488 / 8.6 0.330 / 15.4 0.232 / 6.4 0.163 / 20.7 Low (25%) 0.440 / 8.1 0.324 / 15.5 0.256 / 6.5 0.160 / 21.0 Mid (50%) 0.440 / 8.4 0.312 / 15.3 0.218 / 8.4 0.160 / 22.4 High (75%) 0.440 / 9.8 0.316 / 17.0 0.206 / 9.2 0.138 / 23.6 Adversarial 0.072 / 35.9 0.002 / 36.7 0.012 / 31.6 0.018 / 37.7
+
+S Comparison with Adaptive RAG Compression Methods 
+
+Recent adaptive RAG compression methods such as ACC-RAG (Guo et al., 2025), AttnComp (Luo 17 Algorithm 1 ZipRL: Adaptive Multi-Turn Context Compression with Hindsight Response Replay  
+
+> 1:
+
+Input: Training Query Set Q, SFT Model πsft , Reference Model πref , Group Size G, Reshaping Weight w. 
+
+> 2:
+
+Output: Optimized Policy πθ. 
+
+> 3:
+
+Stage 1: Supervised Fine-Tuning (SFT)  
+
+> 4:
+
+Initialize θ ← Train (πinit , Ddemo ) 
+
+> 5:
+
+Stage 2: Reinforcement Learning with HRR  
+
+> 6:
+
+while not converged do  
+
+> 7:
+
+Sample a batch of queries q ∼ Q  
+
+> 8:
+
+for each query q do  
+
+> 9:
+
+Sample G trajectories O = {o(1) , . . . , o (G)} using πθ(·| q) 
+
+> 10:
+
+Obtain sparse outcome rewards Rfinal = {R(1) 
+
+> final
+
+, . . . , R (G)
+
+> final
+
+} 
+
+> 11:
+
+end for  
+
+> 12:
+
+for each trajectory o(i) in O do  
+
+> 13:
+
+for each turn j = 1 to T do  
+
+> 14:
+
+Calculate Turn Quality : Q(i,j ) 
+
+> com
+
+← Score (o(i,j )) 
+
+> 15:
+
+end for  
+
+> 16:
+
+Calculate Trajectory Baseline : ¯Q(i) 
+
+> com
+
+← 1
+
+> T
+
+P 
+
+> j
+
+Q(i,j ) 
+
+> com
+> 17:
+
+end for  
+
+> 18:
+
+Compute group stats: μR ← mean (Rfinal ), σ R ← std (Rfinal ) 
+
+> 19:
+
+for each trajectory i and turn j do  
+
+> 20:
+
+A(i) 
+
+> GRPO
+
+← (R(i) 
+
+> final
+
+− μR)/(σR + ε) 
+
+> 21:
+
+A(i,j ) 
+
+> HRR
+
+← A(i) 
+
+> GRPO
+
++ w · (Q(i,j ) 
+
+> com
+
+− ¯Q(i)
+
+> com
+
+) 
+
+> 22:
+
+end for  
+
+> 23:
+
+Update θ by maximizing L(θ) 
+
+> 24:
+
+end while 
+
+Table 14: Taxonomy of context compression paradigms. 
+
+✓: supported; ✗: not supported.                         
+
+> Method Multi- Per-doc RL-Joint turn Adaptive optimized Retrieval
+> LLMLingua / RECOMP ✗✗✗✗
+> ACC-RAG / SARA ✗✓✗✗
+> AttnComp ✗✓✗✗
+> MemAgent / MEM1 ✓✗✗✗
+> ZipRL (ours) ✓✓✓✓
+
+et al., 2025), and SARA (Jin et al., 2025b) pursue variable-rate context compression in single-turn settings, with no mechanism to issue new retrieval actions or receive optimization signal from down-stream task outcomes via RL. ZipRL addresses a fundamentally different problem: online, multi-turn agentic search , where compression and agen-tic behavior are co-optimized through sparse end-task reward. 
+
+T Robustness of Compression Quality Score Against Gaming Behaviors 
+
+1. Mutual Structural Constraints. While gener-ating redundant query keywords might marginally increase Qinfo , this behavior is strictly penalized by Qratio (length overflow) and Qsem (destroyed grammatical coherence). Since the final Qcom is a weighted sum, the penalty in structural and seman-tic dimensions heavily outweighs the illicit gain in 
+
+Qinfo .
+
+2. Mathematical Bounding. The keyword cov-erage term Skey = |Kq ∩y|/(|Kq ∩x|+ϵ) naturally caps at 1.0, preventing unbounded reward through keyword repetition. 
+
+3. Anchoring by Final Task Reward. HRR functions as an advantage reshaping technique rather than replacing the environment reward. The final advantage remains fundamentally anchored by the GRPO advantage, which is strictly determined by the exact match (EM/F1) of the final answer. This is empirically confirmed by the monotonically increasing Pearson correlation between Qcom and task reward ( r : 0 .25 → 0.51 ). 18 U Prompts 
+
+We used the prompts shown in Figure 9 and Fig-ure 10. 19 Figure 9: Prompt Design for ZipRL, Part 1. 
+
+20 Figure 10: Prompt Design for ZipRL, Part 2. 
+
+21

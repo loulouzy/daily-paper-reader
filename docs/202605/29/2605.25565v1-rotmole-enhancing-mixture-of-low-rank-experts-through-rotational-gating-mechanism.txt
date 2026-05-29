@@ -1,0 +1,443 @@
+Title: RotMoLE: Enhancing Mixture of Low-Rank Experts through Rotational Gating Mechanism
+
+URL Source: https://arxiv.org/pdf/2605.25565v1
+
+Published Time: Tue, 26 May 2026 01:57:15 GMT
+
+Number of Pages: 18
+
+Markdown Content:
+# RotMoLE: Enhancing Mixture of Low-Rank Experts through Rotational Gating Mechanism 
+
+Mengyang Sun 1 ∗ Maochuan Dou 2 Tao Feng 1 Dan Zhang 3
+
+Yihao Wang 2 Junpeng Liu 4 Yifan Zhu 5 Jie Tang 1
+
+> 1
+
+Tsinghua University 2Beijing Information Science and Technology University 
+
+> 3
+
+National University of Singapore 4Hong Kong University of Science and Technology (Guangzhou) 
+
+> 5
+
+Beijing University of Posts and Telecommunications 
+
+sunmy19@mails.tsinghua.edu.cn {2023011446, 2022011219}@bistu.edu.cn fengtao.hi@gmail.com zhangdan25@nus.edu.sg junpengliu@hkust-gz.edu.cn yifan_zhu@bupt.edu.cn jietang@tsinghua.edu.cn 
+
+# Abstract 
+
+While Large Language Models (LLMs) are commonly fine-tuned to handle domain-specific tasks before being applied to vertical applications, adapting them to com-plex scenarios with diverse specialized knowledge remains challenging. Mean-while, Mixture-of-Experts (MoE) architecture has risen as a crucial paradigm for training LLMs, and some recent works have also incorporated MoE into Parameter-Efficient Fine-Tuning (PEFT) to propose the Mixture of Low-rank Experts (MoE-LoRA), to enhance the power of low-rank adapters for learning complicated knowledge. However, conventional gating mechanisms in MoE typ-ically apply only a scalar reweighing to selected experts, thereby limiting their underlying capacity of representation and generalization. Motivated and enabled by the low-rank structures in MoE-LoRA, we propose RotMoLE, a specialized MoE framework for low-rank experts featuring an additional rotation gate. Beyond simple scaling, RotMoLE implements a rotation mechanism for each selected expert, enabling superior expert exploitation and specialization for learning diverse data, especially when expert candidates are limited. Empirical results on complex multi-task and multilingual training scenarios validate our effectiveness. 
+
+# 1 Introduction 
+
+Through Mixture-of-Experts (MoE) [Jacobs et al., 1991] architecture and Parameter-Efficient Fine-Tuning (PEFT) [Zhang et al., 2025a] technique, large language models (LLMs) exhibit their capabili-ties of accommodating massive general knowledge and rapidly adapting to specific vertical domains. As noted by Cai et al. [2025] and Zhang et al. [2025b], MoE serves as a sparse framework for efficiently scaling LLMs. Through top-k selection and weighted aggregation of experts, MoE exhibits its significant capacity and flexibility across diverse fields, especially for complex and multi-task scenarios. Specifically, top-k expert selection in MoE enables sparse activation, which thereby not only boosts the computational efficiency [Shazeer et al., 2017], but also facilitates the decoupling and isolation of specialized domain knowledge [Ren et al., 2023]. Additionally, the weighted expert aggregation acts as a magnitude scaling process applied to the outputs of selected experts based on their respective gate values, thereby further expanding the representational capacity of MoE [Nie et al., 2021]. The whole paradigm is formulated as y = P   
+
+> i∈T opK (x)
+
+giEi(x), where gis denote the gate values and we typically normalize P   
+
+> i∈T opK (x)
+
+gi = 1 to ensure numerical stability. 
+
+> ∗The work was done while the author interned at Zhipu.AI. Preprint.
+> arXiv:2605.25565v1 [cs.LG] 25 May 2026
+
+Figure 1: The structure of our Rotatable Mixture of Low-rank Experts (i.e., RotMoLE): To model a rotation operation for each expert beyond the simple gate-value-based scaling, we implement a rotation gate θ = Θ( x) as well as a set of learnable vectors q, for generating rotation angles and rotation planes for each low-rank expert. Specifically, for the LoRA expert’s rank equal to r, we conduct a 2D rotation for the r-dimensional embeddings in a 2D sub-plane, given by W = W0 + P   
+
+> i∈T opK (x)
+
+giBiRiAi,where Ri denotes the r-dimensional rotation matrix constructed by θi and qi.Furthermore, as the Low-rank Adaptation (LoRA) [Hu et al., 2022] gains increasing traction in the field of PEFT, recent researchers have also incorporated MoE into LoRA and proposed Mixture of Low-rank Experts (MoE-LoRA) [Dou et al., 2024, Li et al., 2024]. Specifically, conventional LoRA introduces a trainable pair of low-rank matrices Ar×d and Bd×r (r ≪ d) to a fixed pretrained module 
+
+Wd×d, given by W = W0 +BA ; while MoE-LoRA similarly introduces a series of LoRA modules Bi
+
+and Ai, as well as a routing module g = G(x) to W, given by W = W0 + P   
+
+> i∈T opK (x)
+
+giBiAi. The incorporation of multiple low-rank modules in MoE-LoRA demonstrably improved the performance of PEFT in various scenarios, such as multi-task learning [Liu et al., 2024b] and continual learning [Ge et al., 2025], etc. However, there still remain challenges in modeling diverse specialized knowledge in complicated downstream scenarios using such parameter-efficient methods like MoE-LoRA. Most MoE frameworks employ a simple scaling gate to select and weigh experts, which effectively modulates the magnitude of experts’ respective contributions. However, it fundamentally lacks the capacity to perform complex spatial transformations on those selected experts. Consequently, it is insufficient for modeling intricate exploitation strategies of candidate experts required by diverse and complicated scenarios, such as multilingual or multi-task learning, especially when candidate experts are limited. Specifically, scalar gate values are only able to scale the norms of expert outputs along their fixed spatial directions. This limitation restricts the solution space formed by the weighted aggregation of selected experts. As a result, those routers are only limited to determining how much 
+
+an expert contributes, while overlooking how diverse it can contribute. A natural solution is to introduce an enhanced gate module capable of providing each selected expert with a more powerful transformation function beyond scaling. However, this brings a substantial demand for additional trainable parameters. For example, an unconstrained linear transformation of a d-dimensional vector requires a d × d matrix. Therefore, with n d -dimensional experts, this would rely on d3n trainable gating parameters, which are disproportionately large for a routing module, and may even be far larger than expert modules themselves. Dynamically constructing these matrices from fewer coefficients during inference may alleviate the storage burden, but it still leads to a temporary d × d memory usage and a computational cost of d-dimensional matrix construction and multiplication. Given that the hidden dimension d in current mainstream LLMs typically exceeds 4k [Zhao et al., 2023], such an approach is effectively prohibitive compared to its benefits. Notably, the low-rank structure of LoRA offers an opportunity to potentially implement complex expert transformations in MoE-LoRA that go beyond simple scaling: Since r ≪ d, an 
+
+r-dimensional linear transformation function requires only an r × r matrix if we apply it after module A, such as W = W0 + P   
+
+> i∈T opK (x)
+
+BiGiAi, where Gi is an r × r matrix generated by a gate module with only dnr 2 trainable parameters. However, compared to the low-rank expert modules themselves which totally consist of 2ndr parameters, it is still a disproportionately large gate. 2Motivated by the observation that any transformation between two specific non-zero vectors can be formulated as a 2D transformation within the sub-plane spanned by the two vectors, and thus can be further decomposed into a pure scaling operation and a pure rotation within the plane, we propose Rotatable Mixture of Low-rank Experts (i.e., RotMoLE), a specialized MoE framework for low-rank experts featuring an additional rotation gate. Specifically, RotMoLE assigns not only a scaling value 
+
+gi, but also a rotation coefficient θi to each candidate expert. For the case where the expert rank r
+
+equals 2, a 2D rotation matrix can be naturally derived as: 
+
+Ri =
+
+ cos θi − sin θi
+
+sin θi cos θi
+
+
+
+;
+
+While for r larger than 2, the rotation operation is much more complex to formulate since it requires more variables beyond a single θi to specify the rotation sub-plane Pi for expert i. Therefore, we further employ a small set of rn trainable parameters to determine a temporary rotation plane Pi
+
+for each expert and thereby construct the r × r rotation matrix Ri based on Pi and θi. As a result, our proposed RotMoLE can be expressed as W = W0 + P   
+
+> i∈T opK (x)
+
+giBiRiAi, while the total number of extra parameters we introduce is only dn for LoRA ranks equal to 2, and (d + r)n for LoRA ranks larger than 2, respectively. The main structure of RotMoLE is exhibited by Figure 1. The main concepts of this paper are related to the fields of MoE in LLMs, PEFT, LoRA, and MoE-LoRA, etc. Please refer to Appendix A for related works of those fields. Our main contributions are summarized as follows: • We emphasize the limitation of existing MoE routers, which only perform a norm scaling for each selected expert, lacking the capability to perform complex transformations on experts for diverse scenarios, especially when experts are limited. • We indicate the potential of implementing more complex transformations for routing low-rank experts in MoE-LoRA, and propose RotMoLE as a specialized MoE-LoRA framework featuring an additional rotation gate. • We conduct a series of multi-task and multilingual experiments under various circumstances, illustrating the effectiveness and generalization of our RotMoLE over conventional MoE-LoRA baselines. 
+
+# 2 Methodology 
+
+Figure 2: Illustrations of the MoE solution space through a case study in a 2-dimensional space with two candidate experts. Our RotMoLE serves as a specialized frame-work of MoE-LoRA, relying on decomposing an unconstrained transformation of candidate experts into a pure scaling operation and a pure rotation within a 2-dimensional plane space. Specifically, we treat the conventional gate mod-ules in MoE as the scaling operators, so the weighted aggregation based on their generated gate values can be regarded as a normalization to preserve the scale consistency of hidden states during layer-up computation; To model rotation, we introduce an extra gate module named rota-tion gate, which generates rotation angle values 
+
+θs for selected experts. A specific low-rank ro-tation matrix Ri is subsequently derived from the respective angle value θi for each expert i, and then multiplying the expert in the middle of two low-rank matrices Ai and Bi, given by W = W0 + P   
+
+> i∈T opK (x)
+
+giBiRiAi. We claim that performing customized rotation operations for each expert can further expand the global solution space of MoE. We illustrate this through a simple case study in Figure 2. The left part of Figure 2 shows the solution space of a conventional 2-expert MoE structure: Given the outputs of candidate experts E1(x) and E2(x), and their respective gate values g1 and g2 (g1 + g2 = 1 ), the weighted-sum solution space locates only within the blue line; While the right part of Figure 2 demonstrates the case of integrating a rotation gate (which is our proposed method): Given respective rotation angles 3θ1 and θ2, outputs of candidate experts are rotated by θi first, and then weighted summed by their respective gate values. The solution space of weighted-summing thus transfers to the green line. As a result, through dynamic and customized θs, the solution space of MoE is expanded. We elaborate on our RotMoLE in the following four aspects: (1) the theoretical foundation of RotMoLE; (2) the rotation gate module generating angle values; (3) the algorithm of conducting low-rank rotation through rotation matrix, typically for expert ranks equal to 2; and (4) the solution we propose for rotation matrix construction for larger expert ranks. 
+
+2.1 Theoretical Foundation 
+
+Our RotMoLE is based on our observation that any transformation between two specific non-zero vectors, no matter originally linear or non-linear, can be reversely written as a 2D transformation within the sub-plane spanned by the two vectors, and thus can be further decomposed into a pure scaling operation and a pure rotation within the plane. To specify this, we first denote the two random non-zero d-dimensional vectors as u and v, and two orthogonal basis vectors of the plane P spanned by u and v as e1 and e2, where |e1| = |e2| = 1 and e1 · e2 = 0 . Then we can rewrite u and v as: 
+
+u = ( u · e1)e1 + ( u · e2)e2 = u1e1 + u2e2;
+
+v = ( v · e1)e1 + ( v · e2)e2 = v1e1 + v2e2,
+
+and so that we can define uP = [ u1, u 2]T and vP = [ v1, v 2]T as the views of u and v under the condition of plane P. Afterwards, these two vectors can be further expressed by: 
+
+uP =
+
+q
+
+u21 + u22 · [cos θu, sin θu]T ; vP =
+
+q
+
+v21 + v22 · [cos θv , sin θv ]T ,
+
+where θu = arccos u1√u21+u22
+
+and θv = arccos v1√v21 +v22
+
+. Finally, we can formulate the transformation from uP to vP as: 
+
+vP =
+
+pv21 + v22
+
+pu21 + u22
+
+· Rotate (uP , θ v − θu) = 
+
+pv21 + v22
+
+pu21 + u22
+
+·
+
+cos ( θv − θu) − sin ( θv − θu)sin ( θv − θu) cos ( θv − θu)
+
+
+
+· uP ,
+
+indicating that we first rotate the vector uP by the angle of θv − θu in plane P, and then scale it by a scalar 
+
+√v21 +v22
+
+√u21+u22
+
+.
+
+2.2 Rotation Gate 
+
+Similar as the scaling gate g = G(x) = Sof tmax (x·Wg ), we also implement a linear module for the rotation gate. Here we denote it as x · Wθ . Instead of employing a Sof tmax function which targets for a sum-to-1 normalization among all n experts, our rotation operation naturally does not require a sum-to-1 normalization since the operation of rotating each expert is respectively independent. However, we notice that the rotation angles exhibit periodicity. This non-monotonic property may significantly affect model training. Therefore, we implement an independent normalization for each angle to restrict it within a single period. The whole rotation gate is expressed as follows: 
+
+θ = Θ( x) = 2 π · Sigmoid (x · Wθ ) − π, 
+
+where the Sigmoid function normalizes per-expert value to [0 , 1] , and then it is mapped to [−π, π ].We initialize the trainable parameters Wθ to 0 since we regard the default condition as the condition without any rotation. Specifically, Sigmoid function is more sensitive to input variations within the nearby range of 0, while more stable to larger positive or negative inputs. As a result, θ is sensitive to trainable parameters Wθ around 2π · Sigmoid (0) − π = 0 , while more stable around −π or π when 
+
+Wθ is relatively large. This will theoretically encourage both early-stage convergence and late-stage stability of our rotation gate, boosting the training performance of RotMoLE. 4For sparse expert activation, instead of conducting top-k expert selection based on rotation angle values, we still follow the convention of previous MoE frameworks to perform sparse activation only based on scaling gate values gis. In other words, k experts with the largest gi values are activated. This is due to the concept that only scaling gate values gis indicate the relative importance of each expert, while the rotation gate only contributes to the diversity of expert exploitation and generalization. 
+
+2.3 2-Dimensional Rotation 
+
+Two essential components for conducting a rotation operation in a d-dimensional space are the rotation angle and the rotation plane (i.e., a 2-dimensional subspace). For the case where expert rank equals 2, the entire space is 2-dimensional, so the rotation angle serves as the only coefficient for modeling a rotation operation. A 2-dimensional rotation can be expressed by a 2-dimensional matrix 
+
+Ri, and therefore, our proposed RotMoLE can be derived as the follows: 
+
+W = W0 + P   
+
+> i∈T opK (x)
+
+giBiRiAi = W0 + P   
+
+> i∈T opK (x)
+
+giBi
+
+cos θi − sin θi
+
+sin θi cos θi
+
+
+
+Ai,
+
+where g = G(x) and θ = Θ( x), indicating the scaling and the rotation gate modules, respectively. 
+
+2.4 Rotation for Larger LoRA Ranks 
+
+To implement rotation operation for expert rank r larger than 2, we follow the theoretical foundation in Section 2.1, which indicates that the r-dimensional rotation operation inside each r-rank LoRA expert can be formulated as a 2-dimensional rotation by constructing a rotation plane Pi(x) for each expert i and each query x, spanned by the input embedding u (i.e., Aix, since Ri is in the middle of 
+
+Ai and Bi) and output embedding v. However, as the rotation output v is unknown and is just what we aim to obtain, this rotation plane can not be determined only by u. As a result, we also need to model rotation planes as variables, just as the way we model rotation angles. Specifically, as in expert i the input embedding u for rotation (i.e., Aix) definitely lies in its rotation plane, we consider one of the plane basis e1 as Aix 
+
+> |Aix|
+
+, leaving the other r-dimensional basis e2 as the only variable. Then, instead of applying another input-related gate to generate a specific e2 for each expert through a linear mapping xd×1 → ne2r×1 which requires dnr extra trainable parameters, we implement it in a lighter way. Specifically, Luo et al. [2024] claims that since each expert is designed for specializing in a specific domain of knowledge, input embeddings routed to the same expert are expected to be more similar than those routed to distinct experts, and so are their output embeddings. Based on that claim, the inputs xs routed to the same LoRA expert i are similar and can be regarded as a relatively aggregated cluster, and so are the Aix embeddings outputted by matrix 
+
+Ai. As a result, the dispersion level of this Aixs cluster indicates the diversity within expert i, and finally their respective rotation operations can therefore be light-weighted as functions enhancing this diversity to achieve better expert exploitation. To model this diversity enhancement, we constrain and simplify our rotation operation in expert i as a rotation only towards or away from the center of expert i’s cluster, which also means that we require the rotation plane Pi(x) must pass through this cluster center, leveraging the center embedding as the other essential support for determining 
+
+Pi(x) besides Aix. Specifically, we employ a learnable r-dimensional vector qi for each expert i as its cluster center, and construct the specific rotation plane Pi(x) for each embedding Aix using both 
+
+qi and Aix, given by Pi(x) = span (qi, A ix). Considering that qi and Aix may not be orthogonal, we treat Aix 
+
+> |Aix|
+
+as e1 and the component of qi orthogonal to Aix as e2. The whole procedure of constructing the r-dimensional rotation matrix Ri can be illustrated by the following equations: 
+
+e1i = Aix
+
+|Aix| ;
+
+e2i = e2i∗
+
+|e2i∗| , where e2i∗ = qi − (qi · e1i)e1i;
+
+Ri = ( e1i e2i) ·
+
+cos θi − sin θi
+
+sin θi cos θi
+
+
+
+·
+
+e1iT
+
+e2iT
+
+
+
+,
+
+5where g = G(x) and θ = Θ( x). Here Wg , Wθ and q are learnable parameters, totally 2dn + rn .Basically, these equations convert a 2-dimensional rotation matrix into its representation within the 
+
+r-dimensional space via two planar basis vectors, and subsequently apply it to the r-dimensional inputs. 
+
+# 3 Experiments 
+
+We conduct a series of comparative experiments to evaluate the effectiveness of RotMoLE across various complex scenarios, including multilingual and multi-task learning. To ensure fine-tuning complexity, we adopt a joint learning manner for all experiments, which means we jointly train on the mixture of all languages or tasks, named as Multilingual or Multi-task Joint Learning (MJL). We compare our RotMoLE with the conventional MoE-LoRA baseline which implements only a scaling gate g = G(x), as well as some recent MoE-LoRA variants with specific structural designs. Considering that RotMoLE involves more trainable parameters than the baseline, such as the rotation gate θ = Θ( x) or the center vectors q, we also perform a comparative experiment for ablation study between our RotMoLE and a size-equivalent MoE-LoRA with an MLP gate, to further illustrate the pure effectiveness of our structural design; Another ablation study we conduct is to verify RotMoLE under different model sizes. The two ablation studies are presented in Appendix E. 
+
+3.1 Overall Experimental Setup 
+
+Our proposed method is specifically designed for two circumstances: (1) LoRA expert ranks equal to 2, where we implement only a rotation gate; and (2) LoRA expert ranks larger than 2, where we implement a rotation gate along with n r -dimensional trainable vectors. Accordingly, our experiments cover both settings. Besides, we also conduct experiments under both dense MoE and sparse MoE configurations, demonstrating whether our proposed RotMoLE is influenced by the top-k sparse activation. Here we denote the total number of LoRA experts, the number of top experts selected during each forwarding, and the per-expert rank as n, k, r respectively. To simulate a resource-constrained scenario where experts are shared among multiple tasks, we explicitly constrain that nk < N task , where Ntask denotes the number of tasks or languages we jointly train. We claim that our proposed RotMoLE provides extra diversity to those task-shared experts by further distinguishing different assigned tasks through rotation operations, and therefore can enhance the overall performance of MJL. For more details of experimental setup, please refer to Appendix B. 
+
+3.2 Multi-task Joint Learning 3.2.1 Mixture of QA Tasks 
+
+We mix three Question Answering tasks from various fields to constitute a mixture of Multiple QA tasks for our experiments, including CommonsenseQA [Talmor et al., 2019] (CSQA), Open-BookQA [Mihaylov et al., 2018] (OBQA), and SocialIQA [Sap et al., 2019] (SIQA). Please refer to Appendix C.1 for their detailed introduction. To cover the two circumstances that LoRA ranks both equal to and larger than 2, we respectively set rank r to 2 and 3 in our experiments. We also implement both dense MoE and sparse MoE settings, which consist of 2 experts with top-2 experts activated, and 4 experts with top-2 experts activated, respectively. We train the mixture on Llama-3.2-3B for around 4,000 steps, and on Qwen-2.5-3B for around 5,500 steps, ensuring they are fully updated. The batch size is 135, meaning we train 45 samples for each QA task per step. We present our overall performances in Table 1, along with detailed per-task performances and the relative standard deviations (Std./Avg.) across tasks. The evaluation metric for QA is accuracy. It is observed that: (1) Our RotMoLE exhibits consistent superiority over the MoE-LoRA baseline (MoE-LoRA) across almost all configurations. Specifically, out of 8 experimental settings, RotMoLE achieves both higher average and per-task accuracy in 7 cases, with only one exception in configuration 
+
+{r = 3 , n = 4 , k = 2 } under Llama-3.2-3B for OpenBookQA task; (2) Quantitatively, RotMoLE can roughly enhance the jointly learning performance on mixed QA tasks by about 1% ∼ 10%, averagely 5%; (3) The task-balancing performance of RotMoLE is overall equivalent or slightly better than that of the baseline, according to their relative standard deviation values across tasks; and (4) In most cases except r = 2 under Qwen-2.5-3B, the performance improvement of RotMoLE over the baseline is more pronounced when the number of experts is very limited, such as n = 2 . This phenomenon 6indicates the effectiveness of our rotation gate mechanism in boosting per-expert diversity of MoE, since a limited number of experts is more likely to lead to task-shared experts which benefit more from our diversity-boosting design, as we may distinguish tasks by rotation within the same expert. Appendix D also presents the convergence performances of this experiment. Table 1: Performance of Jointly Fine-Tuning on Mixed QA Tasks                                                                                                            
+
+> Base Model rn,kMethod CSQA OBQA SIQA Avg. Boost ↑Std./Avg.
+> MoE-LoRA 34.73 42.60 42.48 39.93 0.09 2, 2 RotMoLE 40.21 43.80 43.86 42.62 6.74% 0.04
+> MoE-LoRA 36.94 40.80 41.15 39.63 0.05 24, 2 RotMoLE 38.90 41.80 43.91 41.54 4.82% 0.05 MoE-LoRA 38.57 37.00 40.43 38.67 0.04 2, 2 RotMoLE 43.57 41.80 42.27 42.55 10.03% 0.02
+> MoE-LoRA 35.95 41.20 36.34 37.83 0.06 Llama-3.2-3B 34, 2 RotMoLE 37.67 38.20 42.27 39.38 4.10% 0.05
+> MoE-LoRA 61.18 56.40 56.09 57.89 0.04
+> 2, 2 RotMoLE 64.13 56.80 60.75 60.56 4.61% 0.05 MoE-LoRA 60.20 52.60 55.48 56.09 0.06 24, 2 RotMoLE 64.05 60.40 60.85 61.77 10.13% 0.03
+> MoE-LoRA 59.62 56.20 57.22 57.68 0.02
+> 2, 2 RotMoLE 62.24 57.60 58.14 59.33 2.86% 0.03 MoE-LoRA 63.06 57.00 56.65 58.91 0.05 Qwen-2.5-3B 34, 2 RotMoLE 63.88 57.60 57.63 59.70 1.34% 0.05
+
+3.2.2 Mixture of GLUE Tasks 
+
+We also mix general NLU tasks from the GLUE benchmark [Wang et al., 2018] for MJL evaluation. To simplify our experiments, we select only three out of the nine tasks in GLUE: SST-2, MRPC, and QNLI. Details of those tasks are described in Appendix C.2. Here, we directly set up a sparse MoE configuration and a LoRA rank larger than 2, as they are more general-purpose and are more commonly used. Specifically, we set the rank r of each LoRA expert to 4, and implement two sparse Table 2: Performance of Jointly Fine-Tuning on Mixed GLUE Tasks (Llama-3.2-3B, r = 4 ). 
+
+n, k Method SST-2 MRPC QNLI Avg. 
+
+MoE-LoRA 89.33 71.77 66.52 75.87 3, 2 RotMoLE 90.37 71.07 66.67 76.03 
+
+MoE-LoRA 88.76 69.19 61.63 73.19 5, 3 RotMoLE 89.22 69.21 61.83 73.42 
+
+configurations, {n = 3 , k = 2 } and 
+
+{n = 5 , k = 3 }. Both the configura-tions still follow nk < N task to model a resource-constrained scenario. We train the mixture of the three tasks on Llama-3.2-3B for around 5,000 steps. The batch size is 30, namely 10 per task. Table 2 illustrates the overall and per-task results. Our proposed Rot-MoLE still exhibits a visible outper-formance over MoE-LoRA baseline. 
+
+3.3 Multilingual Joint Learning 3.3.1 Multilingual Title Generation 
+
+For multilingual joint learning, we adopt the MTG (Multilingual Text Generation) benchmark proposed by Chen et al. [2022], and take its multilingual title generation sub-task as one of our evaluations. Five languages – English, Chinese, Spanish, French, and German – are involved in this task (see Appendix C.3 for details). We test three MoE configurations: {r = 3 , n = 2 , k = 2 },
+
+{r = 2 , n = 4 , k = 2 }, and {r = 4 , n = 5 , k = 3 }. We train the language mixture on Llama-3.2-3B for 16,000 steps using a batch size of 50 (namely 10 per language). Results are presented in Table 3. Here we measure the average performances by Rouge-1, Rouge-2, and Rouge-L scores [Lin, 2004]. To reveal per-language efficacy, we also exhibit Rouge-L scores for each language. In general, 7RotMoLE still achieves better performances than the MoE-LoRA baseline in terms of both average and per-language Rouge metrics in most cases. We also compare their convergence performances under one of the MoE configurations: {r = 4 , n = 5 , k = 3 } in Figure 3. It shows that both methods initially update equivalently during the first 8,000 steps, but the MoE-LoRA baseline exhibits an earlier convergence, and overfits much faster than our proposed RotMoLE. This further indicates that our rotation design may introduce some extra robustness to model against routers overfitting. Table 3: Performance of Jointly Fine-Tuning on Mixed Multilingual Title Generation (Llama-3.2-3B).                                                                
+
+> EN ZH ES FR DE Avg.
+> r,n,kMethod Rouge-L Rouge-1 Rouge-2 Rouge-L
+> MoE-LoRA 32.33 23.87 27.80 25.28 22.79 29.63 11.76 26.41 3, 2, 2 RotMoLE 32.92 24.35 28.02 25.37 23.17 30.21 12.50 26.76
+> MoE-LoRA 30.14 26.94 28.04 27.00 23.11 30.26 11.67 27.04 2, 4, 2 RotMoLE 32.79 26.96 28.72 26.85 23.39 30.68 12.48 27.74
+> MoE-LoRA 23.40 24.27 24.76 22.73 18.07 26.14 10.54 22.64 4, 5, 3 RotMoLE 25.28 25.48 25.75 24.90 18.89 27.82 11.67 24.06
+
+Figure 3: Convergence of Jointly Fine-Tuning on Mixed Multilingual Title Generation(Llama-3.2-3B) 
+
+3.3.2 Multilingual NLI 
+
+Here we adopt XNLI [Conneau et al., 2018] for our multilingual natural language inference experi-ments. Appendix C.4 describes the details of XNLI corpus. Notably, the original purpose of XNLI is to evaluate the cross-lingual transfer ability of multilingual models (i.e., whether models purely trained on English NLI data can handle NLI in other languages). However, in this paper we treat XNLI as a multilingual joint learning dataset to evaluate the performances of models jointly trained on the mixture of samples in five languages. Here we directly set up a sparse MoE and a LoRA expert rank larger than 2, as they are more common scenarios, that is {r = 4 , n = 5 , k = 3 }. We jointly train the mixture on Llama-3.2-3B for around 4,500 steps until they are fully updated, using a batch size of 50 with 10 per language. The overall and per-language accuracies are illustrated in Table 4. Besides the overall performance, our proposed RotMoLE also outperforms the MoE-LoRA baseline in four out of the five languages. This also indicates that RotMoLE learns more equivalent capacities across different languages during the joint training process. Table 4: Performance of Jointly Fine-Tuning on Mixed Multilingual NLI (Llama-3.2-3B).                       
+
+> r,n,kMethod EN ZH ES FR DE Avg.
+> MoE-LoRA 52.25 46.30 48.85 48.90 47.45 48.75 4, 5, 3 RotMoLE 51.96 47.94 50.38 49.14 49.12 49.71
+
+3.4 Comparison with Other Baselines 
+
+Although there are many variants proposed for enhancing MoE-LoRA, most of them focus on the loss design during back-propagation, such as the load-balancing loss or the contrastive loss. Considering that our proposed RotMoLE is a gating-based forward method, here we compare our RotMoLE 8with three variants of MoE-LoRA that specifically focus on improving forward routing effectiveness, including MoCLE [Gou et al., 2023], MoLA [Gao et al., 2024], and AdaMoLE [Liu and Luo, 2024]. MoCLE first clusters the input embeddings into several clusters, and then conducts a top-1 cluster-level expert routing along with a permanently-activated universal expert; MoLA assigns more experts to higher layers given a fixed total number of experts; AdaMoLE replaces the top-k activation by a top-p activation which selects experts whose gate values are larger than a threshold p, and dynamically adjusts p by a network. We conduct our comparisons on the mixture of QA tasks in Section 3.2.1, and apply Qwen-2.5-3B as our foundation model. Since MoCLE implements a top-1 activation and an extra universal expert, it is distinctive only under the condition of sparse MoE with 2 experts activated. As a result, we set the number of experts n to 4, and the number of activated experts k to 2. Additionally, we naturally set the number of clusters in MoCLE to the number of distinct tasks jointly trained during our experiments, which is 3; For MoLA, we set the expert allocation strategy among the first nine layers of Table 5: Performance of Jointly Fine-Tuning on Mixed QA Tasks by Various MoE-LoRA Methods (Qwen-2.5-3B, r =6, n = 4 , k = 2 ). 
+
+Method CSQA OBQA SIQA Avg. 
+
+MoCLE 36.28 29.60 37.82 34.57 MoLA 39.31 30.00 37.67 35.66 AdaMoLE 49.39 37.00 37.87 41.42 RotMoLE (Ours) 43.00 46.60 47.85 45.82 
+
+Qwen-2.5-3B to [2 , 2, 2, 4, 4, 4, 6, 6,
+
+6] , which is equivalent to the configu-ration of 4 experts per layer in terms of total expert count. Finally, we set the per-expert rank r to 6 to directly test our method under the circumstance of large ranks. Table 5 shows the results. An outperformance of our RotMoLE over the other three MoE-LoRA vari-ants is observed, in terms of both over-all and most of per-task accuracies. 
+
+3.5 Rotation Distribution Analysis 
+
+We also conduct internal probing experiments for our proposed RotMoLE, to analyze the distribution of rotational biases (angles) allocated to different sub-tasks. Specifically, during our validating experiments on the mixture of QA tasks under Qwen-2.5-3B, we store the per-task rotation bias value θs for the first expert within the v_proj module in the 8-th layer (the last layer with trainable MoE-LoRA adapters). Then we compute the sequence-level rotation bias by averaging the rotation bias values for each token within every validating sequence. Finally, we plot the distribution of sequence-level rotation biases for each sub-task. Figure 4 exhibits this distribution after 300, 600, 900, and 1,200 training steps, respectively. Here the configuration is {r = 2 , n = 4 , k = 2 }. It is observed that: (1) During training process, rotation biases become larger and non-zero, and their distributions become more flat and dispersed, indicating our rotations are playing roles in modeling sample diversity, aligning with our illustrations in Figure 2; and (2) The deviation between three sub-task distributions becomes more obvious, indicating our rotations are also playing roles in sub-task specialization and modeling the three QA sub-tasks in different ways. 
+
+Figure 4: Rotation bias distribution of the first expert within the v_proj module in the 8-th layer. 
+
+# 4 Conclusion 
+
+We propose the Rotatable Mixture of Low-rank Experts (i.e., RotMoLE), which is a novel MoE-LoRA framework that enhances the representational capacity of conventional MoE-LoRA in diverse and complicated scenarios through an additional rotational gating mechanism. Unlike conventional MoE approaches that rely solely on scalar scaling operations for expert aggregation, RotMoLE 9introduces a rotation gate that performs 2D rotations on r-dimensional low-rank space of experts, thereby significantly expanding the solution space of weighted expert combinations. Our extensive experiments across multi-task and multilingual joint learning demonstrate the effectiveness and generalization ability of RotMoLE. Appendix F discusses the limitations. 
+
+# References 
+
+Weilin Cai, Juyong Jiang, Fan Wang, Jing Tang, Sunghun Kim, and Jiayi Huang. A Survey on Mixture of Experts in Large Language Models. IEEE Transactions on Knowledge and Data Engineering , 2025. Jie Cao, Zhenxuan Fan, Zhuonan Wang, Tianwei Lin, Ziyuan Zhao, Rolan Yan, Wenqiao Zhang, Feifei Shao, Hongwei Wang, Jun Xiao, et al. CoMoL: Efficient Mixture of LoRA Experts via Dynamic Core Space Merging. arXiv preprint arXiv:2603.00573 , 2026. Yiran Chen, Zhenqiao Song, Xianze Wu, Danqing Wang, Jingjing Xu, Jiaze Chen, Hao Zhou, and Lei Li. MTG: A Benchmark Suite for Multilingual Text Generation. Findings of the Association for Computational Linguistics: NAACL 2022 , pages 2508–2527, 2022. Ronan Collobert, Samy Bengio, and Yoshua Bengio. A Parallel Mixture of SVMs for Very Large Scale Problems. Advances in Neural Information Processing Systems , 14, 2001. Alexis Conneau, Ruty Rinott, Guillaume Lample, Adina Williams, Samuel Bowman, Holger Schwenk, and Veselin Stoyanov. XNLI: Evaluating Cross-Lingual Sentence Representations. Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing , pages 2475–2485, 2018. Shihan Dou, Enyu Zhou, Yan Liu, Songyang Gao, Wei Shen, Limao Xiong, et al. LoRAMoE: Allevi-ating World Knowledge Forgetting in Large Language Models via MoE-Style Plugin. Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , pages 1932–1945, 2024. David Eigen, Marc’Aurelio Ranzato, and Ilya Sutskever. Learning Factored Representations in a Deep Mixture of Experts. arXiv e-prints , pages arXiv–1312, 2013. Sugyeong Eo, Jung Jun Lee, Chanjun Park, and Heui-Seok Lim. Mixture-of-Clustered-Experts: Advancing Expert Specialization and Generalization in Instruction Tuning. Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing , pages 14212–14223, 2025. Chongyang Gao, Kezhen Chen, Jinmeng Rao, Baochen Sun, Ruibo Liu, Daiyi Peng, Yawen Zhang, Xiaoyuan Guo, Jie Yang, and VS Subrahmanian. Higher Layers Need More LoRA Experts. arXiv e-prints , pages arXiv–2402, 2024. Chendi Ge, Xin Wang, Zeyang Zhang, Hong Chen, Jiapei Fan, Longtao Huang, Hui Xue, and Wenwu Zhu. Dynamic Mixture of Curriculum LoRA Experts for Continual Multimodal Instruction Tuning. 
+
+Forty-second International Conference on Machine Learning , 2025. Yunhao Gou, Zhili Liu, Kai Chen, Lanqing Hong, Hang Xu, Aoxue Li, Dit-Yan Yeung, James T Kwok, and Yu Zhang. Mixture of Cluster-Conditional LoRA Experts for Vision-Language Instruction Tuning. arXiv e-prints , pages arXiv–2312, 2023. Yongxin Guo, Zhenglin Cheng, Xiaoying Tang, Zhaopeng Tu, and Tao Lin. Dynamic Mixture of Experts: An Auto-Tuning Approach for Efficient Transformer Models. The Thirteenth International Conference on Learning Representations , 2025. Zeyu Han, Chao Gao, Jinyang Liu, Jeff Zhang, and Sai Qian Zhang. Parameter-Efficient Fine-Tuning for Large Models: A Comprehensive Survey. Transactions on Machine Learning Research , 2024. ISSN 2835-8856. Daniel Fidel Harvey, George Weale, and Berk Yilmaz. Optimizing MoE Routers: Design, Implemen-tation, and Evaluation in Transformer Models. arXiv preprint arXiv:2506.16419 , 2025. 10 Soufiane Hayou, Nikhil Ghosh, and Bin Yu. LoRA+: Efficient Low Rank Adaptation of Large Models. 
+
+Proceedings of the 41st International Conference on Machine Learning , pages 17783–17806, 2024. Edward J Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, et al. LoRA: Low-Rank Adaptation of Large Language Models. International Conference on Learning Representations , 1(2):3, 2022. Robert A Jacobs, Michael I Jordan, Steven J Nowlan, and Geoffrey E Hinton. Adaptive Mixtures of Local Experts. Neural Computation , 3(1):79–87, 1991. Albert Q Jiang, Alexandre Sablayrolles, Antoine Roux, Arthur Mensch, Blanche Savary, et al. Mixtral of Experts. arXiv e-prints , pages arXiv–2401, 2024. Damjan Kalajdzievski. A Rank Stabilization Scaling Factor for Fine-Tuning with LoRA. arXiv e-prints , pages arXiv–2312, 2023. Dmitry Lepikhin, HyoukJoong Lee, Yuanzhong Xu, Dehao Chen, Orhan Firat, Yanping Huang, Maxim Krikun, Noam Shazeer, and Zhifeng Chen. GShard: Scaling Giant Models with Conditional Computation and Automatic Sharding. International Conference on Learning Representations ,2021. Brian Lester, Rami Al-Rfou, and Noah Constant. The Power of Scale For Parameter-Efficient Prompt Tuning. Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing , pages 3045–3059, 2021. Dengchun Li, Yingzi Ma, Naizheng Wang, Zhengmao Ye, Zhiyuan Cheng, Yinghao Tang, et al. MixLoRA: Enhancing Large Language Models Fine-Tuning with LoRA-based Mixture of Experts. 
+
+arXiv e-prints , pages arXiv–2404, 2024. Xiang Lisa Li and Percy Liang. Prefix-Tuning: Optimizing Continuous Prompts for Generation. 
+
+Proceedings of the 59th Annual Meeting of the Association for Computational Linguistics and the 11th International Joint Conference on Natural Language Processing (Volume 1: Long Papers) ,pages 4582–4597, 2021. Chin-Yew Lin. Rouge: A Package for Automatic Evaluation of Summaries. Text Summarization Branches Out , pages 74–81, 2004. Yang Lin, Xinyu Ma, Xu Chu, Yujie Jin, Zhibang Yang, Yasha Wang, and Hong Mei. LoRA Dropout as a Sparsity Regularizer for Overfitting Control. arXiv e-prints , pages arXiv–2404, 2024. Aixin Liu, Bei Feng, Bing Xue, Bingxuan Wang, Bochao Wu, Chengda Lu, Chenggang Zhao, et al. DeepSeek-V3 Technical Report. arXiv e-prints , pages arXiv–2412, 2024a. Haokun Liu, Derek Tam, Mohammed Muqeeth, Jay Mohta, Tenghao Huang, Mohit Bansal, and Colin A Raffel. Few-Shot Parameter-Efficient Fine-Tuning is Better and Cheaper Than In-Context Learning. Advances in Neural Information Processing Systems , 35:1950–1965, 2022a. Qidong Liu, Xian Wu, Xiangyu Zhao, Yuanshao Zhu, Derong Xu, Feng Tian, and Yefeng Zheng. When MoE Meets LLMs: Parameter Efficient Fine-Tuning for Multi-Task Medical Applications. 
+
+Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval , pages 1104–1114, 2024b. Shih-Yang Liu, Chien-Yi Wang, Hongxu Yin, Pavlo Molchanov, Yu-Chiang Frank Wang, Kwang-Ting Cheng, and Min-Hung Chen. DoRA: Weight-Decomposed Low-Rank Adaptation. Forty-first International Conference on Machine Learning , 2024c. Xiao Liu, Kaixuan Ji, Yicheng Fu, Weng Tam, Zhengxiao Du, Zhilin Yang, and Jie Tang. P-Tuning: Prompt Tuning Can Be Comparable to Fine-Tuning Across Scales and Tasks. Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics (Volume 2: Short Papers) ,pages 61–68, 2022b. Zefang Liu and Jiahua Luo. AdaMoLE: Fine-Tuning Large Language Models with Adaptive Mixture of Low-Rank Adaptation Experts. First Conference on Language Modeling , 2024. 11 Tongxu Luo, Jiahe Lei, Fangyu Lei, Weihao Liu, Shizhu He, Jun Zhao, and Kang Liu. MoELoRA: Contrastive Learning Guided Mixture of Experts on Parameter-Efficient Fine-Tuning for Large Language Models. arXiv e-prints , pages arXiv–2402, 2024. Yingjie Ma, Zitong Yu, Xun Lin, Weicheng Xie, and Linlin Shen. BIG-MoE: Bypass Isolated Gating MoE for Generalized Multimodal Face Anti-Spoofing. arXiv e-prints , pages arXiv–2412, 2024. Fanxu Meng, Zhaohui Wang, and Muhan Zhang. PiSSA: Principal Singular Values and Singular Vectors Adaptation of Large Language Models. Advances in Neural Information Processing Systems , 37:121038–121072, 2024. Todor Mihaylov, Peter Clark, Tushar Khot, and Ashish Sabharwal. Can a Suit of Armor Conduct Electricity? A New Dataset for Open Book Question Answering. Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing , pages 2381–2391, 2018. Lin Mu, Haiyang Wang, Li Ni, Lei Sang, Zhize Wu, Peiquan Jin, and Yiwen Zhang. TalkLoRA: Communication-Aware Mixture of Low-Rank Adaptation for Large Language Models. arXiv preprint arXiv:2604.06291 , 2026. Xiaonan Nie, Xupeng Miao, Shijie Cao, Lingxiao Ma, Qibin Liu, Jilong Xue, Youshan Miao, Yi Liu, Zhi Yang, and Bin Cui. EvoMoE: An Evolutional Mixture-of-Experts Training Framework via Dense-To-Sparse Gate. arXiv e-prints , pages arXiv–2112, 2021. Ruizhong Qiu, Hanqing Zeng, Yinglong Xia, Yiwen Meng, Ren Chen, Jiarui Feng, Dongqi Fu, Qifan Wang, Jiayi Liu, Jun Xiao, et al. ReMix: Reinforcement Routing for Mixtures of LoRAs in LLM Finetuning. arXiv preprint arXiv:2603.10160 , 2026. Pranav Rajpurkar, Jian Zhang, Konstantin Lopyrev, and Percy Liang. SQuAD: 100,000+ Questions for Machine Comprehension of Text. Proceedings of the 2016 Conference on Empirical Methods in Natural Language Processing , pages 2383–2392, 2016. Xiaozhe Ren, Pingyi Zhou, Xinfan Meng, Xinjing Huang, Yadao Wang, Weichao Wang, et al. PanGu-
+
+{\ Sigma }: Towards Trillion Parameter Language Model with Sparse Heterogeneous Computing. 
+
+arXiv e-prints , pages arXiv–2303, 2023. Maarten Sap, Hannah Rashkin, Derek Chen, Ronan Le Bras, and Yejin Choi. Social IQA: Common-sense Reasoning About Social Interactions. Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP) , pages 4463–4473, 2019. Shrey Shah and Justin Wagle. MoLoRA: Composable Specialization via Per-Token Adapter Routing. 
+
+arXiv preprint arXiv:2603.15965 , 2026. Noam Shazeer, Azalia Mirhoseini, Krzysztof Maziarz, Andy Davis, Quoc Le, Geoffrey Hinton, and Jeff Dean. Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer. 
+
+International Conference on Learning Representations , 2017. Boyan Shi, Wei Chen, Shuyuan Zhao, Junfeng Shen, Shengnan Guo, Shaojiang Wang, and Huaiyu Wan. SAMoRA: Semantic-Aware Mixture of LoRA Experts for Task-Adaptive Learning. arXiv preprint arXiv:2604.19048 , 2026. Mengyang Sun, Yihao Wang, Tao Feng, Dan Zhang, Yifan Zhu, and Jie Tang. A Stronger Mixture of Low-Rank Experts for Fine-Tuning Foundation Models. International Conference on Machine Learning , pages 57712–57727, 2025. Alon Talmor, Jonathan Herzig, Nicholas Lourie, and Jonathan Berant. CommonsenseQA: A Question Answering Challenge Targeting Commonsense Knowledge. Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers) , pages 4149–4158, 2019. GLM Team, Aohan Zeng, Bin Xu, Bowen Wang, Chenhui Zhang, Da Yin, Dan Zhang, et al. ChatGLM: A Family of Large Language Models from GLM-130B to GLM-4 All Tools. arXiv e-prints , pages arXiv–2406, 2024. 12 Hugo Touvron, Thibaut Lavril, Gautier Izacard, Xavier Martinet, Marie-Anne Lachaux, et al. LLaMA: Open and Efficient Foundation Language Models. arXiv e-prints , pages arXiv–2302, 2023a. Hugo Touvron, Louis Martin, Kevin Stone, Peter Albert, Amjad Almahairi, Yasmine Babaei, et al. Llama 2: Open Foundation and Fine-Tuned Chat Models. arXiv e-prints , pages arXiv–2307, 2023b. Alex Wang, Amanpreet Singh, Julian Michael, Felix Hill, Omer Levy, and Samuel Bowman. GLUE: A Multi-Task Benchmark and Analysis Platform for Natural Language Understanding. Proceedings of the 2018 EMNLP Workshop BlackboxNLP: Analyzing and Interpreting Neural Networks for NLP , pages 353–355, 2018. Hanqing Wang, Yixia Li, Shuo Wang, Guanhua Chen, and Yun Chen. MiLoRA: Harnessing Minor Singular Components for Parameter-Efficient LLM Finetuning. Proceedings of the 2025 Confer-ence of the Nations of the Americas Chapter of the Association for Computational Linguistics: Human Language Technologies (Volume 1: Long Papers) , pages 4823–4836, 2025a. Shaowen Wang, Linxi Yu, and Jian Li. LoRA-GA: Low-Rank Adaptation with Gradient Approxima-tion. Advances in Neural Information Processing Systems , 37:54905–54931, 2024a. Sheng Wang, Liheng Chen, Jiyue Jiang, Boyang Xue, Lingpeng Kong, and Chuan Wu. LoRA Meets Dropout Under A Unified Framework. Findings of the Association for Computational Linguistics: ACL 2024 , pages 1995–2008, 2024b. Yaqing Wang, Sahaj Agarwal, Subhabrata Mukherjee, Xiaodong Liu, Jing Gao, Ahmed Hassan, and Jianfeng Gao. AdaMix: Mixture-of-Adaptations for Parameter-Efficient Model Tuning. 
+
+Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing , pages 5744–5760, 2022. Zhengbo Wang, Jian Liang, Ran He, Zilei Wang, and Tieniu Tan. LoRA-Pro: Are Low-Rank Adapters Properly Optimized? The Thirteenth International Conference on Learning Representations ,2025b. Shaohua Wu, Jiangang Luo, Xi Chen, Lingjun Li, Xudong Zhao, Tong Yu, Chao Wang, et al. Yuan 2.0-M32: Mixture of Experts with Attention Router. arXiv e-prints , pages arXiv–2405, 2024a. Xun Wu, Shaohan Huang, and Furu Wei. Mixture of LoRA Experts. The Twelfth International Conference on Learning Representations , 2024b. Lei Xu, Michael Jordan, and Geoffrey E Hinton. An Alternative Model for Mixtures of Experts. 
+
+Advances in Neural Information Processing Systems , 7, 1994. An Yang, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu, Chengyuan Li, et al. Qwen2.5 Technical Report. arXiv e-prints , pages arXiv–2412, 2024a. Shu Yang, Muhammad Asif Ali, Cheng-Long Wang, Lijie Hu, and Di Wang. MoRAL: MoE Augmented LoRA for LLMs’ Lifelong Learning. arXiv e-prints , pages arXiv–2402, 2024b. Seniha Esen Yuksel, Joseph N Wilson, and Paul D Gader. Twenty Years of Mixture of Experts. IEEE Transactions on Neural Networks and Learning Systems , 23(8):1177–1193, 2012. Dan Zhang, Tao Feng, Lilong Xue, Yuandong Wang, Yuxiao Dong, and Jie Tang. Parameter-Efficient Fine-Tuning for Foundation Models. arXiv e-prints , pages arXiv–2501, 2025a. Danyang Zhang, Junhao Song, Ziqian Bi, Yingfang Yuan, Tianyang Wang, Joe Yeong, and Junfeng Hao. Mixture of Experts in Large Language Models. arXiv e-prints , pages arXiv–2507, 2025b. Fangzhao Zhang and Mert Pilanci. Riemannian Preconditioned LoRA for Fine-Tuning Foundation Models. Proceedings of the 41st International Conference on Machine Learning , pages 59641– 59669, 2024. Xu Zhang, Kaidi Xu, Ziqing Hu, and Ren Wang. Optimizing Robustness and Accuracy in Mixture of Experts: A Dual-Model Approach. International Conference on Machine Learning , pages 76436–76450, 2025c. 13 Wayne Xin Zhao, Kun Zhou, Junyi Li, Tianyi Tang, Xiaolei Wang, Yupeng Hou, Yingqian Min, et al. A Survey of Large Language Models. arXiv e-prints , pages arXiv–2303, 2023. Yanqi Zhou, Tao Lei, Hanxiao Liu, Nan Du, Yanping Huang, Vincent Zhao, et al. Mixture-of-Experts with Expert Choice Routing. Advances in Neural Information Processing Systems , 35:7103–7114, 2022. Yun Zhu, Nevan Wichers, Chu-Cheng Lin, Xinyi Wang, Tianlong Chen, Lei Shu, Han Lu, et al. SiRA: Sparse Mixture of Low Rank Adaptation. arXiv e-prints , pages arXiv–2311, 2023. 
+
+# A Related Work 
+
+A.1 Mixture of Experts in LLMs 
+
+The MoE architecture, known as a framework for efficiently increasing model capacity without signif-icant computational overhead, consists of a series of specialized modules called experts , alongside a routing module known as gate . In the concept of MoE, each expert is dedicated to a specific domain or task, or granular features of the data [Cai et al., 2025]. This fundamental idea was initially introduced by Jacobs et al. [1991] to alleviate the issue of cross-interference between tasks and enhance training efficiency. Subsequent studies, such as Xu et al. [1994], Collobert et al. [2001], Yuksel et al. [2012], and Eigen et al. [2013], have all made impressive contributions to the field of MoE. Depending on how the gating module is implemented, MoE architectures can be basically separated into two types: dense MoE and sparse MoE. Dense MoE implements a soft gating mechanism that activates all existing experts during both training and inference. The output can be described as PNexpert  
+
+> i=1
+
+giEi(x), where Ei(x) denotes the output of expert i, and gi is the corresponding gate value. To align with the statistical mixture theory and preserve signal magnitude, MoE usually constrains the sum of gate values to 1.0 by applying a 
+
+Softmax function for normalization, such that g = Sof tmax (x · Wg ); In contrast, sparse MoE was subsequently proposed by Shazeer et al. [2017] to sparsely activate a small group of experts during each forward propagation, given by y = P   
+
+> i∈T opK (x)
+
+giEi(x) where T opK (x) denotes the set of K
+
+selected experts with the highest gate values. This strategy achieves better computational efficiency through its sparse activation while still benefiting from a large pool of candidate experts with extensive knowledge. Gshard [Lepikhin et al., 2021] was the first to introduce the sparse MoE architecture to Transformer models, after which this powerful and flexible design has begun to be increasingly adopted for training large language models. Llama [Touvron et al., 2023a], DeepSeek [Liu et al., 2024a], Mixtral [Jiang et al., 2024], and many other mainstream LLMs are trained based on sparse MoE architectures. However, despite the success of MoE, some researchers have proposed that the routing mechanisms inside MoE may act as a bottleneck of the whole structure. For example, Zhang et al. [2025c] demonstrates that conventional MoE architectures exhibit sudden performance drops during training epochs due to the router’s sensitivity to input perturbations; Besides, Ma et al. [2024] emphasizes that conventional gating networks suffer from noise-sensitive and susceptible decision-making that cannot capture nuanced input characteristics. Therefore, some existing studies also focus on boosting the routing ability of MoE. For example, Eo et al. [2025] applies a dual-stage routing mechanism consisting of a sentence-level group routing and a token-level expert routing within the selected group; Guo et al. [2025] implements a dynamic mechanism to determine the number of selected experts k
+
+instead of treating it as a predefined hyper-parameter; To alleviate the routing imbalance, Zhou et al. [2022] enables experts to select top-k tokens instead of enabling tokens to select experts, allowing each expert to maintain a fixed bucket size; Wu et al. [2024a] designs an attention mechanism for routing, which treats token embeddings as queries and expert embeddings as keys; Harvey et al. [2025] conducts a comparison among six MoE routing mechanisms and concludes that simple routers like a linear module may suffer from overfitting; while complex routers like MLP may suffer from low certainty and thus constrain expert specialization. However, most studies still solely rely on the context of enhancing the scaling routers and their gate value distributions, lacking attention to more complex expert transformations. 14 A.2 PEFT and LoRA 
+
+PEFT [Han et al., 2024] is a family of techniques designed for adapting large pre-trained language models to downstream tasks while avoiding the prohibitive cost of fully fine-tuning. Instead of updating all billions of parameters, PEFT methods freeze most of the original model weights and only update a small number of trainable parameters or modules, dramatically reducing computational and memory requirements. Popular PEFT methods include Prompt Tuning [Lester et al., 2021], Prefix Tuning [Li and Liang, 2021], P-Tuning V2 [Liu et al., 2022b], (IA )3 [Liu et al., 2022a], and LoRA [Hu et al., 2022], etc. Among these approaches, LoRA has emerged as one of the most influential and widely adopted methods due to its simplicity, effectiveness, and theoretical elegance. Specifically, LoRA approximates the full-rank weight updates ∆Wd×d through decomposing it into a product of two low-rank trainable matrices Bd×r and Ar×d, formulated as W = W0 + ∆ W = W0 + BA .Here, the rank r is much smaller than the weight matrix dimension d. As a result, LoRA significantly reduces the number of trainable parameters. To enhance LoRA, researchers have explored several technical directions. These include: (1) Improving the initialization of LoRA modules, such as PISSA [Meng et al., 2024], MiLoRA [Wang et al., 2025a], and DoRA [Liu et al., 2024c]; (2) Optimizing the gradient updates of LoRA, such as LoRA-Pro [Wang et al., 2025b], LoRA-GA [Wang et al., 2024a], Riemannian Preconditioned LoRA [Zhang and Pilanci, 2024], and LoRA+ [Hayou et al., 2024]; (3) Incorporating regularization and dropout techniques within LoRA, such as RsLoRA [Kalajdzievski, 2023], HiddenKey [Wang et al., 2024b], and LoRA Dropout [Lin et al., 2024]; and (4) Integrating multiple LoRA modules into a mixture framework, known as the Mixture of LoRAs or MoE-LoRA, as proposed by Dou et al. [2024], Gou et al. [2023], Gao et al. [2024], Luo et al. [2024], Liu and Luo [2024], and Sun et al. [2025]. In general, these diverse approaches all aim to address the performance limitation of conventional LoRA through bridging the gap with fully fine-tuning while still maintaining parameter efficiency. 
+
+A.3 MoE-LoRA 
+
+Inspired by Wang et al. [2022], many researchers have contributed to the field of MoE-LoRA. For example, LoRAMoE [Dou et al., 2024] designs a MoE-LoRA framework for alleviating world knowledge forgetting during fine-tuning LLMs by allocating some experts to specialize only in exploiting pretrained knowledge for task solving; To overcome task conflicts, MoCLE [Gou et al., 2023] first groups all instructions and then conducts cluster-level expert routing along with a uni-versal expert; MoLA [Gao et al., 2024] assigns a varying number of experts to different layers and emphasizes that higher layers need more LoRA experts; Luo et al. [2024] introduces a contrastive loss into MoE-LoRA to encourage LoRA experts to learn distinct features and improve the efficiency of expert specialization; AdaMoLE [Liu and Luo, 2024] applies a dynamic activation threshold p
+
+for each expert and implements a learnable network to adjust it; Instead of training from scratch, MoLE [Wu et al., 2024b] discusses the scenario of integrating multiple existing LoRA modules that are already trained on different data sources, and proposes an MoE framework to merge them; Sun et al. [2025] proposes an algorithm to integrate Riemannian preconditioners into MoE-LoRA for an enhanced training efficiency and effectiveness; MoRAL [Yang et al., 2024b] focuses on implementing MoE-LoRA for continual lifelong learning; Liu et al. [2024b] focuses on applying MoE-LoRA in multi-task medical applications; MoLoRA [Shah and Wagle, 2026] focuses on per-token adapter routing; TalkLoRA [Mu et al., 2026] introduces a talking module to low-rank experts for information exchange; CoMoL [Cao et al., 2026] proposes a core matrix for LoRA, and only implements a routing structure on multiple core matrices instead of multiple low-rank pairs; ReMix [Qiu et al., 2026] learns routing strategies through reinforcement learning to alleviate the routing weights collapse; SAMoRA [Shi et al., 2026] uses a semantic-aware routing method in MoE-LoRA for task-adaptive learning; While other works such as Dou et al. [2024], Li et al. [2024], and Zhu et al. [2023] focus on load balancing techniques among the low-rank experts. All the existing MoE-LoRA works can be roughly separated into two categories: (1) Improving MoE-LoRA by innovative architectural or algorithmic designs; and (2) Applying the MoE-LoRA framework to some specific domains to solve complex multi-task problems. However, none of the works have noticed that the low-rank feature in each LoRA expert can be fully utilized for enhancing MoE-LoRA capabilities through implementing an efficient low-rank transformation for each selected expert beyond the basic gate-value-based scaling in conventional MoE. 15 B Details of Overall Experimental Setup 
+
+In most of our experiments, we mainly adopt Llama-3.2-3B [Touvron et al., 2023b] as our foundation model, while for some experiments we also employ Qwen-2.5-3B [Yang et al., 2024a] and GLM-4-9B [Team et al., 2024] to demonstrate the generality of our method. We fine-tune all the models on the NVIDIA A100 80GB GPU. To accelerate experiments and reduce resource consumption, we integrate MoE-LoRA trainable modules only into the q_proj , k_proj , v_proj , and o_proj modules 
+
+only from the first quarter of the model layers . Specifically, for the 28-layer Llama-3.2-3B, we train the first seven layers (i.e., layer 0-6); For the 36-layer Qwen-2.5-3B, we train the first nine layers (i.e., layer 0-8); While for the 40-layer GLM-4-9B, we train the first ten layers (i.e., layer 0-9). During training, we use a stochastic gradient descent optimizer and set the initial learning rate to 3e-4 with a linear decay scheduler. We fix the system random seed for each run to eliminate the impact of randomization and ensure reproducibility. For initialization, we follow the convention of LoRA to initialize module B to 0. We also initialize our rotation gate Wθ to 0, and implement a Kaiming uniform initialization for the trainable center vectors q.To facilitate joint learning, we equally distribute the number of samples across all tasks within every batch. Since the size of the training set varies across different tasks, we choose to train each task for the same number of steps rather than epochs . Consequently, all tasks are treated equally regardless of their difficulty. This setting increases the complexity to conduct joint learning on LLMs, as simple and complicated tasks may exhibit different converging speeds — when simple tasks show signs of overfitting, complicated tasks may remain unconverged. 
+
+# C Dataset Overview 
+
+C.1 Mixture of QA Tasks 
+
+Our mixture of QA tasks includes CommonsenseQA [Talmor et al., 2019], OpenBookQA [Mihaylov et al., 2018], and SocialIQA [Sap et al., 2019]. Specifically, CommonsenseQA consists of more than 12,000 questions requiring multiple types of common sense knowledge; OpenBookQA consists of roughly 6,000 questions from real open book exams on elementary level science facts; while SocialIQA consists of around 38,000 questions about emotional and social reactions during people’s everyday life. 
+
+C.2 Mixture of GLUE Tasks 
+
+The GLUE benchmark [Wang et al., 2018] targets for evaluating model performances on natural language understanding. It includes nine diverse NLU tasks varying from sentiment classification to grammar checking. To simplify our experiments, here we only select three of the tasks as the mixture: (1) SST-2 which is a sentiment classification task for movie reviews; (2) MRPC which is a paraphrase detection task that determines whether two sentences are semantically equivalent; and (3) QNLI which is a verifying task for candidate QA pairs derived from SQuAD [Rajpurkar et al., 2016]. 
+
+C.3 Mixture of MTG Title Generation Tasks 
+
+The MTG (Multilingual Text Generation) benchmark [Chen et al., 2022] is a human-annotated multilingual text generation benchmark designed for fine-tuning and evaluating language models across diverse languages and tasks. It consists of 400,000 human-annotated samples covering four distinct generation tasks, including the title generation task across five languages: English, Chinese, Spanish, French, and German. Its title generation task, sourced from the ByteCup news corpus, requires models to convert a given article into a condensed, faithful title that preserves the main idea while encouraging readability. 
+
+C.4 Mixture of XNLI Tasks 
+
+XNLI [Conneau et al., 2018], known as a cross-lingual version of the Natural Language Inference (NLI) corpus, involves 7,500 human-annotated examples in 15 languages, such as English, Chinese, Spanish, etc. Specifically, every sample in XNLI contains a pair of premise and hypothesis sentences, along with a label indicating if the hypothesis logically follows, contradicts, or is irrelevant to the 16 premise. Notably, to facilitate the experiments and align with MTG’s experimental settings, we select the five MTG languages — English, Chinese, Spanish, French, and German — from all the 15 languages in XNLI as the language mixture. 
+
+# D Convergence Performance on the Mixture of QA Tasks 
+
+During our fine-tuning experiments on the mixture of QA tasks in Section 3.2.1, we also analyze the converging performances of both the MoE-LoRA baseline and our proposed RotMoLE. Theoretically speaking, RotMoLE implements more trainable parameters and should therefore be more difficult to converge compared to the MoE-LoRA baseline with only a scaling gate. However, experimental results indicate that our RotMoLE does not converge more slowly; while in some cases, it is even faster. Figure 5 exhibits this phenomenon. We consider it as an advantage of the rotation gate: using both scaling and rotation to model experts’ exploitation is much easier than using scaling alone. Furthermore, RotMoLE also exhibits better converging stability and anti-overfitting ability in experiments under configuration {r = 2 , n = 4 , k = 2 } and {r = 3 , n = 2 , k = 2 }.
+
+Figure 5: Convergence of Jointly Fine-Tuning on Mixed QA Tasks (Qwen-2.5-3B). 
+
+# E Ablation Study 
+
+E.1 Impact of Parameter Size 
+
+Although our method demonstrates a comprehensive improvement over the MoE-LoRA baselines across various scenarios, these gains are built upon the introduction of additional rotation gates 
+
+θ = Θ( x) and center vectors q. This raises the question of whether our achieved improvements are due to the increase of trainable parameter counts, rather than our novel rotary architecture design. To clarify this issue, we conduct an experiment on a size-equivalent scaling baseline compared to our proposed RotMoLE. Specifically, we introduce more parameters to the conventional scaling gate, and replace its linear module by a size-equivalent two-layer MLP whose hidden dimension is denoted as 
+
+h. Then we have: 
+
+2dn + rn = dH + Hn ⇒ H = 2dn + rn d + n ≈ 2n, 
+
+considering that r ≪ d and n ≪ d. Consequently, an MLP with a hidden dimension 2n serves as the scaling gate of the size-equivalent baseline. We test this size-equivalent baseline under the mixture of three GLUE tasks, which is already elaborated in Section 3.2.2. We use the configuration 
+
+{r = 4 , n = 5 , k = 3 } and present the performance comparisons among the conventional MoE-LoRA baseline, the size-equivalent baseline, and our proposed RotMoLE in Table 6. All other settings are the same as in Section 3.2.2. It is observed that the MLP gate performs even worse than the MoE-LoRA baseline with a linear gate, only achieving the best for the sub-task SST-2. We consider it as a phenomenon of overfitting which leads to an unbalanced performance. To illustrate it, we plot the converging traces of MoE-LoRA M LP and RotMoLE in Figure 6 from step 1,500. Figure 6 indicates that the sub-task SST-2 has already converged, while the other two are still improving. This usually means that SST-2 is much easier than the other two sub-tasks, especially the sub-task QNLI which still has much potential for improvement. MoE-LoRA M LP is overfitted to the easier sub-task SST-2 while lacking sufficient learning of the opportunistic QNLI. This confirms our statement that the MLP gate module is more likely to cause an unbalanced performance and fail to fully utilize the potential of its additional parameters. 17 Table 6: Performance of Jointly Fine-Tuning on Mixed GLUE Tasks by the MoE-LoRA Baseline, the Size-Equivalent MoE-LoRA with MLP Gates, and RotMoLE (Llama-3.2-3B, r = 4 , n = 5 , k = 3 ). 
+
+Method SST-2 MRPC QNLI Avg. 
+
+MoE-LoRA 88.76 69.19 61.63 73.19 MoE-LoRA M LP 89.56 69.16 58.19 72.30 RotMoLE 89.22 69.21 61.83 73.42 
+
+Figure 6: Convergence of Jointly Fine-Tuning on Mixed GLUE Tasks by both MoE-LoRA M LP and RotMoLE (Llama-3.2-3B, r = 4 , n = 5 , k = 3 ). 
+
+E.2 Impact of Model Size 
+
+We have already examined the effectiveness of our proposal in previous sections by conducting multi-task and multilingual joint learning experiments under Llama-3.2-3B and Qwen-2.5-3B. Now we turn to another foundation model of a different model size, GLM-4-9B. We follow all the experimental settings of Section 3.2.1 to conduct comparable experiments of the QA mixture under GLM-4-9B. What is different is that we set the initial learning rate to 9e-4, and train the model for 8,000 steps. The results are shown in Table 7. An outperformance of our RotMoLE is still observed in both overall and per-task accuracy. Table 7: Performance of Jointly Fine-Tuning on Mixed QA Tasks (GLM-4-9B). 
+
+r n, k Method CSQA OBQA SIQA Avg. 
+
+MoE-LoRA 50.37 40.20 45.70 45.42 2, 2 RotMoLE 57.33 47.00 52.35 52.23 
+
+MoE-LoRA 48.32 26.80 42.78 39.30 24, 2 RotMoLE 57.82 51.80 52.71 54.11 
+
+MoE-LoRA 49.55 44.00 49.74 47.76 2, 2 RotMoLE 68.06 66.20 68.01 67.42 
+
+MoE-LoRA 57.25 50.60 55.07 54.30 34, 2 RotMoLE 77.48 65.60 72.16 71.75 
+
+# F Limitations 
+
+While our RotMoLE demonstrates significant improvements, we still acknowledge some limitations. For example, our evaluations solely focus on the supervised fine-tuning (SFT) scenarios to validate the efficacy of RotMoLE, not incorporating reinforcement learning methods, such as GRPO, in this paper; Secondly, as we point out the phenomenon that various tasks lead to their specific distributions of rotation biases, a further analysis is preferable on whether/how the distribution distinctions are related to the similarities between tasks. 18
