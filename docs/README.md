@@ -6,80 +6,91 @@
 </div>
 
 ## 每次日报
-- 最新运行日期：2026-05-29
-- 运行时间：2026-05-29 22:00:38 UTC
+- 最新运行日期：2026-05-30
+- 运行时间：2026-05-30 20:25:27 UTC
 - 运行状态：成功
-- 本次总论文数：20
-- 精读区：9
+- 本次总论文数：23
+- 精读区：12
 - 速读区：11
 
 ### 今日简报（AI）
-今日聚焦LLM强化学习估值与多语言视觉翻译，精读9篇速读11篇；其中《Hista and Numca》满分推荐，其状态值估计方法可显著提升强化学习训练效率，《VaaWIT》则展示了视觉感知适配在多语言网页翻译中的突破。建议优先阅读这两篇精读论文，尤其是对LLM微调或跨语言图像翻译感兴趣的读者。
-- 详情：[/202605/29/README](/202605/29/README)
+今日精选23篇论文，精读12篇，两篇满分聚焦多模态与逻辑推理。
+最值得看《Mags-RL》用强化学习增强复杂场景推理，以及《Visual-Redundancy-Controlled》提升扩散模型并行解码效率。
+建议优先精读这两篇，速读列表可关注《KoRe》知识表示与《PALoRA》参数高效微调方向。
+- 详情：[/202605/30/README](/202605/30/README)
 
 ### 精读区论文标签
-1. [Hista and Numca: Estimate State Value Effectively for LLM Reinforcement Learning](/202605/29/2605.29782v1-hista-and-numca-estimate-state-value-effectively-for-llm-reinforcement-learning)  
+1. [Mags-RL: Wearing Multimodal LLMs a Magnifying Glass via Agentic Reinforcement Learning For Complex Scene Reasoning](/202605/30/2605.27960v1-mags-rl-wearing-multimodal-llms-a-magnifying-glass-via-agentic-reinforcement-learning-for-complex-scene-reasoning)  
    标签：评分：10.0/10、query:llm-vlm
-   evidence：大语言模型强化学习
-2. [VaaWIT: Visual-Aware Adaptation of Large Language Models for Multilingual Web Image Translation](/202605/29/2605.24675v1-vaawit-visual-aware-adaptation-of-large-language-models-for-multilingual-web-image-translation)  
+   evidence：智能体强化学习框架为多模态大语言模型配备超分辨率工具以进行复杂场景推理
+2. [Visual-Redundancy-Controlled Parallel Decoding for Diffusion-Based Multimodal Large Language Models](/202605/30/2605.25820v1-visual-redundancy-controlled-parallel-decoding-for-diffusion-based-multimodal-large-language-models)  
    标签：评分：9.0/10、query:llm-vlm
-   evidence：使用视觉-语言理解适配大语言模型进行多语言网页图像翻译
-3. [CoRe-Code: Collaborative Reinforcement Learning for Code Generation](/202605/29/2605.24812v1-core-code-collaborative-reinforcement-learning-for-code-generation)  
+   evidence：针对扩散式多模态大语言模型的并行解码，解决位置选择问题
+3. [DV-SFT: Direct Vision Supervision for Fine-Grained Visual Understanding](/202605/30/2605.26656v1-dv-sft-direct-vision-supervision-for-fine-grained-visual-understanding)  
    标签：评分：9.0/10、query:llm-vlm
-   evidence：将强化学习应用于基于LLM的多智能体代码生成
-4. [QuoVLA: Quotient Space for Vision-Language-Action Models](/202605/29/2605.24890v1-quovla-quotient-space-for-vision-language-action-models)  
+   evidence：多模态大语言模型视觉监督方法
+4. [Escape the Language Prior: Mitigating Late-Stage Modality Collapse in Audio Reasoning via Modality-Aware Policy Optimization](/202605/30/2605.27741v1-escape-the-language-prior-mitigating-late-stage-modality-collapse-in-audio-reasoning-via-modality-aware-policy-optimization)  
    标签：评分：9.0/10、query:llm-vlm
-   evidence：使用预训练视觉语言模型的视觉-语言-动作模型
-5. [ZipRL: Adaptive Multi-Turn Context Compression with Hindsight Response Replay](/202605/29/2605.28069v1-ziprl-adaptive-multi-turn-context-compression-with-hindsight-response-replay)  
+   evidence：面向多模态（音频）大语言模型的强化学习
+5. [CIVIC: End-to-End Sequence Compactness for Efficient Vision-Language Models](/202605/30/2605.28115v1-civic-end-to-end-sequence-compactness-for-efficient-vision-language-models)  
    标签：评分：9.0/10、query:llm-vlm
-   evidence：面向大语言模型的强化学习上下文压缩
-6. [LLM-ALSO: LLM-Driven Adaptive Learning-Signal Optimization for Multi-Agent Reinforcement Learning](/202605/29/2605.29293v1-llm-also-llm-driven-adaptive-learning-signal-optimization-for-multi-agent-reinforcement-learning)  
+   evidence：高效视觉语言模型的紧凑序列推理
+6. [Learning to Label: A Reinforced Self-Evolving Framework for Semi-supervised Referring Expression Segmentation](/202605/30/2605.28239v1-learning-to-label-a-reinforced-self-evolving-framework-for-semi-supervised-referring-expression-segmentation)  
    标签：评分：9.0/10、query:llm-vlm
-   evidence：大语言模型驱动的多智能体强化学习自适应学习信号优化
-7. [Towards Localized and Disentangled Knowledge Editing for Multimodal Large Language Models](/202605/29/2605.29826v1-towards-localized-and-disentangled-knowledge-editing-for-multimodal-large-language-models)  
+   evidence：面向指代表达分割的多模态强化学习框架
+7. [OmniVerifier-M1: Multimodal Meta-Verifier with Explicit Structured Recalibration](/202605/30/2605.28805v1-omniverifier-m1-multimodal-meta-verifier-with-explicit-structured-recalibration)  
    标签：评分：9.0/10、query:llm-vlm
-   evidence：关注多模态大语言模型的知识编辑
-8. [LoMo: Local Modality Substitution for Deeper Vision-Language Fusion](/202605/29/2605.30265v1-lomo-local-modality-substitution-for-deeper-vision-language-fusion)  
+   evidence：利用符号输出进行强化学习奖励的多模态元验证器
+8. [Pocket-Dentist: On-Device Dental Image Understanding via Efficient Multimodal Large Language Models](/202605/30/2605.29299v1-pocket-dentist-on-device-dental-image-understanding-via-efficient-multimodal-large-language-models)  
    标签：评分：9.0/10、query:llm-vlm
-   evidence：视觉语言模型（VLM）研究
-9. [Loong: A Human-Like Long Document Translation Agent with Observe-and-Act Adaptive Context Selection](/202605/29/2605.30274v1-loong-a-human-like-long-document-translation-agent-with-observe-and-act-adaptive-context-selection)  
+   evidence：用于牙科图像理解的高效多模态大语言模型
+9. [AsymVLM: Asymmetric Token Pruning for Efficient Vision-Language Model Inference](/202605/30/2605.29535v1-asymvlm-asymmetric-token-pruning-for-efficient-vision-language-model-inference)  
    标签：评分：9.0/10、query:llm-vlm
-   evidence：强化学习优化大语言模型翻译代理的上下文策略
+   evidence：通过令牌剪枝实现高效视觉语言模型推理
+10. [World Models in Words: Auditing Physical State-Transition Commitments in Vision-Language Models](/202605/30/2605.29585v1-world-models-in-words-auditing-physical-state-transition-commitments-in-vision-language-models)  
+   标签：评分：9.0/10、query:llm-vlm
+   evidence：审计视觉语言模型中的物理状态转换承诺
+11. [CogniVerse: Revolutionizing Multi-Modal Retrieval-Augmented Generation with Cognitive Reflection and Geometric Reasoning](/202605/30/2605.29602v1-cogniverse-revolutionizing-multi-modal-retrieval-augmented-generation-with-cognitive-reflection-and-geometric-reasoning)  
+   标签：评分：9.0/10、query:llm-vlm
+   evidence：多模态RAG框架增强多模态大语言模型
+12. [AgentCVR: Active Multi-Agent Cross-Video Reasoning via Script-Simulated Reinforcement Learning](/202605/30/2605.29643v1-agentcvr-active-multi-agent-cross-video-reasoning-via-script-simulated-reinforcement-learning)  
+   标签：评分：9.0/10、query:llm-vlm
+   evidence：使用脚本模拟强化学习的多智能体跨视频推理
 
 ### 速读区论文标签
-1. [MeMo: Memory as a Model](/202605/29/2605.15156v2-memo-memory-as-a-model)  
+1. [KoRe: Compact Knowledge Representations for Large Language Models](/202605/30/2605.20170v1-kore-compact-knowledge-representations-for-large-language-models)  
    标签：评分：8.0/10、query:llm-vlm
-   evidence：为大型语言模型提供模块化记忆框架，无需重新训练即可注入新知识
-2. [GraSP-VL: Length as a Semantic Granularity Interface for Vision-Language Representations](/202605/29/2605.17727v1-grasp-vl-length-as-a-semantic-granularity-interface-for-vision-language-representations)  
+   evidence：面向大语言模型的紧凑知识表示结合知识图谱
+2. [Machine Intelligence that Understands Visual and Linguistic Information and Interacts with Humans and Environments](/202605/30/2605.24020v1-machine-intelligence-that-understands-visual-and-linguistic-information-and-interacts-with-humans-and-environments)  
    标签：评分：8.0/10、query:llm-vlm
-   evidence：视觉语言表示的粒度接口
-3. [RE-VLM: Event-Augmented Vision-Language Model for Scene Understanding](/202605/29/2605.19329v2-re-vlm-event-augmented-vision-language-model-for-scene-understanding)  
+   evidence：视觉语言任务：图像描述、视觉对话、交互指令跟随
+3. [PALoRA: Projection-Adaptive LoRA for Preserving Reasoning in Large Language Models](/202605/30/2605.24549v1-palora-projection-adaptive-lora-for-preserving-reasoning-in-large-language-models)  
    标签：评分：8.0/10、query:llm-vlm
-   evidence：结合事件相机的视觉语言模型
-4. [Efficient Long-Context Modeling in Diffusion Language Models via Block Approximate Sparse Attention](/202605/29/2605.19726v1-efficient-long-context-modeling-in-diffusion-language-models-via-block-approximate-sparse-attention)  
+   evidence：针对大语言模型的参数高效微调方法，保持推理能力
+4. [A general tensor-structured compression scheme for efficient large language models](/202605/30/2605.25344v1-a-general-tensor-structured-compression-scheme-for-efficient-large-language-models)  
    标签：评分：8.0/10、query:llm-vlm
-   evidence：扩散语言模型的高效长上下文注意力机制
-5. [Large Language Model Selection with Limited Annotations](/202605/29/2605.24981v1-large-language-model-selection-with-limited-annotations)  
+   evidence：大语言模型压缩方案
+5. [How Human-Like Are Large Language Models? A Register-Aware Linguistic Evaluation Framework](/202605/30/2605.23651v1-how-human-like-are-large-language-models-a-register-aware-linguistic-evaluation-framework)  
    标签：评分：7.0/10、query:llm-vlm
-   evidence：来自学术实验室的LLM选择框架
-6. [MATO: Multi-objective Personalized Alignment with Test-time Optimization for Large Language Models](/202605/29/2605.25342v1-mato-multi-objective-personalized-alignment-with-test-time-optimization-for-large-language-models)  
+   evidence：实验室出品的LLM语言学评估框架
+6. [Beyond Query Memorization: Large Language Model Routing with Query Decomposition and Historical Matching](/202605/30/2605.25558v1-beyond-query-memorization-large-language-model-routing-with-query-decomposition-and-historical-matching)  
    标签：评分：7.0/10、query:llm-vlm
-   evidence：大语言模型对齐与测试时优化
-7. [RotMoLE: Enhancing Mixture of Low-Rank Experts through Rotational Gating Mechanism](/202605/29/2605.25565v1-rotmole-enhancing-mixture-of-low-rank-experts-through-rotational-gating-mechanism)  
+   evidence：大语言模型路由研究论文
+7. [Cultural Value Alignment Via Latent Activation Steering in Large Language Models](/202605/30/2605.26365v1-cultural-value-alignment-via-latent-activation-steering-in-large-language-models)  
    标签：评分：7.0/10、query:llm-vlm
-   evidence：LLM微调的专家混合方法
-8. [METATR: A Multilingual, Evolving Benchmark for Automatic Text Recognition](/202605/29/2605.26712v1-metatr-a-multilingual-evolving-benchmark-for-automatic-text-recognition)  
+   evidence：实验室出具的大语言模型研究论文
+8. [Tracing Computation Density in LLMs](/202605/30/2605.27033v1-tracing-computation-density-in-llms)  
    标签：评分：7.0/10、query:llm-vlm
-   evidence：用于评估视觉大语言模型的文字识别基准
-9. [DFKI-MLT at SemEval-2026 TASK 7: Steering Multilingual Models Towards Cultural Knowledge](/202605/29/2605.23069v1-dfki-mlt-at-semeval-2026-task-7-steering-multilingual-models-towards-cultural-knowledge)  
+   evidence：来自学术实验室的大语言模型计算分析
+9. [Mix-MoE: Improving Multilingual Machine Translation of Large Language Models through Mixed MoEs](/202605/30/2605.24681v1-mix-moe-improving-multilingual-machine-translation-of-large-language-models-through-mixed-moes)  
    标签：评分：6.0/10、query:llm-vlm
-   evidence：学术实验室的大语言模型研究
-10. [Repeated Sequences Reveal Gaps between Large Language Models and Natural Language](/202605/29/2605.24850v1-repeated-sequences-reveal-gaps-between-large-language-models-and-natural-language)  
+   evidence：基于MoE的多语言机器翻译LLM研究
+10. [Mimir: Large-scale Multilingual Concept Modeling](/202605/30/2605.25263v1-mimir-large-scale-multilingual-concept-modeling)  
    标签：评分：6.0/10、query:llm-vlm
-   evidence：提出使用重复子序列评估LLM的框架
-11. [H$^{2}$MT: Semantic Hierarchy-Aware Hierarchical Memory Transformer](/202605/29/2605.24930v1-h2mt-semantic-hierarchy-aware-hierarchical-memory-transformer)  
+   evidence：大语言模型替代范式：概念建模
+11. [Neural Router: Semantic Content Matching for Agentic AI](/202605/30/2605.25701v1-neural-router-semantic-content-matching-for-agentic-ai)  
    标签：评分：6.0/10、query:llm-vlm
-   evidence：来自学术实验室的长上下文LLM分层记忆方法
+   evidence：基于大语言模型的智能体AI语义匹配方法
 
 
 <div class="dpr-home-promo-card">

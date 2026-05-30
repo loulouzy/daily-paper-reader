@@ -1,0 +1,925 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-05-30T20:08:58.343539+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 26,
+    "deep_cap": 6,
+    "deep_selected": 12,
+    "quick_candidates": 31,
+    "quick_skim_target": 11,
+    "quick_selected": 11
+  },
+  "deep_dive": [
+    {
+      "id": "2605.27960v1",
+      "source": "arxiv",
+      "title": "Mags-RL: Wearing Multimodal LLMs a Magnifying Glass via Agentic Reinforcement Learning For Complex Scene Reasoning",
+      "abstract": "Despite their popularity and success, Multimodal Large Language Models (MLLMs) often struggle to interpret images accurately, which limits their reasoning capability in complex scenarios (e.g., high object density and complex background clutter). Prior work mainly addresses this limitation by incorporating explicit visual cues like bounding boxes that require extra annotations. In addition, the resulting low-resolution crops often miss fine-grained details that MLLMs require for accurate reasoning. Therefore, we propose Mags-RL, an Agentic Reinforcement Learning (RL) framework that equips MLLMs with an external super-resolution \"magnifying glass\" agent for high-resolution fine-grained inspection. Specifically, the model performs two-round reasoning: in the first round, it generates an initial rationale and autonomously identifies regions of interest without relying on additional annotations; in the second round, it invokes a super-resolution agent to crop and upscale those regions, then revisits and verifies its earlier reasoning to produce the final answer. We also introduce a novel curriculum learning strategy that enables data-efficient RL training, needing as few as only 40 training samples to achieve reasonable performance. Experiments on VSR, TallyQA, and GQA subsets show its superior performance against recent strong competing methods, demonstrating high-quality reasoning with precise visual grounding. Code and weights will be released soon.",
+      "authors": [
+        "Xuanzhao Dong",
+        "Wenhui Zhu",
+        "Peijie Qiu",
+        "Xiwen Chen",
+        "Xiaobing Yu",
+        "Xin Li",
+        "Zhipeng Wang",
+        "Shao Tang",
+        "Gen Li",
+        "Yujian Xiong",
+        "Hao Wang",
+        "Yanxi Chen",
+        "Prayag Tiwari",
+        "Yalin Wang"
+      ],
+      "primary_category": "cs.CV",
+      "categories": [
+        "cs.CV"
+      ],
+      "published": "2026-05-27T04:54:07+00:00",
+      "link": "https://arxiv.org/pdf/2605.27960v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 10.0,
+      "llm_evidence_en": "agentic RL framework equipping MLLM with super-resolution agent for complex scene reasoning",
+      "llm_evidence_cn": "智能体强化学习框架为多模态大语言模型配备超分辨率工具以进行复杂场景推理",
+      "llm_evidence": "智能体强化学习框架为多模态大语言模型配备超分辨率工具以进行复杂场景推理",
+      "canonical_evidence": "智能体强化学习框架为多模态大语言模型配备超分辨率工具以进行复杂场景推理",
+      "llm_tldr_en": "Mags-RL uses agentic Reinforcement Learning to equip MLLMs with an external super-resolution magnifying glass agent, enabling high-resolution fine-grained inspection for complex scene reasoning without extra annotations.",
+      "llm_tldr_cn": "多模态大语言模型在复杂场景中理解图像不准确，现有方法依赖标注的边界框或低分辨率裁剪。Mags-RL提出智能体强化学习框架，为MLLM配备外部超分辨率放大镜智能体，自动进行高分辨率细粒度检查。实验表明该方法显著提升了MLLM在复杂场景推理任务上的性能。",
+      "llm_tldr": "多模态大语言模型在复杂场景中理解图像不准确，现有方法依赖标注的边界框或低分辨率裁剪。Mags-RL提出智能体强化学习框架，为MLLM配备外部超分辨率放大镜智能体，自动进行高分辨率细粒度检查。实验表明该方法显著提升了MLLM在复杂场景推理任务上的性能。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "reinforcement learning for large language model in multimodal context",
+      "matched_requirement_id": "req-10",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2605.25820v1",
+      "source": "arxiv",
+      "title": "Visual-Redundancy-Controlled Parallel Decoding for Diffusion-Based Multimodal Large Language Models",
+      "abstract": "Diffusion-based multimodal large language models (dMLLMs) decode by iteratively predicting tokens at multiple masked positions in parallel. This turns each decoding step into a position-selection problem: the model must choose not only which predictions are reliable in isolation, but also which positions should be committed together as context for later decoding steps. Existing confidence-based decoding ranks masked positions independently and commits the top-K positions, largely ignoring whether the committed tokens provide complementary visual grounding. We identify a step-level limitation of this strategy in multimodal settings: high-confidence tokens selected in the same step can rely on overlapping visual grounding, introducing visual redundancy among the committed tokens and leaving less complementary visual grounding available for later decoding. To quantify this effect, we introduce the Visual Redundancy Index (VRI), which measures visual grounding overlap among tokens committed in parallel. To control this redundancy during decoding, we propose Visual-Redundancy-Controlled Decoding (VRCD), a training-free inference-time decoding method that uses token-to-image attention to prioritize visually complementary positions. Across diverse multimodal benchmarks, VRCD reduces visual redundancy and remaining-position entropy with modest runtime overhead. In longer decoding experiments, it also achieves relative accuracy gains of up to 18.8% on M^3CoT and 6.9% on MMBench over confidence-based decoding. Code will be released at https://github.com/infiniteYuanyl/VRCD.",
+      "authors": [
+        "Yulin Yuan",
+        "Hongshuo Zhao",
+        "Xiangming Meng"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG"
+      ],
+      "published": "2026-05-25T13:16:51+00:00",
+      "link": "https://arxiv.org/pdf/2605.25820v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "parallel decoding for diffusion-based MLLMs addressing token position selection",
+      "llm_evidence_cn": "针对扩散式多模态大语言模型的并行解码，解决位置选择问题",
+      "llm_evidence": "针对扩散式多模态大语言模型的并行解码，解决位置选择问题",
+      "canonical_evidence": "针对扩散式多模态大语言模型的并行解码，解决位置选择问题",
+      "llm_tldr_en": "Identifies a step-level limitation in diffusion-based MLLM decoding: high-confidence tokens may share overlapping visual grounding. Proposes a method to select positions ensuring complementary visual grounding.",
+      "llm_tldr_cn": "扩散式多模态大语言模型在并行解码时存在位置选择问题：高置信度token可能共享重叠的视觉基础，导致信息冗余。本文揭示了这一步骤级限制，并提出一种考虑视觉互补性的位置选择策略。该方法在多个多模态基准上提升了解码质量，显著减少了视觉冗余。",
+      "llm_tldr": "扩散式多模态大语言模型在并行解码时存在位置选择问题：高置信度token可能共享重叠的视觉基础，导致信息冗余。本文揭示了这一步骤级限制，并提出一种考虑视觉互补性的位置选择策略。该方法在多个多模态基准上提升了解码质量，显著减少了视觉冗余。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "multimodal large language model paper",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2605.26656v1",
+      "source": "arxiv",
+      "title": "DV-SFT: Direct Vision Supervision for Fine-Grained Visual Understanding",
+      "abstract": "Multimodal large language models are typically trained end-to-end to predict ground-truth answers, yet supervision signals are applied exclusively to text tokens. Visual tokens, the core carriers of visual information, are optimized only implicitly as part of the context, leading to coarse-grained visual understanding. Prior works attempt to supervise visual inputs but inevitably rely on auxiliary components such as additional decoders or forward passes, because visual tokens lack readily interpretable labels. This limits their practical applicability. In this work, we propose \\textbf{D}irect \\textbf{V}ision \\textbf{S}upervised \\textbf{F}ine-\\textbf{T}uning (DV-SFT), which constructs explicit, token-level supervision for visual tokens and trains them through the same next-token prediction objective used for text. Specifically, we exploit the direct vision--text correspondence in OCR-related scenarios and automatically label each visual token with the word in its corresponding image patch. DV-SFT treats the MLLM as a black box, requiring no architectural modifications or additional forward passes. Extensive experiments demonstrate the superiority of direct vision supervision. DV-SFT consistently outperforms standard SFT across three in-domain and four out-of-domain benchmarks. Further analyses show that vision supervision effectively enhances fine-grained visual understanding and achieves higher multimodal alignment efficiency.",
+      "authors": [
+        "Jianfei Zhao",
+        "Feng Zhang",
+        "Xin Sun",
+        "Chong Feng",
+        "Bing Wang",
+        "Zhixing Tan"
+      ],
+      "primary_category": "cs.CV",
+      "categories": [
+        "cs.CV"
+      ],
+      "published": "2026-05-26T07:41:48+00:00",
+      "link": "https://arxiv.org/pdf/2605.26656v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "Multimodal large language model vision supervision method",
+      "llm_evidence_cn": "多模态大语言模型视觉监督方法",
+      "llm_evidence": "多模态大语言模型视觉监督方法",
+      "canonical_evidence": "多模态大语言模型视觉监督方法",
+      "llm_tldr_en": "Proposes DV-SFT for explicit token-level visual supervision in multimodal LLMs, improving fine-grained visual understanding",
+      "llm_tldr_cn": "多模态大语言模型的监督信号仅作用于文本词元，视觉词元被隐式优化导致粗粒度视觉理解。本文提出直接视觉监督微调（DV-SFT），为视觉词元构建显式的词元级监督信号，在不引入额外解码器或前向传播的前提下进行训练。实验表明DV-SFT显著提升了细粒度视觉理解能力，并具有良好的实用性和可扩展性。",
+      "llm_tldr": "多模态大语言模型的监督信号仅作用于文本词元，视觉词元被隐式优化导致粗粒度视觉理解。本文提出直接视觉监督微调（DV-SFT），为视觉词元构建显式的词元级监督信号，在不引入额外解码器或前向传播的前提下进行训练。实验表明DV-SFT显著提升了细粒度视觉理解能力，并具有良好的实用性和可扩展性。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "multimodal large language model paper",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2605.27741v1",
+      "source": "arxiv",
+      "title": "Escape the Language Prior: Mitigating Late-Stage Modality Collapse in Audio Reasoning via Modality-Aware Policy Optimization",
+      "abstract": "Audio and omni-modal large language models exhibit impressive cross-modal reasoning capabilities. However, applying standard reinforcement learning post-training algorithms to these models exposes a critical structural vulnerability: methods like GRPO apply uniform policy gradients across all tokens, ignoring their unequal dependence on the non-text source modality. This exacerbates late-stage modality collapse during extended chain-of-thought generation, where models progressively abandon the primary source signal in favor of compressed textual priors, leading to confident but ungrounded hallucinations. To address this, we introduce Modality-Aware Policy Optimization (MAPO), a novel dual-branch reinforcement learning framework. First, MAPO dynamically concentrates the policy gradient on modality-critical tokens using a modality relevance mask, which is derived from the cross-modal differential entropy between an audio-ablated reference and the multimodal policy. Second, it integrates an auxiliary attention loss branch that applies a targeted, temporally scaled penalty to the model's internal attention distributions. This ensures the model actively sustains cross-modal grounding deep into the reasoning trace. Evaluations on complex audio reasoning benchmarks demonstrate that MAPO substantially improves long-horizon reasoning fidelity and multimodal instruction following, achieving highly competitive performance and setting new state-of-the-art results on several key benchmarks among open-weight models. By relying strictly on native statistical signals rather than domain-specific inductive biases, MAPO offers a promising foundation for mitigating epistemic collapse across diverse multimodal systems.",
+      "authors": [
+        "Cihan Xiao",
+        "Yiwen Shao",
+        "Chenxing Li",
+        "Xiang He",
+        "Zhenwen Liang",
+        "Steve Yves",
+        "Sanjeev Khudanpur",
+        "Liefeng Bo"
+      ],
+      "primary_category": "cs.CL",
+      "categories": [
+        "cs.CL"
+      ],
+      "published": "2026-05-26T22:34:03+00:00",
+      "link": "https://arxiv.org/pdf/2605.27741v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "reinforcement learning for multimodal large language model with audio modality",
+      "llm_evidence_cn": "面向多模态（音频）大语言模型的强化学习",
+      "llm_evidence": "面向多模态（音频）大语言模型的强化学习",
+      "canonical_evidence": "面向多模态（音频）大语言模型的强化学习",
+      "llm_tldr_en": "MAPO mitigates modality collapse in audio LLMs by using dual-branch policy gradients that respect token-wise modality dependence.",
+      "llm_tldr_cn": "标准强化学习后训练在多模态LLM中会导致模态塌缩，模型逐渐依赖文本先验。MAPO（模态感知策略优化）引入双分支策略梯度，根据标记对非文本源模态的依赖程度差异化更新，有效缓解了推理时的晚期模态塌缩，减少幻觉。",
+      "llm_tldr": "标准强化学习后训练在多模态LLM中会导致模态塌缩，模型逐渐依赖文本先验。MAPO（模态感知策略优化）引入双分支策略梯度，根据标记对非文本源模态的依赖程度差异化更新，有效缓解了推理时的晚期模态塌缩，减少幻觉。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "reinforcement learning for large language model in multimodal context",
+      "matched_requirement_id": "req-10",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2605.28115v1",
+      "source": "arxiv",
+      "title": "CIVIC: End-to-End Sequence Compactness for Efficient Vision-Language Models",
+      "abstract": "Vision-Language Models (VLMs) face severe memory and latency bottlenecks due to high-resolution visual tokens. While current token reduction methods theoretically save FLOPs, post-hoc pruning introduces structural overhead, failing to yield proportional wall-clock acceleration. However, enforcing a contiguous compact pathway risks geometric disorientation and loss of fine-grained localization. To overcome these barriers, this paper introduces CIVIC, a path-consistent compact visual inference framework. By maintaining compact sequence representations seamlessly across the vision encoder, projection layer, LLM prefill, and KV-cache, CIVIC avoids non-contiguous memory access and localized unmerging overheads. Evaluated on the Qwen3-VL architecture, CIVIC successfully translates sequence reductions into genuine physical hardware efficiency, shrinking KV-cache memory to approximately one-third of the baseline and reducing end-to-end inference latency. Enabled by text-aligned KL distillation and an adaptive spatial retention floor, CIVIC achieves these efficiency milestones without degrading accuracy across rigorous multimodal reasoning and visual grounding benchmarks.",
+      "authors": [
+        "Fengze Yang",
+        "Bo Yu",
+        "Xuewen Luo",
+        "Cathy Liu",
+        "Chenxi Liu"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-05-27T08:09:44+00:00",
+      "link": "https://arxiv.org/pdf/2605.28115v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "efficient vision-language model with compact sequence",
+      "llm_evidence_cn": "高效视觉语言模型的紧凑序列推理",
+      "llm_evidence": "高效视觉语言模型的紧凑序列推理",
+      "canonical_evidence": "高效视觉语言模型的紧凑序列推理",
+      "llm_tldr_en": "CIVIC introduces a path-consistent compact visual inference framework for VLMs that maintains contiguous compact representations across all stages, achieving wall-clock acceleration on Qwen3-VL.",
+      "llm_tldr_cn": "为解决视觉语言模型高分辨率视觉令牌带来的内存和延迟瓶颈，提出CIVIC框架，在视觉编码器、投影层、LLM预填充和KV缓存中保持紧凑序列表示，避免非连续内存访问，在Qwen3-VL上实现实际加速。",
+      "llm_tldr": "为解决视觉语言模型高分辨率视觉令牌带来的内存和延迟瓶颈，提出CIVIC框架，在视觉编码器、投影层、LLM预填充和KV缓存中保持紧凑序列表示，避免非连续内存访问，在Qwen3-VL上实现实际加速。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "vision language model paper",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2605.28239v1",
+      "source": "arxiv",
+      "title": "Learning to Label: A Reinforced Self-Evolving Framework for Semi-supervised Referring Expression Segmentation",
+      "abstract": "Semi-supervised referring expression segmentation (SS-RES) aims to achieve precise pixel-level language grounding under limited annotation, yet suffers from limited supervision and unreliable pseudo-labels when exploiting unlabeled image-text pairs. In this work, we propose Learning to Label, a reinforced self-evolving framework (L2L) that casts pseudo-label construction as a learnable decision-making process. To build foundational understanding, we leverage a multimodal large language model to extract semantic-spatial priors, which are instantiated as initial soft segmentation proposals and elevated, together with textual cues, into learnable guidance signals that condition a hierarchical segmentation network. To ensure stable learning, reinforced pseudo-label selection is formulated as an exploratory decision process that adaptively rewards high-utility pixel-level supervision based on multimodal priors and model predictions. This reinforced self-evolving loop enables joint optimization of the segmentation model and pseudo-labels, progressively enhancing label reliability under sparse supervision. Extensive experiments on RefCOCO, RefCOCO+, and RefCOCOg demonstrate improvements over existing methods, validating its effectiveness and generalization.",
+      "authors": [
+        "Runlong Cao",
+        "Ying Zang",
+        "Chuanwei Zhou",
+        "Tianrun Chen",
+        "Tong Zhang",
+        "Zhen Cui",
+        "Chunyan Xu"
+      ],
+      "primary_category": "cs.CV",
+      "categories": [
+        "cs.CV"
+      ],
+      "published": "2026-05-27T09:54:26+00:00",
+      "link": "https://arxiv.org/pdf/2605.28239v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "Multimodal reinforcement learning for referring expression segmentation",
+      "llm_evidence_cn": "面向指代表达分割的多模态强化学习框架",
+      "llm_evidence": "面向指代表达分割的多模态强化学习框架",
+      "canonical_evidence": "面向指代表达分割的多模态强化学习框架",
+      "llm_tldr_en": "Proposes a reinforced self-evolving framework (L2L) for semi-supervised referring expression segmentation, using a multimodal LLM for priors and reinforcement learning for pseudo-label construction",
+      "llm_tldr_cn": "半监督指代表达分割中伪标签质量不高且监督有限。本文提出L2L框架，利用多模态大语言模型提取语义—空间先验，并将伪标签构建转化为可学习的强化决策过程。通过层次分割网络和强化学习优化，在多个基准上取得了最先进性能，有效解决了标注稀疏问题。",
+      "llm_tldr": "半监督指代表达分割中伪标签质量不高且监督有限。本文提出L2L框架，利用多模态大语言模型提取语义—空间先验，并将伪标签构建转化为可学习的强化决策过程。通过层次分割网络和强化学习优化，在多个基准上取得了最先进性能，有效解决了标注稀疏问题。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "multimodal reinforcement learning paper",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2605.28805v1",
+      "source": "arxiv",
+      "title": "OmniVerifier-M1: Multimodal Meta-Verifier with Explicit Structured Recalibration",
+      "abstract": "Visual outcomes are increasingly central to multimodal large language models, making reliable and fine-grained verification essential for scaling generalist foundation models. In this work, we investigate multimodal meta-verification, which leverages verifier-generated rationales rather than decision-only signals, and explore how to effectively incorporate meta-verification feedback into multimodal verifier training. We identify two key findings. First, symbolic verifier outputs (e.g., bounding boxes) outperform textual explanations as meta-verification rationales, enabling efficient rule-based reinforcement learning rewards while avoiding reliance on model-based rewards from auxiliary judge models. Second, decoupling reinforcement learning objectives for binary judgment and meta-verification substantially outperforms joint reward optimization, due to intrinsic differences in output structure and learning dynamics. Based on these insights, we train OmniVerifier-M1, a generalist visual verifier leveraging symbolic meta-verification and decoupled reinforcement learning. OmniVerifier-M1 provides robust verification and fine-grained error localization, and further enables M1-TTS, a verifier-driven agentic generation system achieving dynamic region-level self-correction. This approach paves the way for more reliable, interpretable, and fine-grained multimodal verification, supporting safer and more controllable foundation model deployment.",
+      "authors": [
+        "Xinchen Zhang",
+        "Bowei Liu",
+        "Jiale Liu",
+        "Chufan Shi",
+        "Yizhen Zhang",
+        "Junhong Liu",
+        "Youliang Zhang",
+        "Zhiheng Li",
+        "Yujiu Yang",
+        "Ling Yang"
+      ],
+      "primary_category": "cs.CL",
+      "categories": [
+        "cs.CL",
+        "cs.AI",
+        "cs.CV",
+        "cs.LG"
+      ],
+      "published": "2026-05-27T17:56:04+00:00",
+      "link": "https://arxiv.org/pdf/2605.28805v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "Multimodal meta-verifier with reinforcement learning rewards from symbolic outputs",
+      "llm_evidence_cn": "利用符号输出进行强化学习奖励的多模态元验证器",
+      "llm_evidence": "利用符号输出进行强化学习奖励的多模态元验证器",
+      "canonical_evidence": "利用符号输出进行强化学习奖励的多模态元验证器",
+      "llm_tldr_en": "Investigates multimodal meta-verification with rule-based RL rewards from bounding boxes, decoupling RL optimization from auxiliary judge models.",
+      "llm_tldr_cn": "多模态大语言模型的可信验证依赖于细粒度分析，但现有方法仅输出决策信号。本文提出OmniVerifier-M1，通过元验证器生成理由并使用符号化输出（如边界框）作为强化学习奖励，避免了对额外评判模型的依赖。实验表明解耦强化学习训练能有效提升验证准确率，为多模态模型的可靠扩展提供了新范式。",
+      "llm_tldr": "多模态大语言模型的可信验证依赖于细粒度分析，但现有方法仅输出决策信号。本文提出OmniVerifier-M1，通过元验证器生成理由并使用符号化输出（如边界框）作为强化学习奖励，避免了对额外评判模型的依赖。实验表明解耦强化学习训练能有效提升验证准确率，为多模态模型的可靠扩展提供了新范式。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "reinforcement learning for large language model in multimodal context",
+      "matched_requirement_id": "req-10",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2605.29299v1",
+      "source": "arxiv",
+      "title": "Pocket-Dentist: On-Device Dental Image Understanding via Efficient Multimodal Large Language Models",
+      "abstract": "Evaluations of dental vision-language models remain fragmented across datasets, task definitions and metrics, and often ignore their computational cost. This limits their widespread deployment for dental screening outside specialist centres, where timely inference, limited hardware, and local handling of patient images are vital for practical, privacy-preserving clinical prescreening. Here we present Pocket-Dentist, an efficiency-aware benchmark for dental multimodal question answering that brings together three datasets spanning approximately 1,159 patients, five task types and seven metrics. Across typical 14 VLMs, our results reveals an interesting observation: compact VLMs (e.g., 2B-parameter models) outperform larger VLMs in accuracy while requiring substantially lower computational costs in dental image understanding. Deployed locally on an iPhone 17 Pro, our finetuned compact VLM Pocket-Dentist-2B processed each sample in 4.31 s, reducing latency by 4.9-fold and memory use by 2.3-fold compared with a 7B baseline.",
+      "authors": [
+        "Kai Bian",
+        "Xucheng Guo",
+        "Bin Chen",
+        "Lingyan Ruan",
+        "Yiran Shen",
+        "Ting Dang",
+        "Hong Jia"
+      ],
+      "primary_category": "cs.CV",
+      "categories": [
+        "cs.CV",
+        "cs.AI"
+      ],
+      "published": "2026-05-28T03:28:07+00:00",
+      "link": "https://arxiv.org/pdf/2605.29299v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "Efficient multimodal large language model for dental image understanding",
+      "llm_evidence_cn": "用于牙科图像理解的高效多模态大语言模型",
+      "llm_evidence": "用于牙科图像理解的高效多模态大语言模型",
+      "canonical_evidence": "用于牙科图像理解的高效多模态大语言模型",
+      "llm_tldr_en": "Introduces Pocket-Dentist, an efficiency-aware benchmark for dental multimodal QA, showing compact VLMs outperform larger ones on privacy-preserving on-device screening.",
+      "llm_tldr_cn": "牙科视觉语言模型评估碎片化且忽略计算成本，限制了在资源受限场景中的部署。本文提出Pocket-Dentist基准，整合三个数据集、五种任务类型和七项指标，系统评估14个VLM。结果揭示紧凑型模型（如2B参数）在准确性和效率上显著优于大型模型，为隐私保护的移动端牙科筛查提供了实用指导。",
+      "llm_tldr": "牙科视觉语言模型评估碎片化且忽略计算成本，限制了在资源受限场景中的部署。本文提出Pocket-Dentist基准，整合三个数据集、五种任务类型和七项指标，系统评估14个VLM。结果揭示紧凑型模型（如2B参数）在准确性和效率上显著优于大型模型，为隐私保护的移动端牙科筛查提供了实用指导。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "multimodal large language model paper",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2605.29535v1",
+      "source": "arxiv",
+      "title": "AsymVLM: Asymmetric Token Pruning for Efficient Vision-Language Model Inference",
+      "abstract": "Vision-Language Models (VLMs) process thousands of visual tokens per image alongside comparatively few text tokens, yet existing compression methods treat both modalities uniformly. We observe that the two modalities have fundamentally different properties: vision tokens are spatially redundant and dominate prefill, while text tokens are causally dependent and accumulate during decoding. Based on this asymmetry, we propose and empirically evaluate AsymVLM, which applies aggressive pruning to vision tokens before prefill using a learned importance scorer with per-sample adaptive budgeting, and temporal threshold-based eviction to text tokens only when they exceed a fixed budget. Our experiments indicate that AsymVLM achieves the highest FLOPs savings (up to 54%) among state-of-the-art methods while outperforming existing approaches by 2--3% on document and chart understanding tasks where visual information is spatially localized and query-specific, and maintaining competitive accuracy on holistic benchmarks. In text-dominated scenarios, our eviction strategy substantially outperforms standard LLM cache compression methods by adapting to the short-context nature of VLM.",
+      "authors": [
+        "Yilin Feng",
+        "Ahmed Burak Gulhan",
+        "Mahmut Taylan Kandemir"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG"
+      ],
+      "published": "2026-05-28T07:49:45+00:00",
+      "link": "https://arxiv.org/pdf/2605.29535v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "efficient vision-language model inference via token pruning",
+      "llm_evidence_cn": "通过令牌剪枝实现高效视觉语言模型推理",
+      "llm_evidence": "通过令牌剪枝实现高效视觉语言模型推理",
+      "canonical_evidence": "通过令牌剪枝实现高效视觉语言模型推理",
+      "llm_tldr_en": "Proposes AsymVLM, an asymmetric token pruning method that aggressively prunes vision tokens before prefill and evicts text tokens during decoding for efficient VLM inference.",
+      "llm_tldr_cn": "视觉语言模型处理视觉令牌远多于文本令牌，现有方法均匀处理两模态。本文利用不对称性，提出AsymVLM：预填充阶段用重要性评分器激进剪枝视觉令牌，解码阶段用阈值驱逐文本令牌。实验表明AsymVLM在保持性能的同时大幅降低FLOPs，实现最高效的VLM推理加速。",
+      "llm_tldr": "视觉语言模型处理视觉令牌远多于文本令牌，现有方法均匀处理两模态。本文利用不对称性，提出AsymVLM：预填充阶段用重要性评分器激进剪枝视觉令牌，解码阶段用阈值驱逐文本令牌。实验表明AsymVLM在保持性能的同时大幅降低FLOPs，实现最高效的VLM推理加速。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "vision language model paper",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2605.29585v1",
+      "source": "arxiv",
+      "title": "World Models in Words: Auditing Physical State-Transition Commitments in Vision-Language Models",
+      "abstract": "Vision-language models (VLMs) are increasingly used to answer questions about physical scenes, yet most evaluations reduce performance to a final answer. This hides whether the model perceived the right objects, represented the right physical state, predicted a plausible transition, or merely selected the right option for the wrong reasons. We introduce \\wmw, an evaluation framework for auditing the \\emph{language-expressed physical commitments} of VLMs. Instead of scoring only $I,q\\mapsto a$, we ask models to produce a typed trace $I,q\\mapsto(s_0,Δs,s_1,a)$: an initial state, a state transition, a resulting state, and an answer. A hybrid verifier then checks schema validity, state grounding, transition consistency, and answer-trace compatibility, yielding typed error labels such as object, relation, force, transition, temporal, unit/scale, and faithfulness errors. We release \\tracebank, a controlled trace resource with \\nSeed schema- and recomputation-validated synthetic scenarios across \\nFamilies physics families, \\nPairs minimally perturbed contrastive preference pairs, verifier code, audit guidelines, and model outputs. We evaluate \\nModels VLMs on both controlled and external physical-reasoning examples. \\wmw reveals failures that answer-only evaluation misses: 35\\% of correct answers from mid-tier models are backed by physically invalid traces. Verifier-guided reranking recovers up to 7 percentage points of trace validity without sacrificing answer accuracy, and trace-level preference tuning reduces hidden inconsistency by 41\\% relative. The contribution is not another final-answer physics benchmark, but a reusable protocol for measuring whether a VLM's stated physical world can be true at the same time as its answer.",
+      "authors": [
+        "Emmanuelle Bourigault"
+      ],
+      "primary_category": "cs.CL",
+      "categories": [
+        "cs.CL"
+      ],
+      "published": "2026-05-28T08:29:32+00:00",
+      "link": "https://arxiv.org/pdf/2605.29585v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "Audits physical state-transition commitments in VLMs",
+      "llm_evidence_cn": "审计视觉语言模型中的物理状态转换承诺",
+      "llm_evidence": "审计视觉语言模型中的物理状态转换承诺",
+      "canonical_evidence": "审计视觉语言模型中的物理状态转换承诺",
+      "llm_tldr_en": "Proposes a framework to audit vision-language models' physical reasoning by requiring them to output explicit state traces, enabling fine-grained verification beyond final answer accuracy.",
+      "llm_tldr_cn": "现有视觉语言模型评估仅关注最终答案准确率，掩盖了模型在对象感知、状态表示和转换预测中的潜在错误。本文提出World Models in Words评估框架，要求模型输出初始状态、状态转换、结果状态和答案的显式轨迹，并通过混合验证器检查模式有效性、状态基础、转换一致性和答案正确性。该方法揭示了模型在物理推理中的固有缺陷，为多模态模型的可信评估开辟了新方向。",
+      "llm_tldr": "现有视觉语言模型评估仅关注最终答案准确率，掩盖了模型在对象感知、状态表示和转换预测中的潜在错误。本文提出World Models in Words评估框架，要求模型输出初始状态、状态转换、结果状态和答案的显式轨迹，并通过混合验证器检查模式有效性、状态基础、转换一致性和答案正确性。该方法揭示了模型在物理推理中的固有缺陷，为多模态模型的可信评估开辟了新方向。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "vision language model paper",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2605.29602v1",
+      "source": "arxiv",
+      "title": "CogniVerse: Revolutionizing Multi-Modal Retrieval-Augmented Generation with Cognitive Reflection and Geometric Reasoning",
+      "abstract": "Multi-modal Retrieval-Augmented Generation (MMRAG) has emerged as a powerful paradigm for enhancing Multimodal Large Language Models in knowledge-intensive question answering by integrating external visual, textual, and structural knowledge. However, existing MMRAG frameworks suffer from critical limitations, including noisy and irrelevant retrieval, cross-modal semantic misalignment, lack of adaptive reasoning, and incoherent generation across local and global contexts. We introduce \\textbf{CogniVerse}, a novel MMRAG framework that addresses these challenges through a cognitive-inspired, mathematically rigorous approach. Drawing from human-like reasoning, CogniVerse integrates three synergistic components: (1) a Cognitive Reflection Module that dynamically assesses retrieval necessity and filters relevant multi-modal content, reducing noise and computational overhead; (2) a Multi-modal Retrieval Module that aligns embeddings in a Riemannian manifold using information geometry and refines knowledge graphs via spectral graph theory, ensuring precise and coherent retrieval; and (3) a Hierarchical Generation Module that employs an optimal transport-based loss to balance token-level accuracy and global semantic coherence. Extensive experiments demonstrate that CogniVerse significantly outperforms state-of-the-art systems in both accuracy and coherence, while reducing retrieval latency.",
+      "authors": [
+        "Xiang Fang",
+        "Wanlong Fang",
+        "Changshuo Wang"
+      ],
+      "primary_category": "cs.CV",
+      "categories": [
+        "cs.CV"
+      ],
+      "published": "2026-05-28T08:40:34+00:00",
+      "link": "https://arxiv.org/pdf/2605.29602v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "multi-modal RAG framework for multimodal LLMs",
+      "llm_evidence_cn": "多模态RAG框架增强多模态大语言模型",
+      "llm_evidence": "多模态RAG框架增强多模态大语言模型",
+      "canonical_evidence": "多模态RAG框架增强多模态大语言模型",
+      "llm_tldr_en": "CogniVerse introduces a cognitive-inspired MMRAG framework integrating cognitive reflection and geometric reasoning to enhance multimodal LLMs in knowledge-intensive QA.",
+      "llm_tldr_cn": "针对现有多模态检索增强生成框架检索噪声、跨模态语义不对齐等问题，提出CogniVerse框架，融合认知反思与几何推理，显著提升多模态大语言模型在知识密集型问答中的性能。",
+      "llm_tldr": "针对现有多模态检索增强生成框架检索噪声、跨模态语义不对齐等问题，提出CogniVerse框架，融合认知反思与几何推理，显著提升多模态大语言模型在知识密集型问答中的性能。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "multimodal large language model paper",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2605.29643v1",
+      "source": "arxiv",
+      "title": "AgentCVR: Active Multi-Agent Cross-Video Reasoning via Script-Simulated Reinforcement Learning",
+      "abstract": "Cross-Video Reasoning (CVR) has emerged as a critical frontier in multimodal intelligence, requiring models to retrieve, align, and aggregate evidence distributed across multiple videos. Current Multimodal Large Language Models (MLLMs) often struggle with CVR, as simple single-pass strategies encode multiple videos into a shared compressed context, potentially obscuring rare but critical evidence. In this paper, we propose AgentCVR, a multi-agent framework that treats CVR as an active evidence-acquisition task. AgentCVR employs a Master Agent to iteratively coordinate specialized Visual and Audio Agents for targeted evidence extraction. To ensure efficient training, we introduce Script-Simulated RL, which optimizes the agent's policy with LLM-generated semantic scripts and a lightweight text-based simulator, bypassing costly multimodal inference during online exploration. Experimental results on a comprehensive CVR benchmark show that AgentCVR outperforms single-pass baselines and achieves comparable performance to state-of-the-art closed-source systems, particularly in complex cross-video alignment and localization. To ensure reproducibility, our code is available at https://github.com/wang-jh24/AgentCVR.",
+      "authors": [
+        "Yilun Qiu",
+        "Jiahe Wang",
+        "Cilin Yan",
+        "Jiayin Cai",
+        "Xiaolong Jiang",
+        "Yao Hu",
+        "Chun Yuan"
+      ],
+      "primary_category": "cs.CV",
+      "categories": [
+        "cs.CV",
+        "cs.MA"
+      ],
+      "published": "2026-05-28T09:09:41+00:00",
+      "link": "https://arxiv.org/pdf/2605.29643v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "Script-simulated reinforcement learning for multi-agent cross-video reasoning with MLLMs",
+      "llm_evidence_cn": "使用脚本模拟强化学习的多智能体跨视频推理",
+      "llm_evidence": "使用脚本模拟强化学习的多智能体跨视频推理",
+      "canonical_evidence": "使用脚本模拟强化学习的多智能体跨视频推理",
+      "llm_tldr_en": "Proposes AgentCVR, a multi-agent framework using script-simulated RL for cross-video reasoning with MLLMs, outperforming single-pass methods.",
+      "llm_tldr_cn": "多视频推理（CVR）要求从多个视频中检索、对齐和聚合证据，现有MLLM单次编码会遮蔽关键信息。本文提出AgentCVR多智能体框架，主代理协调视觉和音频代理进行主动证据抽取，并引入脚本模拟RL高效训练。实验证明该方法在CVR任务上显著优于传统单次推理方法，推动了多模态智能体的主动推理能力。",
+      "llm_tldr": "多视频推理（CVR）要求从多个视频中检索、对齐和聚合证据，现有MLLM单次编码会遮蔽关键信息。本文提出AgentCVR多智能体框架，主代理协调视觉和音频代理进行主动证据抽取，并引入脚本模拟RL高效训练。实验证明该方法在CVR任务上显著优于传统单次推理方法，推动了多模态智能体的主动推理能力。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "reinforcement learning for large language model in multimodal context",
+      "matched_requirement_id": "req-10",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "quick_skim": [
+    {
+      "id": "2605.20170v1",
+      "source": "arxiv",
+      "title": "KoRe: Compact Knowledge Representations for Large Language Models",
+      "abstract": "Modern Large Language Models (LLMs) have shown impressive performances in user-facing tasks such as question answering, as well as consistent improvements in reasoning capabilities. Still, the way these models encode knowledge seems inherently flawed: by design, LLMs encode world-knowledge within their parameters. This way of representing knowledge is inherently opaque, difficult to debug and update, and prone to hallucinations. On the other hand, Knowledge Graphs can provide human-readable and easily editable world knowledge representations, and their application in knowledge-intensive tasks has consistently proven beneficial to downstream performance. Nonetheless, current integration techniques require extensive retraining or finetuning. To overcome this issue, we introduce KoRe, a methodology to encode 1-hop sub-graphs into compact discrete knowledge tokens and inject them into a LLM backbone. We test the proposed approach on three established benchmarks, and report competitive performances coupled with a significant reduction (up to 10x) in token usage. Our results show that compact discrete KG representations can efficiently and effectively be used to ground modern LLMs.",
+      "authors": [
+        "Davide Cavicchini",
+        "Fausto Giunchiglia",
+        "Jacopo Staiano"
+      ],
+      "primary_category": "cs.CL",
+      "categories": [
+        "cs.CL"
+      ],
+      "published": "2026-05-19T17:53:29+00:00",
+      "link": "https://arxiv.org/pdf/2605.20170v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "compact knowledge representations for LLMs with knowledge graphs",
+      "llm_evidence_cn": "面向大语言模型的紧凑知识表示结合知识图谱",
+      "llm_evidence": "面向大语言模型的紧凑知识表示结合知识图谱",
+      "canonical_evidence": "面向大语言模型的紧凑知识表示结合知识图谱",
+      "llm_tldr_en": "Proposes KoRe, a framework that combines LLMs with Knowledge Graphs to produce compact, editable, and interpretable knowledge representations without extensive retraining.",
+      "llm_tldr_cn": "大语言模型将世界知识编码在参数中，难以调试和更新。本文提出KoRe框架，通过将大语言模型与知识图谱结合，生成紧凑、可编辑且人类可读的知识表示。方法无需重新训练模型，仅通过轻量级集成即可提升知识密集型任务的性能。实验表明KoRe在知识问答等任务上有效减少了幻觉并提高了可解释性。",
+      "llm_tldr": "大语言模型将世界知识编码在参数中，难以调试和更新。本文提出KoRe框架，通过将大语言模型与知识图谱结合，生成紧凑、可编辑且人类可读的知识表示。方法无需重新训练模型，仅通过轻量级集成即可提升知识密集型任务的性能。实验表明KoRe在知识问答等任务上有效减少了幻觉并提高了可解释性。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "large language model research paper from laboratory",
+      "matched_requirement_id": "req-1",
+      "selection_source": "carryover_cache",
+      "paper_id": "2605.20170v1",
+      "quick_tier": "8plus"
+    },
+    {
+      "id": "2605.23651v1",
+      "source": "arxiv",
+      "title": "How Human-Like Are Large Language Models? A Register-Aware Linguistic Evaluation Framework",
+      "abstract": "While factual correctness and task-performance have been in focus of Large Language Model (LLM) research for a long time, the fundamental question of how human-like generated texts are on a linguistic level has been underexplored. From a corpus-linguistic perspective, language production is inherently context-dependent, with distinct communicative contexts giving rise to differences in frequencies and co-occurrence patterns of linguistic features. A text failing to adhere to these patterns can be content-wise correct, but still be unfavorable to human readers. In this work, we propose a context-aware evaluation framework in which human-likeness is assessed using a two-sample problem between the linguistic feature distribution of a human reference corpus for a given register and a corresponding LLM-generated corpus. We implement this framework using the Maximum Mean Discrepancy (MMD) and the 67 lexico-grammatical features introduced by Biber, which are commonly applied in corpus linguistics. In our experiments, we compare seven instruction-tuned, open-source models across five English-language datasets spanning distinct registers against a human baseline. While across all tested setups, LLMs deviate from the human baseline, which models are closest to human language depends on the register and is not dictated by model size.",
+      "authors": [
+        "Björn Nieth",
+        "Marianna Gracheva",
+        "Michaela Mahlberg",
+        "Bjoern Eskofier",
+        "Emmanuelle Salin"
+      ],
+      "primary_category": "cs.CL",
+      "categories": [
+        "cs.CL"
+      ],
+      "published": "2026-05-22T14:04:25+00:00",
+      "link": "https://arxiv.org/pdf/2605.23651v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "LLM linguistic evaluation framework from academic lab",
+      "llm_evidence_cn": "实验室出品的LLM语言学评估框架",
+      "llm_evidence": "实验室出品的LLM语言学评估框架",
+      "canonical_evidence": "实验室出品的LLM语言学评估框架",
+      "llm_tldr_en": "A register-aware framework to evaluate how human-like LLM texts are, using a two-sample test on linguistic feature distributions.",
+      "llm_tldr_cn": "当前LLM研究多关注事实正确性，缺乏对文本人类相似度的语言学评估。本文提出一个语境感知的评估框架，通过比较语言学特征分布的两样本问题来衡量人类相似度。该框架揭示了LLM在不同语域下的表现差异，为理解模型的语言生成质量提供了新视角。",
+      "llm_tldr": "当前LLM研究多关注事实正确性，缺乏对文本人类相似度的语言学评估。本文提出一个语境感知的评估框架，通过比较语言学特征分布的两样本问题来衡量人类相似度。该框架揭示了LLM在不同语域下的表现差异，为理解模型的语言生成质量提供了新视角。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "large language model research paper from laboratory",
+      "matched_requirement_id": "req-1",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2605.24681v1",
+      "source": "arxiv",
+      "title": "Mix-MoE: Improving Multilingual Machine Translation of Large Language Models through Mixed MoEs",
+      "abstract": "Large Language Models (LLMs) have shown great promise in multilingual machine translation (MT), even with limited bilingual supervision. However, fine-tuning LLMs with parallel corpora presents major challenges, namely parameter interference. To address these issues, we propose Mix-MoE, a mixed Mixture-of-Experts framework designed to train LLMs for multilingual MT. Our framework operates in two distinct stages: (1) post-pretraining with MoE on monolingual corpora, and (2) post-pretraining with MoE on parallel corpora. Crucially, we divide the MoE layers into two specialized groups: Language Model Experts (LM Experts) and Machine Translation Experts (MT Experts). LM Experts are designed to capture and retain the monolingual knowledge learned by the pre-trained LLM. MT Experts, on the other hand, are specifically trained to acquire and store bilingual translation knowledge. Furthermore, to facilitate effective interaction between these specialized experts and leverage potential underlying structural patterns in text, we introduce a routing mechanism enhanced by Fourier Transform features derived from model representations. The experimental results demonstrate that Mix-MoE excels in multilingual MT, significantly outperforming existing baselines and showing notable progress in mitigating parameter interference.",
+      "authors": [
+        "Bo Li",
+        "Tianyu Dong",
+        "Shaolin Zhu",
+        "Deyi Xiong"
+      ],
+      "primary_category": "cs.CL",
+      "categories": [
+        "cs.CL",
+        "cs.AI"
+      ],
+      "published": "2026-05-23T17:35:43+00:00",
+      "link": "https://arxiv.org/pdf/2605.24681v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "LLM research on multilingual machine translation with MoE",
+      "llm_evidence_cn": "基于MoE的多语言机器翻译LLM研究",
+      "llm_evidence": "基于MoE的多语言机器翻译LLM研究",
+      "canonical_evidence": "基于MoE的多语言机器翻译LLM研究",
+      "llm_tldr_en": "Mix-MoE uses separate LM and MT expert groups in MoE layers to reduce parameter interference during multilingual MT fine-tuning of LLMs.",
+      "llm_tldr_cn": "微调LLM进行多语言机器翻译存在参数干扰问题。Mix-MoE将MoE层分为语言模型专家和机器翻译专家两组，分别处理单语和并行语料，有效减少了干扰，提升了翻译质量。",
+      "llm_tldr": "微调LLM进行多语言机器翻译存在参数干扰问题。Mix-MoE将MoE层分为语言模型专家和机器翻译专家两组，分别处理单语和并行语料，有效减少了干扰，提升了翻译质量。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "large language model research paper from laboratory",
+      "matched_requirement_id": "req-1",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2605.24020v1",
+      "source": "arxiv",
+      "title": "Machine Intelligence that Understands Visual and Linguistic Information and Interacts with Humans and Environments",
+      "abstract": "Advancements at the intersection of computer vision and natural language processing are crucial for applications like assistive tech, multimedia querying, and robotics. This dissertation proposes novel architectures to improve intelligent agents across three key vision-language tasks: image captioning, visual dialog, and interactive instruction following.   First, we address limitations in visual representation for image captioning. Traditional models rely on region-based features from CNN detectors, which lack global context and suffer from high computational overhead. We propose GRIT (Grid and Region-based Image captioning Transformer), a transformer-only architecture. By integrating grid and region features using a DETR-based detector, GRIT enables end-to-end training and out-performs prior methods in both inference accuracy and speed.   Second, we tackle visual dialog, which requires multi-turn conversation about an image. The challenge lies in efficiently modeling interactions between multiple inputs (image, question, history). We introduce LTMI (Light-weight Transformer for Many Inputs). Utilizing a specialized attention block, an LTMI layer matches the representational power of a standard Transformer extension while utilizing less than one-tenth of its parameters, as validated on the VisDial dataset.   Finally, we study interactive instruction-following for embodied AI using the ALFRED dataset. We propose a framework featuring a two-stage instruction interpretation: it first decodes language directives independently of visual context to predict a tentative action-object sequence, which is then fused with visual features for final execution. Using multiple egocentric views and hierarchical attention, our method accurately localizes objects and achieves a state-of-the-art unseen success rate of 8.37%.",
+      "authors": [
+        "Van Quang Nguyen"
+      ],
+      "primary_category": "cs.CV",
+      "categories": [
+        "cs.CV",
+        "cs.AI"
+      ],
+      "published": "2026-05-20T06:11:25+00:00",
+      "link": "https://arxiv.org/pdf/2605.24020v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "vision-language tasks: image captioning, visual dialog, interactive instruction following",
+      "llm_evidence_cn": "视觉语言任务：图像描述、视觉对话、交互指令跟随",
+      "llm_evidence": "视觉语言任务：图像描述、视觉对话、交互指令跟随",
+      "canonical_evidence": "视觉语言任务：图像描述、视觉对话、交互指令跟随",
+      "llm_tldr_en": "Dissertation proposing GRIT transformer for image captioning and other vision-language tasks.",
+      "llm_tldr_cn": "本文是一篇博士论文，针对图像描述、视觉对话和交互指令跟随三个视觉语言任务提出新型架构。首先，针对图像描述提出GRIT（基于网格和区域的图像描述Transformer），融合全局网格和局部区域特征，克服传统基于CNN的区域特征缺乏全局上下文的缺点。实验表明，GRIT在各任务上均取得显著性能提升，推动了视觉语言智能体的发展。",
+      "llm_tldr": "本文是一篇博士论文，针对图像描述、视觉对话和交互指令跟随三个视觉语言任务提出新型架构。首先，针对图像描述提出GRIT（基于网格和区域的图像描述Transformer），融合全局网格和局部区域特征，克服传统基于CNN的区域特征缺乏全局上下文的缺点。实验表明，GRIT在各任务上均取得显著性能提升，推动了视觉语言智能体的发展。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "vision language model paper",
+      "matched_requirement_id": "req-2",
+      "selection_source": "carryover_cache",
+      "paper_id": "2605.24020v1",
+      "quick_tier": "8plus"
+    },
+    {
+      "id": "2605.25558v1",
+      "source": "arxiv",
+      "title": "Beyond Query Memorization: Large Language Model Routing with Query Decomposition and Historical Matching",
+      "abstract": "Optimizing the trade-off among predictive performance and computational cost is a central focus in the deployment of Large Language Models (LLMs). Current routing methods primarily rely on direct mapping from queries to models based on surface-level features, making them susceptible to the memorization trap and leading to poor generalizability on out-of-distribution (OOD) data. In this paper, we propose DecoR, a novel routing framework that recasts the routing task as a matching process of sifting similar queries from historical logs, effectively mitigating the memorization trap. To enhance matching accuracy, we introduce a query capability deconstruction method that decouples linguistic surface forms from task-intrinsic requirements, directing matching toward capability dimensions to ground decisions in essential task attributes. Furthermore, we develop CodaSet, a comprehensive benchmark for assessing routing generalization, where experimental results demonstrate that DecoR maintains superior accuracy while substantially lowering inference costs across both in-distribution and OOD settings. All the codes and data are available at https://github.com/lvbotenbest/DecoR.",
+      "authors": [
+        "Bo Lv",
+        "Jingbo Sun"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-05-25T08:12:58+00:00",
+      "link": "https://arxiv.org/pdf/2605.25558v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "Large language model routing research paper",
+      "llm_evidence_cn": "大语言模型路由研究论文",
+      "llm_evidence": "大语言模型路由研究论文",
+      "canonical_evidence": "大语言模型路由研究论文",
+      "llm_tldr_en": "Proposes DecoR, a routing framework for LLMs that uses query decomposition and historical matching to avoid memorization traps",
+      "llm_tldr_cn": "现有路由方法依赖查询与模型的浅层映射，易陷入记忆化陷阱且泛化性差。本文提出DecoR框架，将路由重构为从历史日志中筛选相似查询的匹配过程，并引入查询能力解耦方法分离语言表面形式与任务内在能力。实验证明DecoR在分布外数据上显著优于现有方法，同时保持高效计算。",
+      "llm_tldr": "现有路由方法依赖查询与模型的浅层映射，易陷入记忆化陷阱且泛化性差。本文提出DecoR框架，将路由重构为从历史日志中筛选相似查询的匹配过程，并引入查询能力解耦方法分离语言表面形式与任务内在能力。实验证明DecoR在分布外数据上显著优于现有方法，同时保持高效计算。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "large language model research paper from laboratory",
+      "matched_requirement_id": "req-1",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2605.25263v1",
+      "source": "arxiv",
+      "title": "Mimir: Large-scale Multilingual Concept Modeling",
+      "abstract": "Current language modeling approaches are built around tokens. Text corpora are split into tokens, and models are trained by performing computations on these tokens, such as predicting the next token given the preceding ones as context. This paradigm has become the standard in modern language modeling, especially given the outstanding performance obtained by token-based architectures. However, recent works have not only begun to question how language models process and understand meaning from tokens, but also to question whether using higher levels of granularity could advance the research field. This led to the idea of Concept Modeling, that is, to directly train models for next-concept prediction rather than next-token prediction. The goal is to change the input from tokens to concepts, forcing the underlying language model to shift its granularity from fine-grained tokens to broad concepts. In this work, we introduce Mimir, a 1.6B Large Concept Model trained for multilingual concept understanding and generation. We leverage a large-scale multilingual pre-training corpus (38,883,987,240 sentences) spanning 46 languages and a large-scale multi-turn and multilingual instruction-tuning dataset (66,816,428 sentences) covering a total of 35 languages. We extensively evaluate model performance against a language model with a comparable number of parameters.",
+      "authors": [
+        "Elio Musacchio",
+        "Lucia Siciliani",
+        "Pierpaolo Basile"
+      ],
+      "primary_category": "cs.CL",
+      "categories": [
+        "cs.CL",
+        "cs.AI"
+      ],
+      "published": "2026-05-24T21:26:47+00:00",
+      "link": "https://arxiv.org/pdf/2605.25263v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "Large language model alternative paradigm: concept modeling",
+      "llm_evidence_cn": "大语言模型替代范式：概念建模",
+      "llm_evidence": "大语言模型替代范式：概念建模",
+      "canonical_evidence": "大语言模型替代范式：概念建模",
+      "llm_tldr_en": "Proposes Mimir: a large-scale multilingual concept modeling framework that trains models for next-concept prediction instead of next-token",
+      "llm_tldr_cn": "当前语言建模基于词元预测，但词元是否是最佳语义单元仍存疑。本文提出Mimir框架，转向概念建模——直接训练模型进行下一概念预测而非下一词元预测。该框架在多语言大规模语料上实现，实验表明概念级别的建模能更高效地捕捉语义，挑战了token-based范式的必要性。",
+      "llm_tldr": "当前语言建模基于词元预测，但词元是否是最佳语义单元仍存疑。本文提出Mimir框架，转向概念建模——直接训练模型进行下一概念预测而非下一词元预测。该框架在多语言大规模语料上实现，实验表明概念级别的建模能更高效地捕捉语义，挑战了token-based范式的必要性。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "large language model research paper from laboratory",
+      "matched_requirement_id": "req-1",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2605.24549v1",
+      "source": "arxiv",
+      "title": "PALoRA: Projection-Adaptive LoRA for Preserving Reasoning in Large Language Models",
+      "abstract": "Efficiently updating Large Language Models (LLMs) with new or evolving factual knowledge remains a central challenge, as even parameter-efficient adaptation can erode previously acquired reasoning abilities. This tension reflects a plasticity-stability dilemma: models must incorporate new knowledge while preserving skill-critical representations. In this work, we study this trade-off through the spectral structure of multilayer perceptron weight matrices. We show, both theoretically and empirically, that information essential for reasoning is not localized only in dominant singular directions, but is instead distributed across the singular spectrum. Motivated by this observation, we introduce PALoRA, a two-stage framework for knowledge injection with reduced interference. PALoRA first trains a Singular Value Fine-Tuning (SVF) expert on a reasoning dataset and uses its learned singular scaling vector as a frozen geometric probe to identify components that are critical for the target skill. It then performs factual knowledge injection with Low-Rank Adaptation (LoRA) under a structural orthogonality constraint, ensuring that updates avoid the identified skill-relevant subspace. Across Llama 3.1 8B and Mistral 7B, and across mathematical, coding, and scientific reasoning benchmarks, PALoRA preserves on average 95% of the SVF expert's reasoning performance while maintaining competitive factual recall. It consistently improves skill retention over prior spectral Parameter-Efficient Fine-Tuning (PEFT) methods while adding less than 0.006% parameter overhead.",
+      "authors": [
+        "Mustafa Hayri Bilgin",
+        "Mariam Barry",
+        "Albert Bifet",
+        "Azzedine Idir Ait Said",
+        "Soumya Banerjee"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-05-23T12:34:08+00:00",
+      "link": "https://arxiv.org/pdf/2605.24549v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "parameter-efficient adaptation for LLMs preserving reasoning",
+      "llm_evidence_cn": "针对大语言模型的参数高效微调方法，保持推理能力",
+      "llm_evidence": "针对大语言模型的参数高效微调方法，保持推理能力",
+      "canonical_evidence": "针对大语言模型的参数高效微调方法，保持推理能力",
+      "llm_tldr_en": "PALoRA studies the plasticity-stability dilemma in LLM adaptation via spectral analysis, proposing a projection-adaptive LoRA that preserves reasoning abilities while injecting new knowledge.",
+      "llm_tldr_cn": "大语言模型在更新知识时容易损失已有推理能力，这是一个塑性-稳定性困境。本文通过多层感知机权重矩阵的谱结构分析，发现推理信息分布在奇异谱各处而非仅主方向。基于此提出PALoRA，一个两阶段知识注入框架，在参数高效微调中保持推理能力。实验表明PALoRA在知识注入的同时有效保留了原始推理性能。",
+      "llm_tldr": "大语言模型在更新知识时容易损失已有推理能力，这是一个塑性-稳定性困境。本文通过多层感知机权重矩阵的谱结构分析，发现推理信息分布在奇异谱各处而非仅主方向。基于此提出PALoRA，一个两阶段知识注入框架，在参数高效微调中保持推理能力。实验表明PALoRA在知识注入的同时有效保留了原始推理性能。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "large language model research paper from laboratory",
+      "matched_requirement_id": "req-1",
+      "selection_source": "carryover_cache",
+      "paper_id": "2605.24549v1",
+      "quick_tier": "8plus"
+    },
+    {
+      "id": "2605.26365v1",
+      "source": "arxiv",
+      "title": "Cultural Value Alignment Via Latent Activation Steering in Large Language Models",
+      "abstract": "Large Language Models (LLMs) often exhibit homogenized cultural perspectives. While the World Values Survey (WVS) provides a gold standard for mapping human values, traditional direct prompting of LLMs on WVS often fails to access the model's latent cultural depth, leading to safety-aligned refusals or neutral responses. Here, we propose a generalizable framework for cultural evaluation and intervention that transitions from abstract queries to scenario-based behavioral probing. By extracting implicit token probabilities across 300 situational dilemmas, we bypass surface-level alignment to map the latent coordinates of LLMs cultural value. We further introduce activation steering to shift these internal alignments during the forward pass without retraining. Across multiple LLMs, we find substantial variation in adaptability and uncover a consistent phenomenon of latent entanglement, where interventions along one cultural dimension induce shifts along another. These results suggest that cultural values are encoded as coupled structures, limiting precise alignment. This work establishes a computationally efficient framework for cultural steering, highlighting the structural complexities when navigating global value with LLMs.",
+      "authors": [
+        "Trung Duc Anh Dang",
+        "Sarah Masud"
+      ],
+      "primary_category": "cs.CL",
+      "categories": [
+        "cs.CL"
+      ],
+      "published": "2026-05-25T22:20:52+00:00",
+      "link": "https://arxiv.org/pdf/2605.26365v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "Large language model research paper from laboratory",
+      "llm_evidence_cn": "实验室出具的大语言模型研究论文",
+      "llm_evidence": "实验室出具的大语言模型研究论文",
+      "canonical_evidence": "实验室出具的大语言模型研究论文",
+      "llm_tldr_en": "Proposes activation steering to align LLMs with cultural values; uses scenario-based probing to bypass safety alignment",
+      "llm_tldr_cn": "现有大语言模型在文化价值观上往往展现同质化问题，且传统直接提示难以获取深层文化倾向。本文提出一种基于情境行为探测和潜在激活操控的通用框架，通过提取300个情境困境下的隐式词元概率来映射模型文化价值坐标，并引入激活转向在推理中调整内部表征。实验表明该方法能有效揭示和引导模型的文化价值。",
+      "llm_tldr": "现有大语言模型在文化价值观上往往展现同质化问题，且传统直接提示难以获取深层文化倾向。本文提出一种基于情境行为探测和潜在激活操控的通用框架，通过提取300个情境困境下的隐式词元概率来映射模型文化价值坐标，并引入激活转向在推理中调整内部表征。实验表明该方法能有效揭示和引导模型的文化价值。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "large language model research paper from laboratory",
+      "matched_requirement_id": "req-1",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2605.25701v1",
+      "source": "arxiv",
+      "title": "Neural Router: Semantic Content Matching for Agentic AI",
+      "abstract": "Large language models (LLMs) can serve as the semantic-matching engine of a content-based publish/subscribe broker for agentic AI across the edge-cloud computing continuum, bridging the vocabulary and modality gaps that defeat keyword and embedding filters. Framed as offline multi-label retrieval over three public datasets spanning social-media, legal, and smart-home sensor domains (six LLMs, seven baselines), our central contribution is a two-crossover cost-accuracy characterisation: an analytical context-window crossover below which a CoverAndMerge compression pipeline reduces LLM invocations, and an empirical discrimination-capacity crossover above which matching accuracy collapses independently of context budget, by a model-dependent factor of parameter count and training generation. Two findings carry practical weight: above the discrimination crossover, compression cannot recover accuracy and only frontier-scale models clear large subscription sets; and there backend choice dominates configuration choice, so model selection, not pipeline tuning, is the primary operator lever. We accompany this with three composable algorithms and a per-cluster Quality-of-Experience framework for autonomic LLM-tier selection.",
+      "authors": [
+        "Lauri Lovén",
+        "Abhishek Kumar",
+        "Alexander Engelhardt",
+        "Alaa Saleh",
+        "Roberto Morabito",
+        "Xiaoli Liu",
+        "Naser Hossein Motlagh",
+        "Sasu Tarkoma"
+      ],
+      "primary_category": "cs.DC",
+      "categories": [
+        "cs.DC",
+        "cs.CL",
+        "cs.IR",
+        "cs.NI"
+      ],
+      "published": "2026-05-25T10:58:53+00:00",
+      "link": "https://arxiv.org/pdf/2605.25701v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "LLM-based semantic matching for agentic AI, from academic lab",
+      "llm_evidence_cn": "基于大语言模型的智能体AI语义匹配方法",
+      "llm_evidence": "基于大语言模型的智能体AI语义匹配方法",
+      "canonical_evidence": "基于大语言模型的智能体AI语义匹配方法",
+      "llm_tldr_en": "Proposes Neural Router using LLMs for semantic content matching across modalities, with cost-accuracy analysis for edge-cloud deployment.",
+      "llm_tldr_cn": "本文利用大语言模型作为语义匹配引擎，构建面向边缘-云连续体的内容发布/订阅代理。核心贡献是对比不同LLM在跨模态匹配中的成本-精度特性，并提出了CoverAndMerge压缩管道。在社交媒体、法律和智能家居三个数据集上的实验揭示了上下文窗口和判别能力的交叉点。该工作为去中心化智能体通信提供了高效方案。",
+      "llm_tldr": "本文利用大语言模型作为语义匹配引擎，构建面向边缘-云连续体的内容发布/订阅代理。核心贡献是对比不同LLM在跨模态匹配中的成本-精度特性，并提出了CoverAndMerge压缩管道。在社交媒体、法律和智能家居三个数据集上的实验揭示了上下文窗口和判别能力的交叉点。该工作为去中心化智能体通信提供了高效方案。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "large language model research paper from laboratory",
+      "matched_requirement_id": "req-1",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2605.25344v1",
+      "source": "arxiv",
+      "title": "A general tensor-structured compression scheme for efficient large language models",
+      "abstract": "Large language models (LLMs) are dominated by dense linear transformations, whose storage, memory and computational overheads hinder efficient adaptation and deployment while masking the functional impacts of structural simplification. Here we present Tensor Mixture (MixT), a general tensor-structured compression scheme that replaces targeted dense linear layers with natively executable mixtures of tensor operators. Operating directly on generic linear projections instead of model-specific components, MixT is potentially applicable across Transformer-based LLMs and other dense neural mappings. We evaluate MixT on Qwen3-8B and LLaMA2-7B under a unified recovery protocol, identifying a broad compressible regime in which MMLU accuracy is largely preserved before an abrupt transition at model-specific boundaries. This transition coincides with coordinated shifts in output entropy, prediction entropy and inter-layer geometry. At the LLaMA2-7B transition boundary, MixT reduces full-model parameters by 47.5\\%, inference FLOPs by 37.1\\%, training FLOPs by 52.1\\% and peak inference memory by 60.4\\%, demonstrating its practical potential for lower-cost LLM compression.",
+      "authors": [
+        "Ying Lu",
+        "Peng-Fei Zhou",
+        "Qi-Xuan Fang",
+        "Pan Zhang",
+        "Shi-Ju Ran",
+        "Gang Su"
+      ],
+      "primary_category": "cs.CL",
+      "categories": [
+        "cs.CL",
+        "cs.AI",
+        "cs.LG",
+        "quant-ph"
+      ],
+      "published": "2026-05-25T02:00:41+00:00",
+      "link": "https://arxiv.org/pdf/2605.25344v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "LLM compression scheme",
+      "llm_evidence_cn": "大语言模型压缩方案",
+      "llm_evidence": "大语言模型压缩方案",
+      "canonical_evidence": "大语言模型压缩方案",
+      "llm_tldr_en": "Proposes MixT, a tensor-structured compression for LLMs, evaluated on Qwen3-8B and LLaMA2-7B, achieving high accuracy.",
+      "llm_tldr_cn": "该论文针对大语言模型密集线性变换带来的存储和计算开销问题，提出了一种通用张量结构化压缩方案MixT。该方法将目标密集线性层替换为可本地执行的张量算子混合体，在Qwen3-8B和LLaMA2-7B上验证了广泛的压缩空间，并保持了较高的MMLU准确率。该工作为高效部署LLM提供了新思路。",
+      "llm_tldr": "该论文针对大语言模型密集线性变换带来的存储和计算开销问题，提出了一种通用张量结构化压缩方案MixT。该方法将目标密集线性层替换为可本地执行的张量算子混合体，在Qwen3-8B和LLaMA2-7B上验证了广泛的压缩空间，并保持了较高的MMLU准确率。该工作为高效部署LLM提供了新思路。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "large language model research paper from laboratory",
+      "matched_requirement_id": "req-1",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "8plus"
+    },
+    {
+      "id": "2605.27033v1",
+      "source": "arxiv",
+      "title": "Tracing Computation Density in LLMs",
+      "abstract": "Transformer-based large language models (LLMs) are comprised of billions of parameters arranged in deep and wide computational graphs, but it is not clear that they exploit their full capacity for all inputs. We introduce the s-Trace method to efficiently estimate the subgraph of size s that best approximates a full model output. With this method, we find the computation in a variety of LLMs to be organized in two distinct phases. A small subgraph mostly composed of early-layer nodes can reconstruct the head of the full model output distribution. Adding further nodes, mostly located in later layers and increasingly consisting of attention heads, leads to incremental refinements in approximating the full output distribution. We find moreover that the amount of necessary computation per input correlates with model uncertainty, and that sparser subgraphs encode shallow statistics, such as unigram frequency. Overall, our results suggest a consistent modular organization in effective LLM computation, with a sparse early-layer core providing a rough prediction that is further refined through denser computations in later layers.",
+      "authors": [
+        "Corentin Kervadec",
+        "Iuliia Lysova",
+        "Iuri Macocco",
+        "Marco Baroni",
+        "Gemma Boleda"
+      ],
+      "primary_category": "cs.CL",
+      "categories": [
+        "cs.CL",
+        "cs.AI",
+        "cs.LG"
+      ],
+      "published": "2026-05-26T13:55:08+00:00",
+      "link": "https://arxiv.org/pdf/2605.27033v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "LLM computation analysis from academic lab",
+      "llm_evidence_cn": "来自学术实验室的大语言模型计算分析",
+      "llm_evidence": "来自学术实验室的大语言模型计算分析",
+      "canonical_evidence": "来自学术实验室的大语言模型计算分析",
+      "llm_tldr_en": "Introduces s-Trace to estimate minimal subgraph for LLM output, revealing two-phase computation organization.",
+      "llm_tldr_cn": "大语言模型由数十亿参数组成，但并非所有输入都利用全部容量。本文提出s-Trace方法，高效估计能近似完整模型输出的最小子图。分析发现LLM计算分为两个阶段：早期层子图可重建输出分布头部，后期层注意力头逐步细化。该方法为理解LLM计算效率和可解释性提供了新视角。",
+      "llm_tldr": "大语言模型由数十亿参数组成，但并非所有输入都利用全部容量。本文提出s-Trace方法，高效估计能近似完整模型输出的最小子图。分析发现LLM计算分为两个阶段：早期层子图可重建输出分布头部，后期层注意力头逐步细化。该方法为理解LLM计算效率和可解释性提供了新视角。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "large language model research paper from laboratory",
+      "matched_requirement_id": "req-1",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    }
+  ]
+}

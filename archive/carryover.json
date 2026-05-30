@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-05-29T21:48:09.432438+00:00",
-  "updated_date": "20260529",
+  "generated_at": "2026-05-30T20:08:58.345493+00:00",
+  "updated_date": "20260530",
   "carryover_days": 9,
   "tag_states": {
     "llm-vlm": {
-      "updated_date": "20260529",
+      "updated_date": "20260530",
       "carryover_days": 9,
       "items": [
         {
@@ -34,22 +34,22 @@
             "query:llm-vlm"
           ],
           "llm_score": 8.0,
-          "llm_evidence_en": "Benchmark for active visual search using multimodal LLMs",
-          "llm_evidence_cn": "使用多模态大语言模型进行主动视觉搜索的基准测试",
-          "llm_evidence": "使用多模态大语言模型进行主动视觉搜索的基准测试",
-          "canonical_evidence": "使用多模态大语言模型进行主动视觉搜索的基准测试",
-          "llm_tldr_en": "VisualNeedle benchmarks active visual search in information-dense scenes, revealing that frontier MLLMs often rely on shortcuts rather than faithful visual evidence.",
-          "llm_tldr_cn": "前沿多模态大语言模型在细粒度感知基准上虽取得高分，但本文通过主动视觉搜索任务揭示其依赖语言先验等捷径而非真实视觉证据。VisualNeedle基准要求模型在信息密集场景中定位细小物体，实验表明当前MLLMs表现有限，为评估视觉-语言模型提供了更严格的测试。",
-          "llm_tldr": "前沿多模态大语言模型在细粒度感知基准上虽取得高分，但本文通过主动视觉搜索任务揭示其依赖语言先验等捷径而非真实视觉证据。VisualNeedle基准要求模型在信息密集场景中定位细小物体，实验表明当前MLLMs表现有限，为评估视觉-语言模型提供了更严格的测试。",
+          "llm_evidence_en": "Benchmark revealing MLLM shortcuts in visual search",
+          "llm_evidence_cn": "揭示多模态大语言模型视觉搜索捷径的基准",
+          "llm_evidence": "揭示多模态大语言模型视觉搜索捷径的基准",
+          "canonical_evidence": "揭示多模态大语言模型视觉搜索捷径的基准",
+          "llm_tldr_en": "VisualNeedle benchmarks active visual search in MLLMs, revealing reliance on shortcuts rather than faithful visual evidence.",
+          "llm_tldr_cn": "该论文发现前沿多模态大语言模型在细粒度感知基准上高分并不等同于真实使用视觉证据，并识别了三种数据捷径。为严格评估，提出了VisualNeedle基准，要求模型在信息密集场景中主动搜索目标。实验表明当前MLLM在该基准上表现不佳，揭示了模型依赖语言先验而非视觉输入的倾向。",
+          "llm_tldr": "该论文发现前沿多模态大语言模型在细粒度感知基准上高分并不等同于真实使用视觉证据，并识别了三种数据捷径。为严格评估，提出了VisualNeedle基准，要求模型在信息密集场景中主动搜索目标。实验表明当前MLLM在该基准上表现不佳，揭示了模型依赖语言先验而非视觉输入的倾向。",
           "llm_tags": [
             "query:llm-vlm"
           ],
           "matched_query_tag": "query:llm-vlm",
-          "matched_query_text": "vision language model paper",
-          "matched_requirement_id": "req-2",
+          "matched_query_text": "multimodal large language model paper",
+          "matched_requirement_id": "req-3",
           "selection_source": "carryover_cache",
           "paper_id": "2605.26380v1",
-          "carry_days": 3
+          "carry_days": 1
         },
         {
           "id": "2605.26660v1",
@@ -90,240 +90,7 @@
           "matched_requirement_id": "req-4",
           "selection_source": "carryover_cache",
           "paper_id": "2605.26660v1",
-          "carry_days": 3
-        },
-        {
-          "id": "2605.26656v1",
-          "source": "arxiv",
-          "title": "DV-SFT: Direct Vision Supervision for Fine-Grained Visual Understanding",
-          "abstract": "Multimodal large language models are typically trained end-to-end to predict ground-truth answers, yet supervision signals are applied exclusively to text tokens. Visual tokens, the core carriers of visual information, are optimized only implicitly as part of the context, leading to coarse-grained visual understanding. Prior works attempt to supervise visual inputs but inevitably rely on auxiliary components such as additional decoders or forward passes, because visual tokens lack readily interpretable labels. This limits their practical applicability. In this work, we propose \\textbf{D}irect \\textbf{V}ision \\textbf{S}upervised \\textbf{F}ine-\\textbf{T}uning (DV-SFT), which constructs explicit, token-level supervision for visual tokens and trains them through the same next-token prediction objective used for text. Specifically, we exploit the direct vision--text correspondence in OCR-related scenarios and automatically label each visual token with the word in its corresponding image patch. DV-SFT treats the MLLM as a black box, requiring no architectural modifications or additional forward passes. Extensive experiments demonstrate the superiority of direct vision supervision. DV-SFT consistently outperforms standard SFT across three in-domain and four out-of-domain benchmarks. Further analyses show that vision supervision effectively enhances fine-grained visual understanding and achieves higher multimodal alignment efficiency.",
-          "authors": [
-            "Jianfei Zhao",
-            "Feng Zhang",
-            "Xin Sun",
-            "Chong Feng",
-            "Bing Wang",
-            "Zhixing Tan"
-          ],
-          "primary_category": "cs.CV",
-          "categories": [
-            "cs.CV"
-          ],
-          "published": "2026-05-26T07:41:48+00:00",
-          "link": "https://arxiv.org/pdf/2605.26656v1",
-          "tags": [
-            "keyword:llm-vlm",
-            "query:llm-vlm"
-          ],
-          "llm_score": 8.0,
-          "llm_evidence_en": "Multimodal LLM with direct vision supervision",
-          "llm_evidence_cn": "多模态大语言模型直接视觉监督",
-          "llm_evidence": "多模态大语言模型直接视觉监督",
-          "canonical_evidence": "多模态大语言模型直接视觉监督",
-          "llm_tldr_en": "DV-SFT provides explicit token-level supervision for visual tokens in MLLMs, improving fine-grained visual understanding without auxiliary modules.",
-          "llm_tldr_cn": "多模态大语言模型通常仅对文本token进行监督，视觉token被弱优化导致视觉理解粗糙。本文提出的直接视觉监督微调（DV-SFT）为视觉token构建显式token级标签，无需额外解码器即可训练。实验表明，该方法在细粒度视觉理解和定位任务上优于现有方法。DV-SFT提供了一种简洁有效的途径来增强多模态模型的视觉感知能力。",
-          "llm_tldr": "多模态大语言模型通常仅对文本token进行监督，视觉token被弱优化导致视觉理解粗糙。本文提出的直接视觉监督微调（DV-SFT）为视觉token构建显式token级标签，无需额外解码器即可训练。实验表明，该方法在细粒度视觉理解和定位任务上优于现有方法。DV-SFT提供了一种简洁有效的途径来增强多模态模型的视觉感知能力。",
-          "llm_tags": [
-            "query:llm-vlm"
-          ],
-          "matched_query_tag": "query:llm-vlm",
-          "matched_query_text": "multimodal large language model paper",
-          "matched_requirement_id": "req-3",
-          "selection_source": "carryover_cache",
-          "paper_id": "2605.26656v1",
-          "carry_days": 3
-        },
-        {
-          "id": "2605.24020v1",
-          "source": "arxiv",
-          "title": "Machine Intelligence that Understands Visual and Linguistic Information and Interacts with Humans and Environments",
-          "abstract": "Advancements at the intersection of computer vision and natural language processing are crucial for applications like assistive tech, multimedia querying, and robotics. This dissertation proposes novel architectures to improve intelligent agents across three key vision-language tasks: image captioning, visual dialog, and interactive instruction following.   First, we address limitations in visual representation for image captioning. Traditional models rely on region-based features from CNN detectors, which lack global context and suffer from high computational overhead. We propose GRIT (Grid and Region-based Image captioning Transformer), a transformer-only architecture. By integrating grid and region features using a DETR-based detector, GRIT enables end-to-end training and out-performs prior methods in both inference accuracy and speed.   Second, we tackle visual dialog, which requires multi-turn conversation about an image. The challenge lies in efficiently modeling interactions between multiple inputs (image, question, history). We introduce LTMI (Light-weight Transformer for Many Inputs). Utilizing a specialized attention block, an LTMI layer matches the representational power of a standard Transformer extension while utilizing less than one-tenth of its parameters, as validated on the VisDial dataset.   Finally, we study interactive instruction-following for embodied AI using the ALFRED dataset. We propose a framework featuring a two-stage instruction interpretation: it first decodes language directives independently of visual context to predict a tentative action-object sequence, which is then fused with visual features for final execution. Using multiple egocentric views and hierarchical attention, our method accurately localizes objects and achieves a state-of-the-art unseen success rate of 8.37%.",
-          "authors": [
-            "Van Quang Nguyen"
-          ],
-          "primary_category": "cs.CV",
-          "categories": [
-            "cs.CV",
-            "cs.AI"
-          ],
-          "published": "2026-05-20T06:11:25+00:00",
-          "link": "https://arxiv.org/pdf/2605.24020v1",
-          "tags": [
-            "keyword:llm-vlm",
-            "query:llm-vlm"
-          ],
-          "llm_score": 8.0,
-          "llm_evidence_en": "vision-language tasks: image captioning, visual dialog, interactive instruction following",
-          "llm_evidence_cn": "视觉语言任务：图像描述、视觉对话、交互指令跟随",
-          "llm_evidence": "视觉语言任务：图像描述、视觉对话、交互指令跟随",
-          "canonical_evidence": "视觉语言任务：图像描述、视觉对话、交互指令跟随",
-          "llm_tldr_en": "Dissertation proposing GRIT transformer for image captioning and other vision-language tasks.",
-          "llm_tldr_cn": "本文是一篇博士论文，针对图像描述、视觉对话和交互指令跟随三个视觉语言任务提出新型架构。首先，针对图像描述提出GRIT（基于网格和区域的图像描述Transformer），融合全局网格和局部区域特征，克服传统基于CNN的区域特征缺乏全局上下文的缺点。实验表明，GRIT在各任务上均取得显著性能提升，推动了视觉语言智能体的发展。",
-          "llm_tldr": "本文是一篇博士论文，针对图像描述、视觉对话和交互指令跟随三个视觉语言任务提出新型架构。首先，针对图像描述提出GRIT（基于网格和区域的图像描述Transformer），融合全局网格和局部区域特征，克服传统基于CNN的区域特征缺乏全局上下文的缺点。实验表明，GRIT在各任务上均取得显著性能提升，推动了视觉语言智能体的发展。",
-          "llm_tags": [
-            "query:llm-vlm"
-          ],
-          "matched_query_tag": "query:llm-vlm",
-          "matched_query_text": "vision language model paper",
-          "matched_requirement_id": "req-2",
-          "selection_source": "carryover_cache",
-          "paper_id": "2605.24020v1",
-          "carry_days": 2
-        },
-        {
-          "id": "2605.20170v1",
-          "source": "arxiv",
-          "title": "KoRe: Compact Knowledge Representations for Large Language Models",
-          "abstract": "Modern Large Language Models (LLMs) have shown impressive performances in user-facing tasks such as question answering, as well as consistent improvements in reasoning capabilities. Still, the way these models encode knowledge seems inherently flawed: by design, LLMs encode world-knowledge within their parameters. This way of representing knowledge is inherently opaque, difficult to debug and update, and prone to hallucinations. On the other hand, Knowledge Graphs can provide human-readable and easily editable world knowledge representations, and their application in knowledge-intensive tasks has consistently proven beneficial to downstream performance. Nonetheless, current integration techniques require extensive retraining or finetuning. To overcome this issue, we introduce KoRe, a methodology to encode 1-hop sub-graphs into compact discrete knowledge tokens and inject them into a LLM backbone. We test the proposed approach on three established benchmarks, and report competitive performances coupled with a significant reduction (up to 10x) in token usage. Our results show that compact discrete KG representations can efficiently and effectively be used to ground modern LLMs.",
-          "authors": [
-            "Davide Cavicchini",
-            "Fausto Giunchiglia",
-            "Jacopo Staiano"
-          ],
-          "primary_category": "cs.CL",
-          "categories": [
-            "cs.CL"
-          ],
-          "published": "2026-05-19T17:53:29+00:00",
-          "link": "https://arxiv.org/pdf/2605.20170v1",
-          "tags": [
-            "keyword:llm-vlm",
-            "query:llm-vlm"
-          ],
-          "llm_score": 8.0,
-          "llm_evidence_en": "compact knowledge representations for LLMs with knowledge graphs",
-          "llm_evidence_cn": "面向大语言模型的紧凑知识表示结合知识图谱",
-          "llm_evidence": "面向大语言模型的紧凑知识表示结合知识图谱",
-          "canonical_evidence": "面向大语言模型的紧凑知识表示结合知识图谱",
-          "llm_tldr_en": "Proposes KoRe, a framework that combines LLMs with Knowledge Graphs to produce compact, editable, and interpretable knowledge representations without extensive retraining.",
-          "llm_tldr_cn": "大语言模型将世界知识编码在参数中，难以调试和更新。本文提出KoRe框架，通过将大语言模型与知识图谱结合，生成紧凑、可编辑且人类可读的知识表示。方法无需重新训练模型，仅通过轻量级集成即可提升知识密集型任务的性能。实验表明KoRe在知识问答等任务上有效减少了幻觉并提高了可解释性。",
-          "llm_tldr": "大语言模型将世界知识编码在参数中，难以调试和更新。本文提出KoRe框架，通过将大语言模型与知识图谱结合，生成紧凑、可编辑且人类可读的知识表示。方法无需重新训练模型，仅通过轻量级集成即可提升知识密集型任务的性能。实验表明KoRe在知识问答等任务上有效减少了幻觉并提高了可解释性。",
-          "llm_tags": [
-            "query:llm-vlm"
-          ],
-          "matched_query_tag": "query:llm-vlm",
-          "matched_query_text": "large language model research paper from laboratory",
-          "matched_requirement_id": "req-1",
-          "selection_source": "carryover_cache",
-          "paper_id": "2605.20170v1",
-          "carry_days": 3
-        },
-        {
-          "id": "2605.24549v1",
-          "source": "arxiv",
-          "title": "PALoRA: Projection-Adaptive LoRA for Preserving Reasoning in Large Language Models",
-          "abstract": "Efficiently updating Large Language Models (LLMs) with new or evolving factual knowledge remains a central challenge, as even parameter-efficient adaptation can erode previously acquired reasoning abilities. This tension reflects a plasticity-stability dilemma: models must incorporate new knowledge while preserving skill-critical representations. In this work, we study this trade-off through the spectral structure of multilayer perceptron weight matrices. We show, both theoretically and empirically, that information essential for reasoning is not localized only in dominant singular directions, but is instead distributed across the singular spectrum. Motivated by this observation, we introduce PALoRA, a two-stage framework for knowledge injection with reduced interference. PALoRA first trains a Singular Value Fine-Tuning (SVF) expert on a reasoning dataset and uses its learned singular scaling vector as a frozen geometric probe to identify components that are critical for the target skill. It then performs factual knowledge injection with Low-Rank Adaptation (LoRA) under a structural orthogonality constraint, ensuring that updates avoid the identified skill-relevant subspace. Across Llama 3.1 8B and Mistral 7B, and across mathematical, coding, and scientific reasoning benchmarks, PALoRA preserves on average 95% of the SVF expert's reasoning performance while maintaining competitive factual recall. It consistently improves skill retention over prior spectral Parameter-Efficient Fine-Tuning (PEFT) methods while adding less than 0.006% parameter overhead.",
-          "authors": [
-            "Mustafa Hayri Bilgin",
-            "Mariam Barry",
-            "Albert Bifet",
-            "Azzedine Idir Ait Said",
-            "Soumya Banerjee"
-          ],
-          "primary_category": "cs.AI",
-          "categories": [
-            "cs.AI"
-          ],
-          "published": "2026-05-23T12:34:08+00:00",
-          "link": "https://arxiv.org/pdf/2605.24549v1",
-          "tags": [
-            "keyword:llm-vlm",
-            "query:llm-vlm"
-          ],
-          "llm_score": 8.0,
-          "llm_evidence_en": "parameter-efficient adaptation for LLMs preserving reasoning",
-          "llm_evidence_cn": "针对大语言模型的参数高效微调方法，保持推理能力",
-          "llm_evidence": "针对大语言模型的参数高效微调方法，保持推理能力",
-          "canonical_evidence": "针对大语言模型的参数高效微调方法，保持推理能力",
-          "llm_tldr_en": "PALoRA studies the plasticity-stability dilemma in LLM adaptation via spectral analysis, proposing a projection-adaptive LoRA that preserves reasoning abilities while injecting new knowledge.",
-          "llm_tldr_cn": "大语言模型在更新知识时容易损失已有推理能力，这是一个塑性-稳定性困境。本文通过多层感知机权重矩阵的谱结构分析，发现推理信息分布在奇异谱各处而非仅主方向。基于此提出PALoRA，一个两阶段知识注入框架，在参数高效微调中保持推理能力。实验表明PALoRA在知识注入的同时有效保留了原始推理性能。",
-          "llm_tldr": "大语言模型在更新知识时容易损失已有推理能力，这是一个塑性-稳定性困境。本文通过多层感知机权重矩阵的谱结构分析，发现推理信息分布在奇异谱各处而非仅主方向。基于此提出PALoRA，一个两阶段知识注入框架，在参数高效微调中保持推理能力。实验表明PALoRA在知识注入的同时有效保留了原始推理性能。",
-          "llm_tags": [
-            "query:llm-vlm"
-          ],
-          "matched_query_tag": "query:llm-vlm",
-          "matched_query_text": "large language model research paper from laboratory",
-          "matched_requirement_id": "req-1",
-          "selection_source": "carryover_cache",
-          "paper_id": "2605.24549v1",
-          "carry_days": 3
-        },
-        {
-          "id": "2605.24681v1",
-          "source": "arxiv",
-          "title": "Mix-MoE: Improving Multilingual Machine Translation of Large Language Models through Mixed MoEs",
-          "abstract": "Large Language Models (LLMs) have shown great promise in multilingual machine translation (MT), even with limited bilingual supervision. However, fine-tuning LLMs with parallel corpora presents major challenges, namely parameter interference. To address these issues, we propose Mix-MoE, a mixed Mixture-of-Experts framework designed to train LLMs for multilingual MT. Our framework operates in two distinct stages: (1) post-pretraining with MoE on monolingual corpora, and (2) post-pretraining with MoE on parallel corpora. Crucially, we divide the MoE layers into two specialized groups: Language Model Experts (LM Experts) and Machine Translation Experts (MT Experts). LM Experts are designed to capture and retain the monolingual knowledge learned by the pre-trained LLM. MT Experts, on the other hand, are specifically trained to acquire and store bilingual translation knowledge. Furthermore, to facilitate effective interaction between these specialized experts and leverage potential underlying structural patterns in text, we introduce a routing mechanism enhanced by Fourier Transform features derived from model representations. The experimental results demonstrate that Mix-MoE excels in multilingual MT, significantly outperforming existing baselines and showing notable progress in mitigating parameter interference.",
-          "authors": [
-            "Bo Li",
-            "Tianyu Dong",
-            "Shaolin Zhu",
-            "Deyi Xiong"
-          ],
-          "primary_category": "cs.CL",
-          "categories": [
-            "cs.CL",
-            "cs.AI"
-          ],
-          "published": "2026-05-23T17:35:43+00:00",
-          "link": "https://arxiv.org/pdf/2605.24681v1",
-          "tags": [
-            "keyword:llm-vlm",
-            "query:llm-vlm"
-          ],
-          "llm_score": 8.0,
-          "llm_evidence_en": "large language model research from laboratory",
-          "llm_evidence_cn": "实验室出品的大语言模型研究",
-          "llm_evidence": "实验室出品的大语言模型研究",
-          "canonical_evidence": "实验室出品的大语言模型研究",
-          "llm_tldr_en": "Proposes Mix-MoE, a mixed mixture-of-experts framework to improve multilingual machine translation in LLMs by separating language and translation experts.",
-          "llm_tldr_cn": "大语言模型在多语言机器翻译中面临参数干扰问题。本文提出混合专家框架Mix-MoE，通过两阶段训练：先在单语语料上预训练语言模型专家，再在平行语料上预训练翻译专家，有效分离语言知识与翻译能力。实验表明Mix-MoE在多语言翻译任务上显著优于现有微调方法，同时保持了模型的多语言泛化能力。",
-          "llm_tldr": "大语言模型在多语言机器翻译中面临参数干扰问题。本文提出混合专家框架Mix-MoE，通过两阶段训练：先在单语语料上预训练语言模型专家，再在平行语料上预训练翻译专家，有效分离语言知识与翻译能力。实验表明Mix-MoE在多语言翻译任务上显著优于现有微调方法，同时保持了模型的多语言泛化能力。",
-          "llm_tags": [
-            "query:llm-vlm"
-          ],
-          "matched_query_tag": "query:llm-vlm",
-          "matched_query_text": "large language model research paper from laboratory",
-          "matched_requirement_id": "req-1",
-          "selection_source": "carryover_cache",
-          "paper_id": "2605.24681v1",
-          "carry_days": 1
-        },
-        {
-          "id": "2605.25558v1",
-          "source": "arxiv",
-          "title": "Beyond Query Memorization: Large Language Model Routing with Query Decomposition and Historical Matching",
-          "abstract": "Optimizing the trade-off among predictive performance and computational cost is a central focus in the deployment of Large Language Models (LLMs). Current routing methods primarily rely on direct mapping from queries to models based on surface-level features, making them susceptible to the memorization trap and leading to poor generalizability on out-of-distribution (OOD) data. In this paper, we propose DecoR, a novel routing framework that recasts the routing task as a matching process of sifting similar queries from historical logs, effectively mitigating the memorization trap. To enhance matching accuracy, we introduce a query capability deconstruction method that decouples linguistic surface forms from task-intrinsic requirements, directing matching toward capability dimensions to ground decisions in essential task attributes. Furthermore, we develop CodaSet, a comprehensive benchmark for assessing routing generalization, where experimental results demonstrate that DecoR maintains superior accuracy while substantially lowering inference costs across both in-distribution and OOD settings. All the codes and data are available at https://github.com/lvbotenbest/DecoR.",
-          "authors": [
-            "Bo Lv",
-            "Jingbo Sun"
-          ],
-          "primary_category": "cs.AI",
-          "categories": [
-            "cs.AI"
-          ],
-          "published": "2026-05-25T08:12:58+00:00",
-          "link": "https://arxiv.org/pdf/2605.25558v1",
-          "tags": [
-            "keyword:llm-vlm",
-            "query:llm-vlm"
-          ],
-          "llm_score": 8.0,
-          "llm_evidence_en": "Large language model routing method from academic lab",
-          "llm_evidence_cn": "学术实验室提出的大语言模型路由方法",
-          "llm_evidence": "学术实验室提出的大语言模型路由方法",
-          "canonical_evidence": "学术实验室提出的大语言模型路由方法",
-          "llm_tldr_en": "Proposes DecoR, an LLM routing framework using query decomposition and historical matching to overcome memorization trap and improve generalization.",
-          "llm_tldr_cn": "当前大语言模型路由方法过度依赖表面特征而易陷入记忆化陷阱。本文提出DecoR框架，将路由任务转化为基于查询分解和历史日志匹配的过程，有效缓解了记忆化问题并提升了对分布外数据的泛化能力。实验表明该方法在多个基准上优于现有路由策略。",
-          "llm_tldr": "当前大语言模型路由方法过度依赖表面特征而易陷入记忆化陷阱。本文提出DecoR框架，将路由任务转化为基于查询分解和历史日志匹配的过程，有效缓解了记忆化问题并提升了对分布外数据的泛化能力。实验表明该方法在多个基准上优于现有路由策略。",
-          "llm_tags": [
-            "query:llm-vlm"
-          ],
-          "matched_query_tag": "query:llm-vlm",
-          "matched_query_text": "large language model research paper from laboratory",
-          "matched_requirement_id": "req-1",
-          "selection_source": "carryover_cache",
-          "paper_id": "2605.25558v1",
-          "carry_days": 1
+          "carry_days": 4
         },
         {
           "id": "2605.29861v1",
@@ -349,13 +116,13 @@
             "query:llm-vlm"
           ],
           "llm_score": 8.0,
-          "llm_evidence_en": "Multimodal large language model for deep research report generation",
-          "llm_evidence_cn": "用于深度研究报告生成的多模态大语言模型",
-          "llm_evidence": "用于深度研究报告生成的多模态大语言模型",
-          "canonical_evidence": "用于深度研究报告生成的多模态大语言模型",
-          "llm_tldr_en": "Proposes Ptah, a multi-agent harness for verifiable multimodal deep research, generating interleaved reports with textual arguments and visual evidence.",
-          "llm_tldr_cn": "多模态深度研究需综合文本和视觉证据生成可验证报告。本文提出Ptah多智能体框架，通过规划、研究和写作阶段协调专用智能体，构建视觉感知计划、收集基于声明的证据并保持源对齐图像。最终渲染出带引用和图像的交错网页报告。",
-          "llm_tldr": "多模态深度研究需综合文本和视觉证据生成可验证报告。本文提出Ptah多智能体框架，通过规划、研究和写作阶段协调专用智能体，构建视觉感知计划、收集基于声明的证据并保持源对齐图像。最终渲染出带引用和图像的交错网页报告。",
+          "llm_evidence_en": "Multi-agent harness for multimodal deep research report generation using LLMs",
+          "llm_evidence_cn": "使用LLM的多智能体框架生成多模态深度研究报告",
+          "llm_evidence": "使用LLM的多智能体框架生成多模态深度研究报告",
+          "canonical_evidence": "使用LLM的多智能体框架生成多模态深度研究报告",
+          "llm_tldr_en": "Proposes Ptah, a multi-agent system for verifiable multimodal report generation with planning, research, and writing stages interleaving text and images.",
+          "llm_tldr_cn": "多模态深度研究面临开放合成无确定真值和图文交织的困难。本文提出Ptah多智能体框架，通过规划、研究和写作三个阶段协同工作，生成包含图文证据的可验证报告。智能体构建视觉感知计划、收集基于主张的证据，并维护源对齐图像。实验证明框架在报告准确性和可验证性上显著优于单模型方法。",
+          "llm_tldr": "多模态深度研究面临开放合成无确定真值和图文交织的困难。本文提出Ptah多智能体框架，通过规划、研究和写作三个阶段协同工作，生成包含图文证据的可验证报告。智能体构建视觉感知计划、收集基于主张的证据，并维护源对齐图像。实验证明框架在报告准确性和可验证性上显著优于单模型方法。",
           "llm_tags": [
             "query:llm-vlm"
           ],
@@ -403,7 +170,7 @@
           "matched_requirement_id": "req-2",
           "selection_source": "carryover_cache",
           "paper_id": "2605.27315v1",
-          "carry_days": 1
+          "carry_days": 2
         },
         {
           "id": "2605.29956v1",
@@ -426,13 +193,13 @@
             "query:llm-vlm"
           ],
           "llm_score": 8.0,
-          "llm_evidence_en": "multimodal RAG uncertainty quantification",
-          "llm_evidence_cn": "多模态RAG不确定性量化",
-          "llm_evidence": "多模态RAG不确定性量化",
-          "canonical_evidence": "多模态RAG不确定性量化",
-          "llm_tldr_en": "This paper proposes uncertainty quantification methods tailored for multimodal RAG pipelines, addressing retrieval, vision, and generation stages.",
-          "llm_tldr_cn": "针对多模态检索增强生成（RAG）中答案可能错误的问题，提出专门的不确定性量化方法，建模检索、视觉理解和生成多个阶段的不确定性，实验表明该方法能更可靠地估计回答可靠性，优于文本-only方法，提升了多模态问答的可信度。",
-          "llm_tldr": "针对多模态检索增强生成（RAG）中答案可能错误的问题，提出专门的不确定性量化方法，建模检索、视觉理解和生成多个阶段的不确定性，实验表明该方法能更可靠地估计回答可靠性，优于文本-only方法，提升了多模态问答的可信度。",
+          "llm_evidence_en": "uncertainty quantification for multimodal LLM in RAG",
+          "llm_evidence_cn": "多模态LLM在检索增强生成中的不确定性量化",
+          "llm_evidence": "多模态LLM在检索增强生成中的不确定性量化",
+          "canonical_evidence": "多模态LLM在检索增强生成中的不确定性量化",
+          "llm_tldr_en": "A UQ method for multimodal RAG that models uncertainty from retrieval, vision understanding, and generation stages.",
+          "llm_tldr_cn": "现有不确定性量化方法在文本模型中表现良好，但在多模态RAG中效果不佳。本文提出一种专门针对多模态RAG管道的不确定性量化方法，分别建模检索、视觉理解和生成阶段的不确定性，显著提升了可靠性估计的准确性。",
+          "llm_tldr": "现有不确定性量化方法在文本模型中表现良好，但在多模态RAG中效果不佳。本文提出一种专门针对多模态RAG管道的不确定性量化方法，分别建模检索、视觉理解和生成阶段的不确定性，显著提升了可靠性估计的准确性。",
           "llm_tags": [
             "query:llm-vlm"
           ],
@@ -444,41 +211,206 @@
           "carry_days": 1
         },
         {
-          "id": "2605.29535v1",
+          "id": "2605.28573v1",
           "source": "arxiv",
-          "title": "AsymVLM: Asymmetric Token Pruning for Efficient Vision-Language Model Inference",
-          "abstract": "Vision-Language Models (VLMs) process thousands of visual tokens per image alongside comparatively few text tokens, yet existing compression methods treat both modalities uniformly. We observe that the two modalities have fundamentally different properties: vision tokens are spatially redundant and dominate prefill, while text tokens are causally dependent and accumulate during decoding. Based on this asymmetry, we propose and empirically evaluate AsymVLM, which applies aggressive pruning to vision tokens before prefill using a learned importance scorer with per-sample adaptive budgeting, and temporal threshold-based eviction to text tokens only when they exceed a fixed budget. Our experiments indicate that AsymVLM achieves the highest FLOPs savings (up to 54%) among state-of-the-art methods while outperforming existing approaches by 2--3% on document and chart understanding tasks where visual information is spatially localized and query-specific, and maintaining competitive accuracy on holistic benchmarks. In text-dominated scenarios, our eviction strategy substantially outperforms standard LLM cache compression methods by adapting to the short-context nature of VLM.",
+          "title": "Efficient Pre-Training of LLMs through Truncated SVD Layers",
+          "abstract": "The massive scaling of Large Language Models (LLMs) has made pretraining increasingly cost-prohibitive. While low-rank representation and orthonormal weight matrices could in principle reduce parameter counts and computational overhead, most existing methods rely on static rank selection and do not enforce weight orthonormality due to high computational cost. This paper introduces TSVD, a framework that maintains low rank and strict orthonormality throughout the training process. It utilizes a spectral energy-based heuristic for adaptive rank selection, and a caching mechanisms to maintain orthonormality. Theoretical analysis justifies the advantage of the approach in pretraining dynamics and experiments across various model scales demonstrate that it is effective empirically. TSVD matches or exceeds the performance of full-parameter baselines while significantly reducing compute requirements. The approach thus offers a well-founded, practical, and scalable path toward efficient high-performance LLM pretraining.",
           "authors": [
-            "Yilin Feng",
-            "Ahmed Burak Gulhan",
-            "Mahmut Taylan Kandemir"
+            "Kaivan Kamali",
+            "Kajetan Schweighofer",
+            "Hormoz Shahrzad",
+            "Olivier Francon",
+            "Babak Hodjat",
+            "Risto Miikkulainen"
           ],
           "primary_category": "cs.LG",
           "categories": [
-            "cs.LG"
+            "cs.LG",
+            "cs.AI"
           ],
-          "published": "2026-05-28T07:49:45+00:00",
-          "link": "https://arxiv.org/pdf/2605.29535v1",
+          "published": "2026-05-27T14:57:49+00:00",
+          "link": "https://arxiv.org/pdf/2605.28573v1",
           "tags": [
             "keyword:llm-vlm",
             "query:llm-vlm"
           ],
           "llm_score": 8.0,
-          "llm_evidence_en": "efficient VLM inference via token pruning",
-          "llm_evidence_cn": "通过令牌剪枝实现高效VLM推理",
-          "llm_evidence": "通过令牌剪枝实现高效VLM推理",
-          "canonical_evidence": "通过令牌剪枝实现高效VLM推理",
-          "llm_tldr_en": "AsymVLM proposes asymmetric token pruning for VLMs, aggressively pruning vision tokens pre-fill and selectively evicting text tokens during decoding for efficiency.",
-          "llm_tldr_cn": "针对视觉语言模型推理时视觉令牌冗余且文本令牌因果累积的问题，提出AsymVLM方法，采用非对称剪枝策略：在学习的重要性评分器下对视觉令牌进行动态预算自适应剪枝，对文本令牌在超限时进行暂存驱逐，实验表明该方法在保持精度的前提下实现最高FLOPs节省和加速。",
-          "llm_tldr": "针对视觉语言模型推理时视觉令牌冗余且文本令牌因果累积的问题，提出AsymVLM方法，采用非对称剪枝策略：在学习的重要性评分器下对视觉令牌进行动态预算自适应剪枝，对文本令牌在超限时进行暂存驱逐，实验表明该方法在保持精度的前提下实现最高FLOPs节省和加速。",
+          "llm_evidence_en": "Large language model pre-training efficiency improvement",
+          "llm_evidence_cn": "大语言模型预训练效率提升研究",
+          "llm_evidence": "大语言模型预训练效率提升研究",
+          "canonical_evidence": "大语言模型预训练效率提升研究",
+          "llm_tldr_en": "Introduces TSVD framework for efficient LLM pre-training using truncated SVD layers with adaptive rank selection and orthonormality",
+          "llm_tldr_cn": "大语言模型预训练成本随规模增长而急剧上升，现有低秩方法大多采用静态秩选择且未能执行权重正交归一。本文提出TSVD框架，利用基于谱能量的启发式自适应秩选择，并引入缓存机制维持正交性。理论分析证明了其在预训练动力学中的优势，多尺度实验表明该框架能显著降低参数和计算开销而不损失性能。",
+          "llm_tldr": "大语言模型预训练成本随规模增长而急剧上升，现有低秩方法大多采用静态秩选择且未能执行权重正交归一。本文提出TSVD框架，利用基于谱能量的启发式自适应秩选择，并引入缓存机制维持正交性。理论分析证明了其在预训练动力学中的优势，多尺度实验表明该框架能显著降低参数和计算开销而不损失性能。",
           "llm_tags": [
             "query:llm-vlm"
           ],
           "matched_query_tag": "query:llm-vlm",
-          "matched_query_text": "vision language model paper",
-          "matched_requirement_id": "req-2",
+          "matched_query_text": "large language model research paper from laboratory",
+          "matched_requirement_id": "req-1",
           "selection_source": "carryover_cache",
-          "paper_id": "2605.29535v1",
+          "paper_id": "2605.28573v1",
+          "carry_days": 1
+        },
+        {
+          "id": "2605.27268v1",
+          "source": "arxiv",
+          "title": "Lost in Sampling: Assessing Lexical Reachability in LLMs via the Word Coverage Score (WCS)",
+          "abstract": "Modern Large Language Models (LLMs) are often criticized for producing repetitive and homogeneous text, despite possessing vast latent vocabularies. While previous research has focused on model knowledge and training data, we investigate the role of decoding mechanics in suppressing linguistic diversity. We introduce the Word Coverage Score (WCS), a metric that quantifies the extent to which contextually appropriate human vocabulary is mathematically pruned by standard sampling filters (e.g., Top-$p$, Top-$k$, and Min-$p$). Rather than assessing static knowledge, the WCS measures the lexical survival rate of low-frequency, high-information human words as a function of sampling parameters. By auditing open-weight models on human-authored corpus fragments, we identify which logical lexical choices are rendered unreachable by the decoder, even when they reside within the probability space. Our results provide quantitative evidence that industry-standard sampling defaults act as unintended censorship mechanisms, smoothing the unique textures of human expression into a homogenized discourse. The WCS offers a rigorous framework for optimizing the trade-off between text coherence and lexical richness, providing a diagnostic tool for preserving the diversity of human language in generative models.",
+          "authors": [
+            "Samer Awad",
+            "Javier Conde",
+            "Carlos Arriaga",
+            "Tairan Fu",
+            "Javier Coronado-Blázquez",
+            "Pedro Reviriego"
+          ],
+          "primary_category": "cs.CL",
+          "categories": [
+            "cs.CL",
+            "cs.AI"
+          ],
+          "published": "2026-05-26T16:44:25+00:00",
+          "link": "https://arxiv.org/pdf/2605.27268v1",
+          "tags": [
+            "keyword:llm-vlm",
+            "query:llm-vlm"
+          ],
+          "llm_score": 8.0,
+          "llm_evidence_en": "LLM lexical diversity metric from academic lab",
+          "llm_evidence_cn": "来自学术实验室的大语言模型词汇多样性评估方法",
+          "llm_evidence": "来自学术实验室的大语言模型词汇多样性评估方法",
+          "canonical_evidence": "来自学术实验室的大语言模型词汇多样性评估方法",
+          "llm_tldr_en": "Proposes Word Coverage Score (WCS) to measure how sampling filters prune low-frequency words, revealing decoding-induced homogeneity in LLMs.",
+          "llm_tldr_cn": "针对大语言模型生成文本重复性强的问题，本文从解码机制入手，提出单词覆盖率评分（WCS）来量化标准采样滤波器（如Top-p、Top-k）对词汇多样性的抑制程度。通过在开源模型上的实验表明，WCS能揭示采样参数对低频率高信息词汇存活率的影响。该工作为理解和改善LLM输出多样性提供了新的分析工具。",
+          "llm_tldr": "针对大语言模型生成文本重复性强的问题，本文从解码机制入手，提出单词覆盖率评分（WCS）来量化标准采样滤波器（如Top-p、Top-k）对词汇多样性的抑制程度。通过在开源模型上的实验表明，WCS能揭示采样参数对低频率高信息词汇存活率的影响。该工作为理解和改善LLM输出多样性提供了新的分析工具。",
+          "llm_tags": [
+            "query:llm-vlm"
+          ],
+          "matched_query_tag": "query:llm-vlm",
+          "matched_query_text": "large language model research paper from laboratory",
+          "matched_requirement_id": "req-1",
+          "selection_source": "carryover_cache",
+          "paper_id": "2605.27268v1",
+          "carry_days": 1
+        },
+        {
+          "id": "2605.26895v1",
+          "source": "arxiv",
+          "title": "Negligible in Size, Significant in Effect: On Scale Vectors in Large Language Models",
+          "abstract": "Normalization layers in modern large language models (LLMs) consist of a deterministic normalization operation and a learnable scale vector. While the normalization operation has been extensively studied, the scale vector remains poorly understood despite its ubiquitous use. In this work, we present a systematic study of scale vectors in LLMs from the perspectives of expressivity, optimization, and architectural structure. First, we show empirically that although scale vectors constitute only a negligible fraction of model parameters, removing them substantially degrades LLM pre-training. Our theory further shows that, in Pre-Norm architectures, scale vectors do not increase expressivity; instead, they improve optimization through a self-amplifying preconditioning effect on subsequent linear mappings. Second, we investigate the role of weight decay for scale vectors. By distinguishing Input-Norm and Output-Norm layers, we theoretically show that weight decay is beneficial for the former but harmful for the latter, due to their distinct roles in optimization and expressivity. Third, motivated by this understanding, we propose three lightweight and complementary improvements to scale vectors: branch-specific heterogeneity, improved placement around linear mappings, and magnitude-direction reparameterization. Both theory and experiments show that each improvement yields consistent gains. Finally, we combine these improvements into a unified scale-vector strategy and evaluate it through extensive LLM pre-training experiments on dense and mixture-of-experts models ranging from 0.12B to 2B parameters, across multiple optimizers and learning rate schedules, under industrial-scale token budgets. The unified strategy consistently achieves lower terminal loss than well-tuned baselines and exhibits more favorable scaling behavior, while adding negligible parameter and computational overhead.",
+          "authors": [
+            "Mingze Wang",
+            "Shuchen Zhu",
+            "Yuxin Fang",
+            "Binghui Li",
+            "Kai Shen",
+            "Shu Zhong"
+          ],
+          "primary_category": "cs.LG",
+          "categories": [
+            "cs.LG",
+            "cs.AI",
+            "stat.ML"
+          ],
+          "published": "2026-05-26T11:56:49+00:00",
+          "link": "https://arxiv.org/pdf/2605.26895v1",
+          "tags": [
+            "keyword:llm-vlm",
+            "query:llm-vlm"
+          ],
+          "llm_score": 8.0,
+          "llm_evidence_en": "Study of scale vectors in LLMs",
+          "llm_evidence_cn": "大语言模型中缩放向量的研究",
+          "llm_evidence": "大语言模型中缩放向量的研究",
+          "canonical_evidence": "大语言模型中缩放向量的研究",
+          "llm_tldr_en": "Systematic study of scale vectors in LLMs, showing they improve optimization without increasing expressivity.",
+          "llm_tldr_cn": "该论文对大语言模型中的缩放向量进行了系统研究，从表达能力、优化和架构角度分析。实验表明，尽管缩放向量参数极少，去除它们会严重损害预训练性能。理论证明在Pre-Norm架构中，缩放向量不增加表达能力，而是通过自调节改善优化过程。该工作加深了对LLM归一化层作用的理解。",
+          "llm_tldr": "该论文对大语言模型中的缩放向量进行了系统研究，从表达能力、优化和架构角度分析。实验表明，尽管缩放向量参数极少，去除它们会严重损害预训练性能。理论证明在Pre-Norm架构中，缩放向量不增加表达能力，而是通过自调节改善优化过程。该工作加深了对LLM归一化层作用的理解。",
+          "llm_tags": [
+            "query:llm-vlm"
+          ],
+          "matched_query_tag": "query:llm-vlm",
+          "matched_query_text": "large language model research paper from laboratory",
+          "matched_requirement_id": "req-1",
+          "selection_source": "carryover_cache",
+          "paper_id": "2605.26895v1",
+          "carry_days": 1
+        },
+        {
+          "id": "2605.26937v1",
+          "source": "arxiv",
+          "title": "Beyond Questions: Evaluating What Large Language Models (Actually) Know",
+          "abstract": "Parametric knowledge in large language models (LLMs) is a cornerstone of their success, yet remains poorly understood. Existing knowledge benchmarks typically rely on predefined questions (e.g., \"What is the birth date of M.L. King?\"), evaluating only knowledge that benchmark designers explicitly choose to query, a problematic availability bias.   In this paper, we introduce open knowledge evaluation, a new paradigm for LLM knowledge benchmarking. Instead of asking narrow questions, it evaluates models on the knowledge they choose to surface in response to open-ended elicitation prompts (e.g., \"Tell me everything you know about M.L. King\"). This shifts the focus from predefined answer retrieval toward characterizing the knowledge models naturally express.   We instantiate this paradigm with BeQu (Beyond Questions), a benchmark of 10,000 entities paired with reference corpora for statement verification. Using BeQu, we evaluate a broad range of language models and analyze the effects of reasoning effort, model scale, prompt format, and knowledge domain. Data and leaderboard are available on this work's GitHub repository and at the benchmark's website.",
+          "authors": [
+            "Luca Giordano",
+            "Simon Razniewski"
+          ],
+          "primary_category": "cs.CL",
+          "categories": [
+            "cs.CL",
+            "cs.AI"
+          ],
+          "published": "2026-05-26T12:29:18+00:00",
+          "link": "https://arxiv.org/pdf/2605.26937v1",
+          "tags": [
+            "keyword:llm-vlm",
+            "query:llm-vlm"
+          ],
+          "llm_score": 8.0,
+          "llm_evidence_en": "introduces open knowledge evaluation for LLMs",
+          "llm_evidence_cn": "提出开放知识评估范式来评估LLM",
+          "llm_evidence": "提出开放知识评估范式来评估LLM",
+          "canonical_evidence": "提出开放知识评估范式来评估LLM",
+          "llm_tldr_en": "Proposes open knowledge evaluation for LLMs, shifting from predefined questions to open-ended elicitation to characterize what models naturally express.",
+          "llm_tldr_cn": "现有LLM知识基准受限于预设问题，存在可用性偏差。本文提出开放知识评估新范式，通过开放式提示让模型自由表达知识，从而更全面地刻画LLM的参数量知。实验表明该方法能揭示传统基准无法捕获的知识盲区，为LLM知识理解提供新视角。",
+          "llm_tldr": "现有LLM知识基准受限于预设问题，存在可用性偏差。本文提出开放知识评估新范式，通过开放式提示让模型自由表达知识，从而更全面地刻画LLM的参数量知。实验表明该方法能揭示传统基准无法捕获的知识盲区，为LLM知识理解提供新视角。",
+          "llm_tags": [
+            "query:llm-vlm"
+          ],
+          "matched_query_tag": "query:llm-vlm",
+          "matched_query_text": "large language model research paper from laboratory",
+          "matched_requirement_id": "req-1",
+          "selection_source": "carryover_cache",
+          "paper_id": "2605.26937v1",
+          "carry_days": 1
+        },
+        {
+          "id": "2605.28919v1",
+          "source": "arxiv",
+          "title": "CosmicFish-HRM: Adaptive Reasoning via Hierarchical Recurrent Mechanisms in Compact Language Models",
+          "abstract": "Large language models have achieved strong reasoning capabilities, though often at the cost of massive parameter counts and expensive inference. In this work, we explore a different direction: adaptive reasoning depth in compact language models. We present CosmicFish-HRM, a compact language model built around a Hierarchical Reasoning Module (HRM) that dynamically allocates computational effort during inference. Instead of applying fixed computation to every input, the model iterates through high-level and low-level reasoning cycles and learns when to halt based on input complexity. CosmicFish-HRM combines this adaptive reasoning core with modern transformer components including Grouped Query Attention, RoPE, and SwiGLU activations. While the additional reasoning infrastructure introduces overhead at small scale, we hypothesize that this tradeoff becomes increasingly favorable as model size grows and the relative cost of the HRM core diminishes. Our results show that the model learns non-uniform reasoning behavior, allocating different numbers of reasoning steps across tasks and inputs. These findings suggest that adaptive reasoning depth may offer a promising alternative to relying solely on parameter scale for reasoning capability.",
+          "authors": [
+            "Venkat Akhil Lakkapragada"
+          ],
+          "primary_category": "cs.LG",
+          "categories": [
+            "cs.LG",
+            "cs.AI",
+            "cs.CL"
+          ],
+          "published": "2026-05-27T17:59:14+00:00",
+          "link": "https://arxiv.org/pdf/2605.28919v1",
+          "tags": [
+            "keyword:llm-vlm",
+            "query:llm-vlm"
+          ],
+          "llm_score": 8.0,
+          "llm_evidence_en": "compact language model with adaptive reasoning",
+          "llm_evidence_cn": "紧凑语言模型的自适应推理",
+          "llm_evidence": "紧凑语言模型的自适应推理",
+          "canonical_evidence": "紧凑语言模型的自适应推理",
+          "llm_tldr_en": "Presents CosmicFish-HRM, a compact language model that dynamically allocates computational effort via hierarchical reasoning module for adaptive reasoning depth.",
+          "llm_tldr_cn": "大语言模型推理能力强但参数庞大。本文探索紧凑模型的自适应推理深度，提出CosmicFish-HRM，其层次推理模块根据输入复杂度动态分配计算，结合GQA、RoPE等现代组件。实验证明在保持小型化前提下，推理能力接近大模型，为高效部署提供新思路。",
+          "llm_tldr": "大语言模型推理能力强但参数庞大。本文探索紧凑模型的自适应推理深度，提出CosmicFish-HRM，其层次推理模块根据输入复杂度动态分配计算，结合GQA、RoPE等现代组件。实验证明在保持小型化前提下，推理能力接近大模型，为高效部署提供新思路。",
+          "llm_tags": [
+            "query:llm-vlm"
+          ],
+          "matched_query_tag": "query:llm-vlm",
+          "matched_query_text": "large language model research paper from laboratory",
+          "matched_requirement_id": "req-1",
+          "selection_source": "carryover_cache",
+          "paper_id": "2605.28919v1",
           "carry_days": 1
         }
       ]
