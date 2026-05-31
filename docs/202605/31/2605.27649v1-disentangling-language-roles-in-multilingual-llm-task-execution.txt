@@ -1,0 +1,811 @@
+Title: Disentangling Language Roles in Multilingual LLM Task Execution
+
+URL Source: https://arxiv.org/pdf/2605.27649v1
+
+Published Time: Thu, 28 May 2026 00:23:32 GMT
+
+Number of Pages: 22
+
+Markdown Content:
+## Disentangling Language Roles in Multilingual LLM Task Execution 
+
+Qishi Zhan *
+
+Marquette 
+
+Minxuan Hu 
+
+Cornell 
+
+Seoyeon Jang 
+
+UC San Diego 
+
+Lei Zhao 
+
+UPenn 
+
+Ziheng Chen 
+
+UT Austin 
+
+Man Liang 
+
+Maryland 
+
+Xinyue Xiang 
+
+Michigan 
+
+Jiaxin Liu 
+
+UIUC 
+
+Guansu Wang 
+
+Melbourne 
+
+Liang He 
+
+Stanford 
+
+Abstract 
+
+Multilingual LLMs are increasingly used when instruction, source content, and re-quired response languages do not coin-cide. Existing benchmarks have expanded multilingual instruction-following evaluation, but they rarely isolate these three roles within a fully crossed design. We intro-duce MTM-Bench, a controlled benchmark for language-conditioned task execution in which each instance is defined by a triplet 
+
+(Linstr , L content , L resp ). Across English, Span-ish, and Chinese, MTM-Bench enumerates all 27 triplets and contains 2,430 instances per model across semantic reversal, final-state ex-traction, and language purity with update re-alization. We evaluate 20 frontier and open-weight LLMs using decomposed metrics for se-mantic correctness, target-language adherence, constraint satisfaction, contamination ratio, and joint success, with scoring validated by a tar-geted human audit. The fully crossed design reveals that degradation is organized by the role a language occupies in the task structure, not merely by mismatch count. The response-language role is the dominant axis of variation, and a single response-slot mismatch accounts for most degradation. The response-only and full-mismatch comparison suggests that mis-match count is not a monotonic predictor of difficulty, with model-level ordering varying across systems. Task families fail through dis-tinct channels, showing that semantic correct-ness alone does not capture reliable multilin-gual task execution. 
+
+1 Introduction 
+
+Large language models are increasingly used in multilingual workflows where language roles are no longer aligned. A Spanish-speaking employee in a multinational company may instruct an LLM in Spanish, provide an English email thread as source content, and ask for a Chinese summary to share  
+
+> *Corresponding author: qishi.zhan@marquette.edu .
+
+with colleagues in China. Such cases make mul-tilingual task execution a triplet-structured prob-lem: the instruction language, content language, and response language may each differ. Success-ful execution therefore requires more than general multilingual fluency. A model must understand the task from the instruction, process the source con-tent, realize the answer in the specified response language, and follow explicit output constraints. Despite its practical importance, this setting remains difficult to evaluate cleanly. Existing multilingual benchmarks have expanded language coverage, cross-lingual transfer evaluation, and instruction-following assessment. However, they often do not treat the instruction language, source content language, and required response language as independently controlled roles within a single evaluation design (Conneau et al., 2018; Lewis et al., 2020; Hu et al., 2020; Ruder et al., 2021; Liang et al., 2020; FitzGerald et al., 2023; Ahuja et al., 2023; Bandarkar et al., 2024). As a result, when a model fails, it can be unclear whether the error arises from task misunderstanding, content processing, target-language realization, constraint following, or an interaction among these factors. We investigate this problem through language-conditioned task execution. Each instance is de-fined by an explicit triplet (Linstr , L content , L resp ),representing the instruction language, content lan-guage, and required response language. This for-mulation treats multilingual execution as a struc-tured interaction among three language roles, sepa-rating task understanding from output realization. We introduce MTM-Bench (Multilingual Triplet Mismatch Benchmark), a controlled benchmark for this setting (Figure 1). Across English (EN), Spanish (ES), and Chinese (ZH), we enumerate all 33 = 27 language triplets and construct 2,430 instances per model over three task families: se-mantic reversal, final-state extraction, and language purity with update realization. We evaluate model 1
+
+> arXiv:2605.27649v1 [cs.CL] 26 May 2026 Figure 1: Overview of MTM-Bench: benchmark construction, decomposed evaluation, and scoring validation.
+
+outputs with decomposed metrics for semantic cor-rectness, target-language adherence, explicit con-straint satisfaction, contamination ratio, and joint success. MTM-Bench makes three contributions. First, it reframes multilingual task execution as a triplet-based evaluation problem, where the instruction, content, and response languages are varied inde-pendently rather than treated as one undifferenti-ated language variable. Second, it offers a fully crossed EN/ES/ZH benchmark spanning 27 lan-guage triplets and three task families, scored with a decomposed protocol that separates semantic cor-rectness, target-language adherence, constraint sat-isfaction, contamination, and joint success, and checked against a targeted human audit. Third, the fully crossed design enables role-specific marginal comparisons that aggregate multilingual bench-marks cannot isolate: response-language varia-tion is much larger than instruction- or content-language variation, and the response-only versus full-mismatch contrast suggests mismatch count is not a monotonic predictor of difficulty. 
+
+2 Related Work 
+
+Cross-linguistic instruction following has become a central testbed for multilingual LLMs (Conneau et al., 2020; Xue et al., 2021; Wei et al., 2022; Ouyang et al., 2022). Prior work shows that instruction-following behavior can transfer across languages, but transfer varies by language, model, and tuning mixture (Ranaldi et al., 2024; Muen-nighoff et al., 2023; Shaham et al., 2024). Our fo-cus is diagnostic rather than training-oriented: we ask where multilingual task execution fails when instruction, content, and response languages vary independently. Recent instruction-following benchmarks have expanded both language coverage and evaluation realism. IFEval introduced automatically verifiable instruction-following evaluation in English (Zhou et al., 2023), while FollowBench examines fine-grained constraint following across content, situa-tion, style, format, and example dimensions (Jiang et al., 2024). Subsequent work has extended this agenda in multiple directions: M-IFEval adapts the framework to multilingual settings and documents substantial language-dependent varia-tion (Dussolle et al., 2025); MaXIFE scales cov-erage to many languages and verifiable tasks (Liu et al., 2025); and Marco-Bench-MIF emphasizes verifiable execution under language-specific con-straints (Zeng et al., 2025). XIFBench evaluates instruction following through constraint categories and requirement-based validation, while Multi-IF moves the setting into multi-turn conversations (Li et al., 2025; He et al., 2024). These benchmarks provide strong task templates, language-specific constraints, and verifiable eval-uation protocols. MTM-Bench addresses a com-plementary diagnostic question. Prior work asks how well a model follows instructions in each lan-guage overall; MTM-Bench asks which language role drives failure when the instruction language, source content language, and required response lan-guage vary independently. This role-based design separates the target language itself from mismatch between earlier prompt context and the required an-swer language, and from the number of languages present in an instance. MTM-Bench therefore re-tains the emphasis on verifiable tasks while reor-ganizing evaluation around role-specific language variation. This fully crossed design enables role-specific marginal comparisons that prior multilin-gual instruction-following benchmarks cannot iso-late: the same target task can be evaluated while varying only the instruction, content, or response language role. 2Another related line of work addresses how to evaluate multilingual outputs. CoCo-CoLa argues that concept-level correctness and target-language correctness should be evaluated separately rather than collapsed into a single decision (Rahmati et al., 2025). Language-control failures have also been studied as language confusion: Marchisio et al. (2024) show that LLMs may fail to gener-ate outputs in the intended language even when that language is explicitly specified. These find-ings motivate our decomposed evaluation proto-col, which separates semantic correctness, target-language adherence, constraint satisfaction, and non-target-language contamination. 
+
+3 Framework 
+
+An evaluation instance is defined as 
+
+x = ( i, c, y ⋆, L instr , L content , L resp ),
+
+where i is the instruction, c is the source con-tent, y⋆ is the reference answer or target condi-tion, and (Linstr , L content , L resp ) specifies the in-struction language, content language, and required response language. Given x, a model produces an output ˆy.We evaluate each output along three binary di-mensions: SC = SEMANTIC CORRECT (ˆ y, y ⋆),
+
+LC = LANG CORRECT (ˆ y, L resp ),
+
+CC = CONSTRAINT CORRECT (ˆ y).
+
+SC measures whether the output captures the target meaning, LC measures whether it is realized in the required response language, and CC measures whether it satisfies explicit output constraints. We also define C ONTAMINATION RATIO (CTR) as a continuous measure of non-target-language material. Let A be an allowlist of language-neutral units, including pure numerals, single-letter labels, allowlisted proper names, and allowlisted platform or system names. We define scored units as lex-ical spans, including contiguous Latin alphabetic tokens, contiguous Chinese-character spans, and numeric spans after applying the allowlist. Let 
+
+Nnt (ˆ y, L resp ) be the number of non-target scored units after excluding A, and let Nall (ˆ y) be the num-ber of scored units. We compute CTR (ˆ y, L resp ) = Nnt (ˆ y, L resp )
+
+Nall (ˆ y) .
+
+LC and CTR capture complementary aspects of language control. LC is a binary admissibility judgment: it records whether the response satis-fies the target-language requirement under the al-lowlist. CTR provides a graded severity measure, distinguishing isolated carryover from substantial non-target-language contamination. The aggregate success metric is JS = SC · LC · CC .
+
+The multiplicative definition treats the three re-quirements as jointly necessary rather than compen-satory: a response is not fully successful if it solves the task but uses the wrong response language, or if it is in the target language but violates the re-quested output form. Operational scoring rules are described in § 5. 
+
+4 Benchmark 
+
+We construct MTM-Bench to support controlled comparisons across instruction, content, and re-sponse language roles while keeping task semantics fixed. The benchmark is designed around four con-straints: semantic portability across EN, ES, and ZH; short outputs that make language-control fail-ures observable; closed-form or rubric-verifiable answers; and separability of semantic correctness, target-language correctness, and format compli-ance. These constraints motivate our focus on short, controlled tasks rather than open-ended multilin-gual generation (Ribeiro et al., 2020; Naik et al., 2018). We use EN, ES, and ZH as a compact multi-lingual testbed for the fully crossed triplet design. EN serves as a high-resource baseline language in many existing LLM evaluations, ES retains the Latin script while differing from English in mor-phology, function words, and surface realization, and ZH introduces a non-Latin script and substan-tial typological distance from EN and ES (Pires et al., 2019). This combination provides com-plementary contrasts while keeping benchmark construction, localization, and scoring validation tightly controlled. We next describe how the bench-mark is constructed under this design. 
+
+4.1 Benchmark Construction 
+
+We construct MTM-Bench through a controlled rewriting and localization pipeline. We begin from task patterns in prior multilingual instruction-following benchmarks, especially M-IFEval and 3Marco-Bench-MIF (Dussolle et al., 2025; Zeng et al., 2025), and retain patterns that are semanti-cally portable across EN, ES, and ZH and admit closed-form or rubric-verifiable evaluation. For semantic-reversal items, prior irony and reversal re-sources guide the phenomenon categories and item patterns. We rewrite each item as a short controlled scenario in a triplet-based format with normalized metadata, gold conditions, and language-specific output constraints, rather than directly translating existing prompts, so that the intended stance re-mains stable across all triplet variants. Each selected pattern is instantiated as a base item with separable instruction, content, and response-language components. This design allows the same semantic target to be evaluated under any 
+
+(Linstr , L content , L resp ) triplet. Across triplet vari-ants, names, dates, times, room numbers, platform names, and answer formats are held fixed when they define the underlying task, while ordinary lex-ical and functional material is localized according to the relevant language slot. We manually check that each base item has a unique gold answer or target condition, that dis-tractor values are not accidentally valid, and that changing one language slot does not alter the se-mantic target. Ambiguous or unstable items are removed or rewritten. The final benchmark con-tains 30 base items per task family. For each base item, we instantiate all 27 combinations of instruc-tion, content, and response languages, yielding 810 instances per family and 2,430 instances per model. 
+
+4.2 Task Families 
+
+We organize the benchmark into three task fami-lies, each targeting a distinct multilingual execution challenge. The families are chosen to cover three complementary points in the execution pipeline: re-covering intended meaning despite misleading sur-face form, extracting the final valid state under ex-plicit format constraints, and realizing an updated state in the requested response language. Family A focuses on semantic reversal. Each item presents surface wording that suggests one interpretation, while the author’s intended stance points in the opposite direction or substantially revises it. This family includes irony, sarcasm, understatement, os-tensible praise masking criticism, and concluding remarks that overturn earlier framing (Van Hee et al., 2018). The task tests whether a model can identify the underlying polarity and evaluative tar-get rather than relying on surface wording alone. Family B focuses on final-state extraction. Each item presents a short administrative or informa-tional text containing multiple candidate values, such as times, deadlines, locations, contacts, or re-quirements. Only the final valid value is correct af-ter updates, corrections, rescheduling, or reassign-ment. This family follows the verifiable, closed-form extraction style emphasized in prior multilin-gual instruction-following benchmarks (Dussolle et al., 2025; Liu et al., 2025; Zeng et al., 2025), but is rewritten into our triplet-based setting and scored with a family-specific final-value rubric. Family C focuses on language purity with update realization in short administrative scenarios. Each item presents a controlled update, such as a meeting room change, reassigned contact person, revised platform, or moved deadline, and asks the model to describe the resulting update in the required re-sponse language. By language purity, we mean that ordinary lexical and functional material must be realized in Lresp . Proper nouns, numeric expres-sions, and allowlisted platform or system names, such as Canvas, Zoom, Teams, and Moodle, may remain unchanged. Non-target language framing must be localized: in a ZH response, for example, “Room 327” and “Friday at 4 PM” are treated as EN structural carryover, whereas “Zoom 会议改
+
+到周五下 午4点” (‘the Zoom meeting is moved to Friday at 4 PM’) is allowed because the platform name is allowlisted and the surrounding structure is localized. We treat non-localized structural car-ryover as a failure because the task explicitly asks for the response to be localized into Lresp ; the cri-terion is not meant to judge the appropriateness of code-switching when users permit or prefer mixed-language use (Do˘ gruöz et al., 2021). See Appx. D.2 for the complete rubric for each task family. 
+
+5 Evaluation Protocol 
+
+We score each output using the decomposed met-rics defined in § 3: S EMANTIC CORRECT , L ANG -CORRECT , C ONSTRAINT CORRECT , C ONTAMI -
+
+> NATION
+
+RATIO , and J OINT SUCCESS .SEMANTIC CORRECT is evaluated by task fam-ily. For Family A, the output must recover the writer’s intended stance rather than the surface wording. For Family B, only the final valid value receives credit, with format-equivalent or cross-linguistic variants accepted when they refer to the same final value. For Family C, the output is correct if it captures the main update without contradiction. 4Rule-based prefilters handle obvious failures, in-cluding empty outputs and explicit non-answers, as well as family-specific failures such as polarity mismatches or missing critical numeric anchors. We then score Family B with a deterministic final-value checker, while Families A and C use an LLM-assisted judge with family-specific rubrics (Kocmi and Federmann, 2023; Liu et al., 2023; Zheng et al., 2023). The judge receives the benchmark item, the model output, and the task-specific semantic rubric, but not the identity of the evaluated model. Lan-guage correctness and constraint correctness are evaluated separately from semantic correctness, so the judge is not used to determine target-language adherence or explicit format compliance. LANG CORRECT applies a strict target-language criterion. Pure numerals, single-letter labels, al-lowlisted proper names, and allowlisted platform names are treated as language-neutral. Non-target lexical items or structural frames cause failure un-less they fall under this allowlist. For instance, “327” passes as language-neutral in a ZH-target response, whereas “Room 327” fails because the English structural token Room is not allowlisted. Representative edge-case decisions are reported in Appx. D.1. CONSTRAINT CORRECT checks explicit output requirements in the instruction. We implement rule-based checks for five recurring constraint types: yes-or-no with brief reason, output-only, single sentence, banned word, and starts-with pre-fix. For output-only tasks, explanatory prefixes and continuation-style explanations are marked as vio-lations, while minor formatting variation is allowed when it does not change the final value. CONTAMINATION RATIO operationalizes the framework-level definition by counting non-target scored units after applying the allowlist. For ZH targets, non-allowlisted Latin alphabetic tokens are treated as non-target units. For ES targets, non-allowlisted EN structural tokens, venue words, month names, and common function words are treated as non-target units. This metric is related to prior work on code-switching and language con-fusion, but is tailored to short, constraint-driven outputs rather than open-ended code-switched text (Aguilar et al., 2020; Do˘ gruöz et al., 2021; Marchi-sio et al., 2024). We validate the scoring pipeline through a hu-man audit covering task families, response lan-guages, triplet configurations, and major failure types. The audit contains two complementary sub-sets: 1022 targeted boundary cases marked during scoring development and validation, and 300 un-flagged routine outputs sampled as a sanity check. Human annotators inspect the benchmark item, model response, and automatic component la-bels, and record overrides for S EMANTIC COR -
+
+> RECT
+
+, L ANG CORRECT , and C ONSTRAINT COR -
+
+> RECT
+
+. The targeted set has a component-level over-ride rate of 18.2%, while the unflagged check has a lower override rate of 7.3%, suggesting that most routine cases are handled consistently by the auto-matic pipeline. At the J OINT SUCCESS level, the targeted-set override rate is lower, at 15.4%, be-cause some component corrections do not alter the final joint decision. Disagreements are adjudicated using the edge-case policy in Appx. D.1 (Artstein and Poesio, 2008); full audit details, including per-language agreement rates, are reported in Appx. F. 
+
+6 Experimental Setup 
+
+We evaluate 20 models spanning frontier com-mercial systems, open-weight models, and differ-ent degrees of multilingual specialization: Claude Haiku 4.5, Claude Sonnet 4.6, and Claude Opus 4.1 (Anthropic, 2025b, 2026, 2025a); GPT-4.1, GPT-5.4, GPT-5.4-mini, and GPT-5.3-Codex (Ope-nAI, 2025, 2026b,c,a); Gemini 2.5 Flash and Gem-ini 2.5 Flash-Lite (Comanici et al., 2025; Google DeepMind, 2025); DeepSeek-V3.1, DeepSeek-V3.2, and DeepSeek-R1 (DeepSeek-AI, 2025a,b; Guo et al., 2025); Qwen3-Max, Qwen3.5-Plus, and Qwen3.5-Flash (Yang et al., 2025; Alibaba Cloud, 2026); MiniMax-M2.5 and MiniMax-M2.7 (MiniMax-AI, 2026a,b); and LLaMA-3, LLaMA-3.1-8B, and LLaMA-3.3-70B (Grattafiori et al., 2024; Meta AI, 2024). We evaluate all models on the full 2,430-instance benchmark (3 task families × 30 base items ×
+
+27 triplets) in a zero-shot setting, without system prompts or few-shot demonstrations (Brown et al., 2020; Wei et al., 2022). For each instance, we use a fixed prompt template that concatenates the localized instruction, source content, and question, and we request one response per model. We set temperature to 0 when supported and leave top-p at the provider default (Holtzman et al., 2020). We do not enable optional reasoning or thinking modes unless they are part of the model’s default public interface. Full generation details are reported in Appx. A. 5Model SC ↑ LC ↑ CC ↑ CTR ↓ JS ↑                                                                                                         
+
+> Qwen3-Max .937 .949 .925 .021 .840
+> DeepSeek-R1 .928 .946 .923 .019 .822
+> Qwen3.5-Plus .913 .958 .932 .021 .820
+> GPT-5.4-mini .935 .935 .908 .023 .815 GPT-5.4 .930 .949 .893 .016 .799 DeepSeek-V3.2 .909 .945 .905 .024 .796 DeepSeek-V3.1 .908 .927 .901 .037 .786 GPT-5.3-Codex .938 .944 .869 .020 .781 Claude Sonnet 4.6 .926 .930 .886 .033 .767 Gemini 2.5 Flash-Lite .872 .944 .924 .023 .767 Qwen3.5-Flash .911 .878 .908 .068 .765 GPT-4.1 .912 .911 .886 .045 .758 Claude Opus 4.1 .918 .910 .876 .043 .741 LLaMA-3.3-70B .880 .893 .915 .068 .740 Gemini 2.5 Flash .867 .919 .899 .043 .727 MiniMax-M2.7 .851 .847 .820 .034 .719 MiniMax-M2.5 .800 .796 .786 .041 .681 Claude Haiku 4.5 .925 .906 .795 .051 .678 LLaMA-3 .830 .790 .799 .131 .573 LLaMA-3.1-8B .761 .817 .839 .105 .537
+> Mean .893 .905 .880 .043 .745
+
+Table 1: Main results for 20 models. Top-3 per column in blue , bottom-3 in red. Sorted by J OINT SUCCESS .
+
+7 Results 
+
+7.1 Overall Performance 
+
+Across the 20 models, J OINT SUCCESS ranges from 0.537 to 0.840 (mean 0.745; Table 1). The com-ponent metrics are higher in isolation: LANG -CORRECT has mean 0.905, S EMANTIC CORRECT 
+
+has mean 0.893, and C ONSTRAINT CORRECT has mean 0.880. Satisfying all three simultaneously is substantially harder, showing that multilingual task success depends on the joint satisfaction of semantic, language, and constraint requirements. Qwen3-Max achieves the highest overall JOINT SUCCESS (0.840), followed by DeepSeek-R1 (0.822) and Qwen3.5-Plus (0.820). The overall ranking does not reduce to any single component metric. GPT-5.3-Codex achieves the highest S E-
+
+> MANTIC
+
+CORRECT across all 20 models yet ranks lower on C ONSTRAINT CORRECT ; Gemini 2.5 Flash-Lite shows the opposite profile. These cases illustrate why decomposed evaluation is needed: a model can recover the correct meaning while consistently failing format requirements, or satisfy output-form constraints while making more seman-tic errors (Liang et al., 2023). Table 2 summarizes performance by mismatch class and task family, providing the aggregate views used below to separate language-role effects from task-family effects.                                                       
+
+> Class nSC LC CC CTR JS
+> Same 270 .920 .975 .910 .008 .829
+> Instr only 540 .909 .939 .888 .022 .795 Content only 540 .890 .913 .891 .039 .746 Resp only 540 .880 .860 .860 .065 .694 Full mismatch 540 .878 .871 .864 .064 .705
+> By task family
+> A: Sem. rev. 810 .925 .888 .906 .066 .786
+> B: Final-state 810 .937 .948 .796 .036 .728 C: Lang. purity 810 .816 .878 .936 .027 .722
+
+Table 2: Performance by mismatch class and task family, averaged across all 20 models. Blue shading marks the highest J OINT SUCCESS row in each block; red shading marks the lowest task-family row. Response-only and full-mismatch triplets are compared in § 7.3. 
+
+7.2 Response Language Is the Dominant Axis 
+
+The response language is the dominant axis of variation. As shown in Table 3 and Figure 2, JOINT SUCCESS in the response slot drops from 0.819 for EN to 0.711 for ES and 0.706 for ZH, a range of ∆resp = 0 .113 . The corresponding ranges are much smaller for content language ( ∆content =0.029 ) and instruction language ( ∆instr = 0 .018 ). This ordering remains stable under clustered boot-strap resampling over base items: the 95% interval for the response-axis range is [0 .083 , 0.156] , com-pared with [0 .012 , 0.049] for the content axis and 
+
+[0 .006 , 0.033] for the instruction axis. Bootstrap 6Figure 2: Marginal effects of the three language roles on S EMANTIC CORRECT , L ANG CORRECT , and J OINT SUC - 
+
+> CESS
+
+across EN, ES, and ZH. The response axis has the largest J OINT SUCCESS range ( ∆JS = 0 .113 ).                                                          
+
+> Axis Lang SC LC CC CTR JS
+> Instr.
+> ∆JS =.018
+> en .896 .882 .875 .043 .744 es .894 .908 .898 .051 .755 zh .888 .925 .866 .036 .737 Content
+> ∆JS =.029
+> en .893 .889 .874 .036 .729 es .888 .928 .880 .033 .758 zh .897 .897 .884 .060 .750
+> Resp.
+> ∆JS =.113
+> en .942 .965 .887 .023 .819
+> es .885 .890 .873 .039 .711 zh .851 .860 .878 .067 .706
+
+Table 3: Marginal effects of language axes. Values are averaged over all models and over the other two axes. 
+
+∆ denotes the range across en/es/zh. 
+
+details are reported in Appx. G. A fixed-effect model controlling for model iden-tity and base-item difficulty confirms the same ranking of the three axes. Response-slot coeffi-cients are substantially larger than instruction-slot and content-slot coefficients, indicating that the response-role effect is not explained by model com-position or item difficulty. Content-slot effects are smaller and not directionally consistent across ES and ZH, matching the marginal analysis in Table 3. Full regression results are reported in Appx. H. The same ordering appears for S EMANTIC COR - 
+
+> RECT
+
+and L ANG CORRECT : in Table 3, the re-sponse axis has ranges of 0.091 and 0.105, respec-tively, while the other two axes are flatter. C ON -
+
+> TAMINATION
+
+RATIO moves in the opposite direc-tion: ZH-response instances have an average ratio of 0.067, compared with 0.023 for EN-response instances (Table 3). Model-level sensitivity pat-terns are reported in Appx. B, Fig. 5. We next ask whether aggregate degradation can be explained by mismatch count alone, or whether the role in which a mismatch occurs provides additional explanatory structure. 
+
+7.3 Role Position Beyond Mismatch Count 
+
+To separate mismatch count from language-role position, we group the 27 triplets into five classes: 
+
+same , instr-only , content-only , resp-only , and full mismatch . Table 2 shows that performance drops from same (0.829) to instr-only (0.795) and content-only (0.746), but the lowest scores occur when the response language is mismatched: resp-only 
+
+reaches 0.694 and full mismatch reaches 0.705. If mismatch count alone were a monotonic predictor of task difficulty, full-mismatch triplets would be expected to show a clear additional penalty beyond the response-only single-mismatch case. A clustered bootstrap over base items gives a full-minus-response-only difference of 0.011 with a 95% interval of [0.001, 0.022] (Appx. G). Al-though this interval lies slightly above zero, the difference is small and runs counter to the direc-tion expected under a monotonic mismatch-count account: full-mismatch triplets do not score below response-only triplets. This suggests that mismatch count is not a monotonic predictor of difficulty, and that much of the aggregate degradation associated with multilingual mismatch is already present once the required response language differs from the preceding language context. This aggregate ordering is not consistent across models. We therefore do not interpret the response-only and full-mismatch comparison as a directional claim that full mismatch is intrinsically easier. In-stead, we use it as evidence that mismatch count alone does not account for the observed aggregate degradation pattern. Model-level details are re-ported in Appx. B.1. 7Figure 3: J OINT SUCCESS by task family and response language, averaged over 20 models. Final-state ex-traction is the main exception to the overall response-language degradation pattern. 
+
+7.4 Task Families Expose Distinct Bottlenecks 
+
+The three task families have similar overall JOINT SUCCESS (0.722–0.786; Table 2), but they fail through different channels. Task A has high S E-
+
+> MANTIC
+
+CORRECT (0.925), suggesting that models often recover the intended stance, yet performance is limited by response-language realization, espe-cially for ZH responses (Figure 3). Task B has the highest L ANG CORRECT (0.948), but the low-est C ONSTRAINT CORRECT (0.796), reflecting fre-quent violations of strict output-form requirements. Task C shows a different bottleneck: it has the high-est C ONSTRAINT CORRECT (0.936) but the lowest SEMANTIC CORRECT (0.816), because controlled administrative updates create more opportunities for omitting, distorting, or incompletely realizing the intended update. Two deviations from the overall response-language pattern are visible in Figure 3. First, Task B is the only family in which ZH-response per-formance does not degrade relative to EN-response performance (J OINT SUCCESS =0.746 for ZH and 0.743 for EN), consistent with its short temporal, numeric, or named-entity answers. Second, Task C shows a marked language-control failure on ES-response items (Figure 4), driven by retained En-glish structural tokens such as Room , Building , and 
+
+Hall . Its overall J OINT SUCCESS , however, remains lowest for ZH-response items. Figure 4 makes these bottlenecks explicit. Although the three task families have similar JOINT SUCCESS , their component-level failure pro-files differ sharply. Final-state extraction is domi-nated by constraint failures across response lan-guages. Semantic reversal with ZH responses is mainly limited by target-language realization. 
+
+> Figure 4: Component failure profiles by task family and response language. Bars show one minus each score; outlines mark the dominant failure component.
+
+Language-purity tasks show a different pattern: ZH responses are dominated by semantic update fail-ures, whereas ES responses combine semantic and language-control failures. 
+
+8 Conclusion 
+
+MTM-Bench frames multilingual task execution as a triplet-structured problem in which instruc-tion, content, and response languages vary indepen-dently. This design exposes language-role effects that are hidden when benchmarks aggregate over language configurations. Across 20 models and 27 language triplets, the response language is the main source of varia-tion, while instruction and content languages play smaller and less consistent roles. The response-only and full-mismatch comparison suggests that difficulty is not governed by mismatch count alone: once the requested answer language departs from the preceding context, extra mismatches add little explanatory power. Because this ordering varies across models, we treat it as evidence against a monotonic mismatch-count account, not as a direc-tional claim about full mismatch. Task-family results show why decomposed eval-uation matters. Similar end-to-end scores can reflect different failures, including correct mean-ings expressed in the wrong language and target-language outputs that violate format requirements. Multilingual evaluation should therefore track the role each language plays rather than collapse dis-tinct configurations into one aggregate score. With-out this distinction, aggregate scores may obscure failures in the specific language role required by the task. 8Limitations 
+
+MTM-Bench covers EN, ES, and ZH across three task families, fully crossing instruction, content, and response language roles while keeping task se-mantics and scoring rules tightly controlled. The observed response-role dominance should there-fore be interpreted as a controlled finding within the EN/ES/ZH setting rather than as a universal claim about all multilingual task execution. EN and ES provide a high-resource same-script contrast, while ZH provides one non-Latin-script contrast. Whether the same role structure changes with typo-logical distance, script, or resource level remains an open question. Broader language coverage and additional task families would be valuable for test-ing whether the role-position effect and response-axis pattern extend to more typologically distinct or lower-resource languages. With 30 base items per task family, MTM-Bench is better suited for controlled role-specific diagno-sis than for estimating broad domain-level multi-lingual performance. The language-purity family, in particular, draws on short administrative update scenarios; its findings are best interpreted as evi-dence about localized update realization under con-trolled conditions, not as a comprehensive account of update-generation tasks more generally. Automated scoring remains imperfect for short extractions, mixed-script responses, paraphrastic answers, aliases, and localized entity names. The combination of deterministic checks, LLM-assisted semantic judgment, and a stratified human audit reduces but does not eliminate residual errors in boundary cases. The main remaining risk is se-mantic labeling for Families A and C, where S E-
+
+> MANTIC
+
+CORRECT is assigned by a single LLM-assisted judge. This judge is blinded to model identity, and its role is limited to semantic content: LANG CORRECT , C ONSTRAINT CORRECT , C ON -
+
+> TAMINATION
+
+RATIO , and all Family B semantic labels are determined outside the LLM judge. Al-though the judge model is also included among the evaluated systems, model-family information is not provided to the judge. This risk is further bounded by the targeted human audit and the unflagged san-ity check, which directly inspect boundary cases and routine rows. Multi-judge sensitivity analy-sis and expanded human annotation would further characterize this residual risk. MTM-Bench should therefore be viewed as a controlled diagnostic probe rather than a compre-hensive multilingual leaderboard. To support re-producibility, we include the benchmark data, eval-uation code, scored model outputs, and bootstrap scripts in the supplementary material. The same triplet-based framework can be extended to addi-tional languages, domains, and task types, enabling future work to test whether the role-specific pat-terns observed here hold in broader multilingual settings. 
+
+Ethical Considerations 
+
+MTM-Bench is constructed from synthetic admin-istrative and evaluative scenarios and does not con-tain personal, private, user-derived, or intention-ally offensive content. The benchmark is intended for controlled evaluation of multilingual task ex-ecution rather than for deployment in high-stakes decision-making settings. Because the benchmark uses short multilingual prompts and automatic scor-ing, residual scoring errors may occur, especially near language-boundary and paraphrase cases; we mitigate this risk through decomposed scoring and a human audit. The human audit was conducted internally by members of the research team to vali-date scoring decisions and did not involve recruited external participants or crowdworkers. The released artifacts are intended for research use and include synthetic benchmark instances, evaluation scripts, aggregate analyses, and scored model outputs. Closed-source models were ac-cessed through official provider APIs or public in-terfaces under the applicable provider terms, and open-weight models were used through released checkpoints or hosted inference endpoints under the licenses stated by their creators. We do not redistribute model weights, provider documenta-tion, or provider system artifacts; included model outputs are provided only as benchmark evaluation records. 
+
+References  
+
+> Gustavo Aguilar, Sudipta Kar, and Thamar Solorio. 2020. LinCE: A centralized benchmark for linguis-tic code-switching evaluation. In Proceedings of the Twelfth Language Resources and Evaluation Con-ference , pages 1803–1813. European Language Re-sources Association. Kabir Ahuja, Harshita Diddee, Rishav Hada, Milli-cent Ochieng, Krithika Ramesh, Prachi Jain, Ak-shay Nambi, Tanuja Ganu, Sameer Segal, Mohamed Ahmed, Kalika Bali, and Sunayana Sitaram. 2023. MEGA: Multilingual evaluation of generative AI.
+
+9In Proceedings of the 2023 Conference on Empir-ical Methods in Natural Language Processing , pages 4232–4267. Association for Computational Linguis-tics. Alibaba Cloud. 2026. Alibaba cloud model studio: Model list. Anthropic. 2025a. System card addendum: Claude opus 4.1. Anthropic. 2025b. System card: Claude haiku 4.5. Anthropic. 2026. System card: Claude sonnet 4.6. Ron Artstein and Massimo Poesio. 2008. Inter-coder agreement for computational linguistics. Computa-tional Linguistics , 34(4):555–596. Lucas Bandarkar, Davis Liang, Benjamin Muller, Mikel Artetxe, Satya Narayan Shukla, Donald Husa, Naman Goyal, Abhinandan Krishnan, Luke Zettlemoyer, and Madian Khabsa. 2024. The belebele benchmark: a parallel reading comprehension dataset in 122 lan-guage variants. In Proceedings of the 62nd Annual Meeting of the Association for Computational Lin-guistics (Volume 1: Long Papers) , pages 749–775. Association for Computational Linguistics. Tom Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared D. Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel Ziegler, Jeffrey Wu, Clemens Winter, and 12 others. 2020. Language models are few-shot learners. In Advances in Neural Information Processing Systems , volume 33, pages 1877–1901. Curran Associates, Inc. A. Colin Cameron and Douglas L. Miller. 2015. A prac-titioner’s guide to cluster-robust inference. Journal of Human Resources , 50(2):317–372. Gheorghe Comanici, Eric Bieber, Mike Schaekermann, Ice Pasupat, Noveen Sachdeva, Inderjit Dhillon, Mar-cel Blistein, Ori Ram, Dan Zhang, Evan Rosen, Luke Marris, Sam Petulla, Colin Gaffney, Asaf Aharoni, Nathan Lintz, Tiago Cardal Pais, Henrik Jacobs-son, Idan Szpektor, Nan-Jiang Jiang, and 3416 oth-ers. 2025. Gemini 2.5: Pushing the frontier with advanced reasoning, multimodality, long context, and next generation agentic capabilities. Preprint ,arXiv:2507.06261. Alexis Conneau, Kartikay Khandelwal, Naman Goyal, Vishrav Chaudhary, Guillaume Wenzek, Francisco Guzmán, Edouard Grave, Myle Ott, Luke Zettle-moyer, and Veselin Stoyanov. 2020. Unsupervised cross-lingual representation learning at scale. In Pro-ceedings of the 58th Annual Meeting of the Associa-tion for Computational Linguistics , pages 8440–8451. Association for Computational Linguistics. Alexis Conneau, Ruty Rinott, Guillaume Lample, Adina Williams, Samuel Bowman, Holger Schwenk, and Veselin Stoyanov. 2018. XNLI: Evaluating cross-lingual sentence representations. In Proceedings of the 2018 Conference on Empirical Methods in Natu-ral Language Processing , pages 2475–2485. Associ-ation for Computational Linguistics. DeepSeek-AI. 2025a. Deepseek-v3.1 release. DeepSeek-AI. 2025b. Deepseek-v3.2 release. A. Seza Do˘ gruöz, Sunayana Sitaram, Barbara E. Bul-lock, and Almeida Jacqueline Toribio. 2021. A sur-vey of code-switching: Linguistic and social per-spectives for language technologies. In Proceedings of the 59th Annual Meeting of the Association for Computational Linguistics and the 11th International Joint Conference on Natural Language Processing (Volume 1: Long Papers) , pages 1654–1666. Associ-ation for Computational Linguistics. Rotem Dror, Gili Baumer, Segev Shlomov, and Roi Reichart. 2018. The hitchhiker’s guide to testing statistical significance in natural language processing. In Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , pages 1383–1392. Association for Computational Linguistics. Antoine Dussolle, Andrea Cardeña Díaz, Shota Sato, and Peter Devine. 2025. M-IFEval: Multilingual instruction-following evaluation. In Findings of the Association for Computational Linguistics: NAACL 2025 , pages 6176–6191. Association for Computa-tional Linguistics. Bradley Efron and Robert J. Tibshirani. 1994. An Intro-duction to the Bootstrap . Chapman and Hall/CRC. Jack FitzGerald, Christopher Hench, Charith Peris, Scott Mackie, Kay Rottmann, Ana Sanchez, Aaron Nash, Liam Urbach, Vishesh Kakarala, Richa Singh, Swetha Ranganath, Laurie Crist, Misha Britan, Wouter Leeuwis, Gokhan Tur, and Prem Natara-jan. 2023. MASSIVE: A 1M-example multilin-gual natural language understanding dataset with 51 typologically-diverse languages. In Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) ,pages 4277–4302. Association for Computational Linguistics. Google DeepMind. 2025. Gemini 2.5 flash-lite model card. Aaron Grattafiori, Abhimanyu Dubey, Abhinav Jauhri, Abhinav Pandey, Abhishek Kadian, Ahmad Al-Dahle, Aiesha Letman, Akhil Mathur, Alan Schel-ten, Alex Vaughan, Amy Yang, Angela Fan, Anirudh Goyal, Anthony Hartshorn, Aobo Yang, Archi Mi-tra, Archie Sravankumar, Artem Korenev, Arthur Hinsvark, and 542 others. 2024. The llama 3 herd of models. Preprint , arXiv:2407.21783. 
+
+10 Daya Guo, Dejian Yang, Haowei Zhang, Junxiao Song, Peiyi Wang, Qihao Zhu, Runxin Xu, Ruoyu Zhang, Shirong Ma, Xiao Bi, Xiaokang Zhang, Xingkai Yu, Yu Wu, Z. F. Wu, Zhibin Gou, Zhihong Shao, Zhuoshu Li, Ziyi Gao, Aixin Liu, and 175 oth-ers. 2025. DeepSeek-R1 incentivizes reasoning in LLMs through reinforcement learning. Nature ,645(8081):633–638. Yun He, Di Jin, Chaoqi Wang, Chloe Bi, Karishma Mandyam, Hejia Zhang, Chen Zhu, Ning Li, Tengyu Xu, Hongjiang Lv, Shruti Bhosale, Chenguang Zhu, Karthik Abinav Sankararaman, Eryk Helenowski, Melanie Kambadur, Aditya Tayade, Hao Ma, Han Fang, and Sinong Wang. 2024. Multi-if: Benchmark-ing llms on multi-turn and multilingual instructions following. Preprint , arXiv:2410.15553. Ari Holtzman, Jan Buys, Li Du, Maxwell Forbes, and Yejin Choi. 2020. The curious case of neural text de-generation. In International Conference on Learning Representations .Junjie Hu, Sebastian Ruder, Aditya Siddhant, Gra-ham Neubig, Orhan Firat, and Melvin Johnson. 2020. XTREME: A massively multilingual multi-task benchmark for evaluating cross-lingual gener-alisation. In Proceedings of the 37th International Conference on Machine Learning , volume 119 of 
+
+Proceedings of Machine Learning Research , pages 4411–4421. PMLR. Yuxin Jiang, Yufei Wang, Xingshan Zeng, Wanjun Zhong, Liangyou Li, Fei Mi, Lifeng Shang, Xin Jiang, Qun Liu, and Wei Wang. 2024. Follow-Bench: A multi-level fine-grained constraints follow-ing benchmark for large language models. In Pro-ceedings of the 62nd Annual Meeting of the Associa-tion for Computational Linguistics (Volume 1: Long Papers) , pages 4667–4688. Association for Compu-tational Linguistics. Tom Kocmi and Christian Federmann. 2023. Large lan-guage models are state-of-the-art evaluators of trans-lation quality. In Proceedings of the 24th Annual Conference of the European Association for Machine Translation , pages 193–203. European Association for Machine Translation. Philipp Koehn. 2004. Statistical significance tests for machine translation evaluation. In Proceedings of the 2004 Conference on Empirical Methods in Natural Language Processing , pages 388–395. Association for Computational Linguistics. Patrick Lewis, Barlas Oguz, Ruty Rinott, Sebastian Riedel, and Holger Schwenk. 2020. MLQA: Evalu-ating cross-lingual extractive question answering. In 
+
+Proceedings of the 58th Annual Meeting of the Asso-ciation for Computational Linguistics , pages 7315– 7330. Association for Computational Linguistics. Zhenyu Li, Kehai Chen, Yunfei Long, Xuefeng Bai, Yaoyin Zhang, Xuchen Wei, Juntao Li, and Min Zhang. 2025. Xifbench: Evaluating large lan-guage models on multilingual instruction following. 
+
+Preprint , arXiv:2503.07539. Percy Liang, Rishi Bommasani, Tony Lee, Dimitris Tsipras, Dilara Soylu, Michihiro Yasunaga, Yian Zhang, Deepak Narayanan, Yuhuai Wu, Ananya Ku-mar, Benjamin Newman, Binhang Yuan, Bobby Yan, Ce Zhang, Christian Cosgrove, Christopher D Man-ning, Christopher Re, Diana Acosta-Navas, Drew A. Hudson, and 31 others. 2023. Holistic evaluation of language models. Transactions on Machine Learning Research .Yaobo Liang, Nan Duan, Yeyun Gong, Ning Wu, Fenfei Guo, Weizhen Qi, Ming Gong, Linjun Shou, Daxin Jiang, Guihong Cao, Xiaodong Fan, Ruofei Zhang, Rahul Agrawal, Edward Cui, Sining Wei, Taroon Bharti, Ying Qiao, Jiun-Hung Chen, Winnie Wu, and 5 others. 2020. XGLUE: A new benchmark dataset for cross-lingual pre-training, understanding and gen-eration. In Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP) , pages 6008–6018. Association for Com-putational Linguistics. Yang Liu, Dan Iter, Yichong Xu, Shuohang Wang, Ruochen Xu, and Chenguang Zhu. 2023. G-eval: NLG evaluation using gpt-4 with better human align-ment. In Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing ,pages 2511–2522. Association for Computational Linguistics. Yile Liu, Ziwei Ma, Xiu Jiang, Jinglu Hu, ChangJing ChangJing, and Liang Li. 2025. MaXIFE: Multilin-gual and cross-lingual instruction following evalua-tion. In Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Vol-ume 1: Long Papers) , pages 14252–14332. Associa-tion for Computational Linguistics. Kelly Marchisio, Wei-Yin Ko, Alexandre Bérard, Théo Dehaze, and Sebastian Ruder. 2024. Understanding and mitigating language confusion in LLMs. In Pro-ceedings of the 2024 Conference on Empirical Meth-ods in Natural Language Processing , pages 6653– 6677. Association for Computational Linguistics. Meta AI. 2024. Model cards and prompt formats: Llama 3.3. MiniMax-AI. 2026a. Minimax-m2.5. MiniMax-AI. 2026b. Minimax m2.7: Early echoes of self-evolution. Niklas Muennighoff, Thomas Wang, Lintang Sutawika, Adam Roberts, Stella Biderman, Teven Le Scao, M Saiful Bari, Sheng Shen, Zheng Xin Yong, Hai-ley Schoelkopf, Xiangru Tang, Dragomir Radev, Al-ham Fikri Aji, Khalid Almubarak, Samuel Albanie, Zaid Alyafeai, Albert Webson, Edward Raff, and Colin Raffel. 2023. Crosslingual generalization through multitask finetuning. In Proceedings of the 
+
+11 61st Annual Meeting of the Association for Compu-tational Linguistics (Volume 1: Long Papers) , pages 15991–16111. Association for Computational Lin-guistics. Aakanksha Naik, Abhilasha Ravichander, Norman Sadeh, Carolyn Rose, and Graham Neubig. 2018. Stress test evaluation for natural language inference. In Proceedings of the 27th International Conference on Computational Linguistics , pages 2340–2353. As-sociation for Computational Linguistics. OpenAI. 2025. Introducing gpt-4.1 in the api. OpenAI. 2026a. Gpt-5.3-codex system card. OpenAI. 2026b. Introducing gpt-5.4. OpenAI. 2026c. Introducing gpt-5.4 mini and nano. Long Ouyang, Jeffrey Wu, Xu Jiang, Diogo Almeida, Carroll Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller, Maddie Simens, Amanda Askell, Peter Welinder, Paul F Christiano, Jan Leike, and Ryan Lowe. 2022. Training language models to follow instructions with human feedback. In Advances in Neural Information Processing Systems , volume 35, pages 27730–27744. Curran Associates, Inc. Telmo Pires, Eva Schlinger, and Dan Garrette. 2019. How multilingual is multilingual BERT? In Proceed-ings of the 57th Annual Meeting of the Association for Computational Linguistics , pages 4996–5001. As-sociation for Computational Linguistics. Elnaz Rahmati, Alireza Salkhordeh Ziabari, and Morteza Dehghani. 2025. CoCo-CoLa: Evaluating and improving language adherence in multilingual LLMs. In Proceedings of the 5th Workshop on Multi-lingual Representation Learning (MRL 2025) , pages 62–77. Association for Computational Linguistics. Leonardo Ranaldi, Giulia Pucci, and Andre Fre-itas. 2024. Empowering cross-lingual abilities of instruction-tuned large language models by translation-following demonstrations. In Findings of the Association for Computational Linguistics ACL 2024 , pages 7961–7973. Association for Computa-tional Linguistics. Marco Tulio Ribeiro, Tongshuang Wu, Carlos Guestrin, and Sameer Singh. 2020. Beyond accuracy: Be-havioral testing of NLP models with CheckList. In 
+
+Proceedings of the 58th Annual Meeting of the Asso-ciation for Computational Linguistics , pages 4902– 4912. Association for Computational Linguistics. Sebastian Ruder, Noah Constant, Jan Botha, Aditya Sid-dhant, Orhan Firat, Jinlan Fu, Pengfei Liu, Junjie Hu, Dan Garrette, Graham Neubig, and Melvin John-son. 2021. XTREME-R: Towards more challenging and nuanced multilingual evaluation. In Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing , pages 10215–10245. Association for Computational Linguistics. Uri Shaham, Jonathan Herzig, Roee Aharoni, Idan Szpektor, Reut Tsarfaty, and Matan Eyal. 2024. Mul-tilingual instruction tuning with just a pinch of mul-tilinguality. In Findings of the Association for Com-putational Linguistics: ACL 2024 , pages 2304–2317. Association for Computational Linguistics. Cynthia Van Hee, Els Lefever, and Véronique Hoste. 2018. SemEval-2018 task 3: Irony detection in En-glish tweets. In Proceedings of the 12th International Workshop on Semantic Evaluation , pages 39–50. As-sociation for Computational Linguistics. Jason Wei, Maarten Bosma, Vincent Zhao, Kelvin Guu, Adams Wei Yu, Brian Lester, Nan Du, Andrew M. Dai, and Quoc V Le. 2022. Finetuned language mod-els are zero-shot learners. In International Confer-ence on Learning Representations .Linting Xue, Noah Constant, Adam Roberts, Mihir Kale, Rami Al-Rfou, Aditya Siddhant, Aditya Barua, and Colin Raffel. 2021. mT5: A massively multilingual pre-trained text-to-text transformer. In Proceedings of the 2021 Conference of the North American Chap-ter of the Association for Computational Linguistics: Human Language Technologies , pages 483–498. As-sociation for Computational Linguistics. An Yang, Anfeng Li, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu, Chang Gao, Chengen Huang, Chenxu Lv, Chujie Zheng, Day-iheng Liu, Fan Zhou, Fei Huang, Feng Hu, Hao Ge, Haoran Wei, Huan Lin, Jialong Tang, and 41 others. 2025. Qwen3 technical report. Preprint ,arXiv:2505.09388. Bo Zeng, Chenyang Lyu, Sinuo Liu, Mingyan Zeng, Minghao Wu, Xuanfan Ni, Tianqi Shi, Yu Zhao, Yefeng Liu, Chenyu Zhu, Ruizhe Li, Jiahui Geng, Qing Li, Yu Tong, Longyue Wang, Weihua Luo, and Kaifu Zhang. 2025. Marco-bench-MIF: On multi-lingual instruction-following capability of large lan-guage. In Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Vol-ume 1: Long Papers) , pages 24058–24072. Associa-tion for Computational Linguistics. Lianmin Zheng, Wei-Lin Chiang, Ying Sheng, Siyuan Zhuang, Zhanghao Wu, Yonghao Zhuang, Zi Lin, Zhuohan Li, Dacheng Li, Eric Xing, Hao Zhang, Joseph Gonzalez, and Ion Stoica. 2023. Judging llm-as-a-judge with mt-bench and chatbot arena. In 
+
+Advances in Neural Information Processing Systems ,volume 36, pages 46595–46623. Curran Associates, Inc. Jeffrey Zhou, Tianjian Lu, Swaroop Mishra, Siddhartha Brahma, Sujoy Basu, Yi Luan, Denny Zhou, and Le Hou. 2023. Instruction-following evaluation for large language models. Preprint , arXiv:2311.07911. 
+
+12 A Generation Settings and Benchmark Inventory 
+
+All model outputs are generated in a zero-shot set-ting with no system prompt and no few-shot demon-strations (Brown et al., 2020; Wei et al., 2022). For each benchmark instance, we use a fixed prompt template that concatenates the localized instruction, source content, and question: 
+
+> instruction_text Content: content_text Question: question
+
+We request one response per model. In our gen-eration scripts, we set temperature to 0 when the provider supports it and leave top-p at the provider default (Holtzman et al., 2020) because decoding controls are not exposed uniformly across APIs. We do not enable optional reasoning or thinking modes unless they are part of the model’s default public interface. The benchmark contains 90 base items in total: 30 semantic-reversal items, 30 final-state extraction items, and 30 language-purity items. Each base item is instantiated under all 27 language triplets, yielding 810 instances per family and 2,430 in-stances per model. Semantic-reversal and language-purity items use LLM-assisted semantic judging, while final-state extraction uses a deterministic final-value checker. 
+
+B Additional Model-Level Results 
+
+Table 4 reports model-level task-family perfor-mance and token usage. The ranking across task families is not monotone: models that perform well on semantic reversal do not always lead on final-state extraction or language purity, reflecting the distinct capability profiles exposed by each family. Some models generate substantially longer outputs, but higher output length does not uniformly corre-spond to higher J OINT SUCCESS .Figure 5 shows that the response role pro-duces the largest model-level sensitivity for many systems. Figure 6 isolates L ANG CORRECT on Chinese-response instances, highlighting which models are most robust under the most difficult response-language setting. 
+
+B.1 Model-level Heterogeneity in Response-only and Full-mismatch Triplets 
+
+The aggregate response-only and full-mismatch comparison should not be interpreted as a univer-  
+
+> Figure 5: Model-level sensitivity to the three language roles. Each point shows the range in J OINT SUCCESS
+> across English, Spanish, and Chinese for one language slot, averaging over the other two slots.
+> Figure 6: LANG CORRECT on Chinese-response in-stances, sorted by model.
+
+sal model-level ordering. Across the 20 evaluated models, 12 perform worse on response-only triplets than on full-mismatch triplets, 7 show the opposite ordering, and 1 is tied or nearly tied. The aggregate full-minus-response-only difference is 0.011 un-der clustered bootstrap resampling over base items. We therefore interpret this result as evidence that mismatch count is not a monotonic predictor of difficulty, rather than as a directional claim that full mismatch is intrinsically easier. 
+
+C Additional Triplet-Level Visualizations 
+
+Figure 7 presents J OINT SUCCESS for all 27 lan-guage triplets across 20 models. Triplets are 13 Task-family JS Token usage Model A B C Model In Out JS 
+
+Qwen3-Max .891 .801 .826 Qwen3-Max 77.8 20.4 .840 
+
+DeepSeek-R1 .894 .804 .769 DeepSeek-R1 77.8 344.4 .822 Qwen3.5-Plus .927 .770 .763 Qwen3.5-Plus 80.7 18.7 .820 GPT-5.4-mini .878 .754 .814 GPT-5.4-mini 74.4 51.2 .815 GPT-5.4 .915 .709 .773 GPT-5.4 74.4 46.0 .799 DeepSeek-V3.2 .863 .756 .769 DeepSeek-V3.2 74.7 18.2 .796 DeepSeek-V3.1 .830 .778 .749 DeepSeek-V3.1 72.8 18.4 .786 GPT-5.3-Codex .928 .631 .784 GPT-5.3-Codex 74.4 71.8 .781 Claude Sonnet 4.6 .804 .722 .776 Claude Sonnet 4.6 97.2 34.3 .767 Gemini 2.5 Flash-Lite .848 .759 .694 Gemini 2.5 Flash-Lite 72.1 19.1 .767 Qwen3.5-Flash .775 .753 .765 Qwen3.5-Flash 80.7 19.5 .765 GPT-4.1 .848 .683 .742 GPT-4.1 75.4 18.6 .758 Claude Opus 4.1 .730 .780 .712 Claude Opus 4.1 97.2 33.7 .741 LLaMA-3.3-70B .815 .700 .704 LLaMA-3.3-70B 109.0 20.7 .740 Gemini 2.5 Flash .733 .779 .669 Gemini 2.5 Flash 72.1 19.7 .727 MiniMax-M2.7 .746 .791 .619 MiniMax-M2.7 91.8 256.4 .719 MiniMax-M2.5 .775 .760 .507 MiniMax-M2.5 99.9 297.5 .681 Claude Haiku 4.5 .527 .747 .759 Claude Haiku 4.5 97.2 37.7 .678 LLaMA-3 .538 .577 .604 LLaMA-3 84.0 27.2 .573 LLaMA-3.1-8B .464 .500 .646 LLaMA-3.1-8B 84.0 18.9 .537 
+
+Mean .786 .728 .722 Mean 83.4 69.6 .745 
+
+Table 4: Additional model-level results. Left: J OINT SUCCESS by task family, where A = semantic reversal, B = final-state extraction, and C = language purity. Right: mean input and output tokens per instance. The bottom row reports unweighted averages over models. 
+
+grouped by mismatch class and ordered by mean JOINT SUCCESS within each group, making it straightforward to compare the within-class spread against the between-class gap. The within-class ordering shows that even among triplets sharing the same mismatch type, the choice of specific lan-guages still introduces visible variation, especially in the response-only and full-mismatch groups. 
+
+D Scoring Edge Cases and Task Rubrics 
+
+D.1 LangCorrect Edge Cases 
+
+Table 5 summarizes representative boundary de-cisions used when applying the target-language criterion. 
+
+D.2 Task-Specific Semantic Rubrics 
+
+The three task families apply different semantic cor-rectness criteria, reflecting the distinct challenges each one targets (Van Hee et al., 2018; Jiang et al., 2024; Marchisio et al., 2024). 
+
+Family A: Semantic reversal. An output is scored as correct if it recovers the author’s actual stance rather than the surface framing. Wording may differ from the reference answer, but polarity and the target of evaluation must be preserved. 
+
+Output Target LC Reason 
+
+327 zh 1 Pure numeral. 
+
+Rivera zh 1 Allowlisted proper name. 
+
+Professor Rivera zh 0 English title not local-ized. 
+
+Professor Rivera es 0 English title spelling; Spanish uses profe-sor/profesora. 
+
+Profesor Rivera es 1 Localized title plus proper name. 
+
+Friday at 4 PM zh 0 English phrase in a Chinese response. 
+
+Room 327 zh 0 English structural token. 327 室 zh 1 Localized room expres-sion. 
+
+Hall 2 es 0 English structural token. 
+
+el salón 2 es 1 Localized Spanish ex-pression. 
+
+Table 5: Representative L ANG CORRECT decisions for short extraction outputs. 
+
+Family B: Final-state extraction. An output is scored as correct if it returns the final valid value after updates, reschedules, reassignments, or revi-sions. Earlier mentioned values receive no credit, even if they were valid at an intermediate stage. 
+
+Family C: Language purity and update realiza-tion. An output is scored as correct if it captures 14 Figure 7: J OINT SUCCESS across the 27 triplets, grouped by mismatch class and ordered within each class by mean JOINT SUCCESS . Darker green indicates higher joint success; tick-label colors indicate response language. 
+
+the main update or status change without contradic-tion. Minor paraphrastic variation is allowed, and omission of secondary details is acceptable so long as the core update is preserved. 
+
+E LLM-Assisted Semantic Judging Details 
+
+We use LLM-assisted semantic judging only for task families whose semantic correctness cannot be fully captured by deterministic string or an-chor matching (Kocmi and Federmann, 2023; Liu et al., 2023; Zheng et al., 2023). Families A and C are scored with this procedure, while Family B is scored by a deterministic final-state checker. This separation avoids using a generative judge when the correct value can be verified by structured rules, such as dates, times, room numbers, contacts, or localized numeric variants. For Family A, the judge determines whether the output recovers the author’s actual stance rather than the surface framing, focusing on whether both the polarity and the evaluative target match the reference. For Family C, the judge determines whether the output captures the main update or status change without contradiction; minor para-phrases and omissions of secondary details are per-mitted when they do not alter the core update. The judge scores only semantic content. Target-language adherence, code-switching, formatting, sentence count, and output-length constraints are handled separately by L ANG CORRECT , C ONTAMI -
+
+> NATION
+
+RATIO , and C ONSTRAINT CORRECT . This separation matters because a response may be se-mantically correct while retaining an English struc-tural shell, or fluent in the target language while missing the required update (Rahmati et al., 2025). The LLM judge returns a binary label, SEMANTIC CORRECT (ˆ y, y ⋆) ∈ { 0, 1}.
+
+The prompt includes the task family, the reference answer or rubric, and the model output. The judge does not receive the identity of the model that pro-duced the output, preventing model-family infor-mation from influencing the semantic label. Al-though the judge model is also included among the evaluated systems, the semantic judge is blinded to model identity and is used only for S EMANTIC -CORRECT in Families A and C; L ANG CORRECT ,CONSTRAINT CORRECT , C ONTAMINATION RA-
+
+> TIO
+
+, and all Family B semantic labels are deter-mined outside the LLM judge. We use Claude Haiku 4.5 as the semantic judge at temperature 0. We use the following judge prompt template for Families A and C: 15 Subset n Comp. Rate JS      
+
+> Targeted audit set 1,022 186 18.2% 15.4% Unflagged check 300 22 7.3% 7.3%
+
+Table 6: Human audit summary. Comp. reports the number of audited rows with at least one override to S E-
+
+> MANTIC
+
+CORRECT , L ANG CORRECT , or C ONSTRAINT -CORRECT . JS reports the percentage of rows whose final J OINT SUCCESS label changes.  
+
+> You are a factual evaluator for a multilingual benchmark. Judge only semantic correctness. Ig-nore language purity, code-switching, and format-ting constraints. For Family A, the gold answer captures the au-thor’s real stance, not the surface wording. Do not reward literal praise if the passage is actually critical. The output is correct only if the polarity and the target of criticism are both correct. For Family C, mark the output correct if the core update is captured accurately and there is no con-tradiction. Minor paraphrase, mixed-language wording, or non-target-language shells do not make it semantically wrong. Score only semantic content. Reply with only the digit 1 or 0.
+
+This design keeps semantic judging narrow and decoupled from the stricter language-purity and constraint checks. The LLM-assisted judge there-fore serves as a targeted semantic adjudicator rather than as a replacement for the rule-based scoring protocol. 
+
+F Human Scoring Audit 
+
+We conduct a human audit to assess the reliabil-ity of the scoring pipeline and to characterize re-curring boundary cases. The audit includes two complementary sets: a targeted audit set containing 1,022 cases marked during scoring development and validation for closer review, and an additional unflagged sanity check of 300 outputs sampled from routine rows without review flags. For each audited output, annotators inspect the benchmark item, model response, and automatic component labels. The audit records agreements and human overrides for the binary component la-bels: S EMANTIC CORRECT , L ANG CORRECT , and CONSTRAINT CORRECT . Rows without human overrides are counted as agreements, and overrides are adjudicated using the edge-case policy in Ap-pendix D.1 (Artstein and Poesio, 2008). Table 6 summarizes the size of each audit sub-set and the corresponding component-level and JOINT SUCCESS -level override rates.                 
+
+> Resp. lang. Overall SC LC CC
+> EN 86.9% 96.1% 99.4% 90.8% ES 80.4% 89.6% 98.8% 91.4% ZH 78.8% 89.3% 98.0% 89.0%
+
+Table 7: Human-audit agreement rates by response lan-guage and scoring component, computed on the targeted audit set. Overall agreement requires agreement on all three binary component labels. 
+
+Agreement rates vary across response languages, with the largest differences appearing in S EMAN -
+
+> TIC
+
+CORRECT and C ONSTRAINT CORRECT , while LANG CORRECT remains stable across all three languages (Table 7). The unflagged sanity check yields a lower over-ride rate than the targeted audit set, suggesting that most routine cases are handled consistently by the automatic pipeline. Overrides concentrate in a small number of boundary conditions, espe-cially strict only_output constraints, paraphrastic semantic matches, and target-language realization near the allowlist boundary. These cases are pre-cisely where decomposed scoring is useful: seman-tic, language, and constraint errors can be corrected independently rather than collapsed into a single undifferentiated label. The J OINT SUCCESS -level override rate is lower than the component-level override rate because some component corrections do not change the final joint decision. For example, correcting a lan-guage label does not affect J OINT SUCCESS when the same response already fails an explicit format constraint. Overall, the audit supports the decom-posed scoring policy while motivating caution for small differences between closely ranked models. Figure 8 presents representative cases from the audit, showing the automatic labels alongside the adjudicated human labels. Cases are selected to illustrate common override sources: output-form violations, punctuation-level constraint boundaries, paraphrastic semantic matches, and old-to-new transition framing that preserves the core update despite surface differences from the gold reference. 
+
+G Statistical Uncertainty Analysis 
+
+To quantify uncertainty in aggregate benchmark es-timates, we use clustered bootstrap resampling over base items (Efron and Tibshirani, 1994; Koehn, 2004; Dror et al., 2018). Each base item appears in all 27 language triplet configurations for each model, so resampling individual rows would treat 16 Case 1  Only-output explanatory shell 
+
+> LMB22_C4 · Family B · response=en · claude-haiku-4.5
+
+Gold  0.8 
+
+Model output  0.8 is larger. 
+
+Auto  SC 1  LC 1  CC 1  → Human  SC 1  LC 1  CC 0  
+
+> Audit decision: The final value is correct, but the output adds an explanatory sentence.
+
+Case 2  Spanish only-output violation 
+
+> LMB29_C17 · Family B · response=es · gemini-2.5-flash-lite
+
+Gold  5
+
+Model output  Ahora hay 5 archivos. 
+
+Auto  SC 1  LC 1  CC 1  → Human  SC 1  LC 1  CC 0  
+
+> Audit decision: The answer should only give the final value; the sentence frame violates the constraint.
+
+Case 3  Short final answer wrongly rejected 
+
+> LMB06_C24 · Family B · response=es · gemini-2.5-flash-no-think
+
+Gold  el informe final y el formulario de ética 
+
+Model output  El informe final y el formulario de ética. 
+
+Auto  SC 1  LC 1  CC 0  → Human  SC 1  LC 1  CC 1  
+
+> Audit decision: Terminal punctuation does not break the only-output constraint.
+
+Case 4  Core update wrongly rejected 
+
+> LMC08_C21 · Family C · response=es · llama3.1-8b
+
+Gold  La mesa redonda NorthLab se trasladó al edificio D, sala 410, y sigue en pie. 
+
+Model output  La reunión de NorthLab se llevará a cabo en el edificio D, sala 410 en lugar del edificio B. 
+
+Auto  SC 0  LC 1  CC 1  → Human  SC 1  LC 1  CC 1  
+
+> Audit decision: The old-to-new location framing preserves the core update.
+
+Case 5  Semantic false positive 
+
+> LMB23_C24 · Family B · response=es · deepseek-v3_1
+
+Gold  Canadá 
+
+Model output  Can 
+
+Auto  SC 1  LC 0  CC 1  → Human  SC 0  LC 0  CC 1  
+
+> Audit decision: The output is truncated and does not provide the required country name.
+
+Case 6  Brief reason missing 
+
+> LMA30_C1 · Family A · response=en · llama3
+
+Gold  No. The wording is mild but the overall stance is negative. 
+
+Model output  No. 
+
+Auto  SC 1  LC 1  CC 1  → Human  SC 1  LC 1  CC 0  
+
+> Audit decision: The polarity is correct, but the required brief reason is absent.
+
+Case 7  Language error, not format error 
+
+> LMA21_C9 · Family A · response=zh · deepseek-v3_1
+
+Gold  不。结论是批评而不是赞赏。 
+
+Model output  No, 因为社论最终将他的魅力定性为欺骗。 
+
+Auto  SC 1  LC 0  CC 0  → Human  SC 1  LC 0  CC 1  
+
+> Audit decision: The yes/no-plus-reason format is satisfied; English “No” is a language issue.
+
+Case 8  English answer with minor punctuation 
+
+> LMB08_C8 · Family B · response=en · gemini-2.5-flash-lite
+
+Gold  the revised chapter and the response memo 
+
+Model output  Revised chapter and response memo 
+
+Auto  SC 1  LC 1  CC 0  → Human  SC 1  LC 1  CC 1  
+
+> Audit decision: The output gives only the final items; omitted articles do not violate the constraint.
+
+Figure 8: Representative human-audit cases comparing automatic labels with adjudicated human labels for common scoring boundary cases. 
+
+triplet variants derived from the same underlying item as independent observations and would under-estimate item-level uncertainty. In each bootstrap replicate, we sample base items with replacement and retain all associated triplet instances and model outputs. We then recompute aggregate quantities, including model-level metric means, mismatch-class means, task-family means, and marginal language-axis ranges. Reported 95% intervals are percentile intervals over bootstrap replicates. The marginal range in J OINT SUCCESS is largest for the response-language axis. The response-axis range is 0.113, with a 95% clustered boot-strap interval of [0 .083 , 0.156] , compared with 
+
+0.029 [0 .012 , 0.049] for the content axis and 
+
+0.018 [0 .006 , 0.033] for the instruction axis (Ta-ble 8). The separation among these intervals supports the interpretation that response-language dominance is not an artifact of item-level sampling variance and is consistent with the main-text find-ing that response-language control is the dominant source of variation in this benchmark. 
+
+Axis Range 95% CI 
+
+Instruction 0.018 [0 .006 , 0.033] 
+
+Content 0.029 [0 .012 , 0.049] 
+
+Response 0.113 [0 .083 , 0.156] 
+
+Table 8: Clustered bootstrap intervals for language-axis ranges in J OINT SUCCESS .
+
+Mismatch-class comparison. We use the same base-item clustered bootstrap to quantify uncer-tainty in the comparison between response-only and full-mismatch triplets. For this analysis, the statistic is the J OINT SUCCESS difference 
+
+∆full −resp = JS full mismatch − JS resp only .
+
+The observed response-only mean is 0.694 and the observed full-mismatch mean is 0.705. The result-ing full-minus-response-only difference is 0.011, with a 95% clustered bootstrap interval of [0.001, 0.022]. Although the interval lies slightly above zero, the difference is small and runs counter to the direction expected under a monotonic mismatch-count account: full-mismatch triplets do not score below response-only triplets. Because the response-17 only versus full-mismatch ordering is not consis-tent across models (Appx. B.1), we interpret this comparison as evidence that mismatch count is not a monotonic predictor of difficulty, rather than as a directional claim that full mismatch is intrinsically easier. 
+
+H Regression Analysis with Model and Item Controls 
+
+We conduct an additional regression analysis to ver-ify that the response-language effect is not driven solely by differences among models or by variation in base-item difficulty. We fit a fixed-effect linear probability model for J OINT SUCCESS :
+
+Ymijt = β0 + αLinstr + γLcontent + δLresp 
+
++ μm + νi + εmijt ,
+
+where Ymijt denotes J OINT SUCCESS for model m,base item i, and language triplet t. The terms μm
+
+and νi are model and base-item fixed effects, re-spectively. Standard errors are clustered by base item (Cameron and Miller, 2015), and English serves as the reference level for each language slot. Table 9 reports the estimated language-axis co-efficients. Response-language coefficients are sub-stantially larger in magnitude than those for the instruction or content language: requiring a Span-ish or Chinese response rather than an English one is associated with decreases of 0.108 and 0.113 in J OINT SUCCESS , respectively. Instruction-language coefficients are close to zero, while content-language effects are smaller and not direc-tionally consistent across ES and ZH. This pattern supports the main finding that response-language variation is the dominant source of role-specific degradation after controlling for model identity and base-item difficulty. 
+
+I Benchmark Items and Representative Output Cases 
+
+Table 10 shows one representative item from each task family, illustrating how the instruction lan-guage, content language, and required response language are specified independently within a sin-gle instance. Figures 9–12 then present represen-tative model outputs from these and analogous items, showing how semantic correctness, target-language adherence, explicit constraint satisfaction, and code-switching can come apart under multilin-gual task execution. Taken together, the items and output cases ground the aggregate metric results in concrete examples of where and how models succeed or fail. 18 Predictor Coef. 95% CI lower 95% CI upper 
+
+Instruction: Spanish vs. English 0.011 −0.005 0.026 Instruction: Chinese vs. English −0.007 −0.026 0.012 Content: Spanish vs. English 0.029 0.011 0.047 Content: Chinese vs. English 0.021 −0.003 0.044 Response: Spanish vs. English −0.108 −0.147 −0.070 Response: Chinese vs. English −0.113 −0.153 −0.073 
+
+Table 9: Fixed-effect linear probability model for J OINT SUCCESS . The model controls for model identity and base item; standard errors are clustered by base item. English is the reference level. 
+
+Fam. Content snippet Instruction example Gold answer 
+
+A “At first, the essay seems to praise the professor . . . what looked like authority was often only fear in disguise.” “Answer in Spanish with yes or no plus one brief reason.” “No. El autor critica al profesor. . . ” 
+
+‘No. The author criticizes the professor. . . ’ 
+
+B “The seminar originally scheduled for Tuesday in Room 214 will now be held online one hour later.” “Only output the final valid schedule in Chinese.” “周二延后一小时，线上举 
+
+行”
+
+‘Tuesday, one hour later, held online.’ 
+
+C “The workshop is moved from Room 401 to Room 327 and has not been cancelled.” “Respond in Chinese in one sentence. Proper nouns may remain, but avoid English structural framing.” “研讨会改到327 室举行，并
+
+未取消。”
+
+‘The workshop is moved to Room 327 and is not cancelled.’ 
+
+Table 10: Representative benchmark items. English glosses of non-English gold answers are shown in italics. Case 1 · Chinese Target, Spanish Output 
+
+Item: LMC01_C7  Triplet: (es, en, zh)  Family: C · Language purity 
+
+Content:  The DataBridge workshop moves from Room 401 to Room 327 next Thursday; registered students should bring ID; it is not cancelled. 
+
+Question:  Respond in Chinese in one sentence, avoiding English structural framing. 
+
+Gold:  DataBridge 工作坊改到下周四在 327 室举行，并未取消。  
+
+> ◆
+
+Qwen3 Max:  ✔
+
+备忘录通知，原定于 401 室举行的 DataBridge 研讨会将于下周四改至 327 室举行， 已通过 CampusConnect 注册的学生需携带身份证，研讨会并未取消，仅更换地 点。  
+
+> ◆
+
+DeepSeek V3.2:  ✔
+
+DataBridge 研讨会下周四将从 401 室移至 327 室，已通过 CampusConnect 注册的学生 需携带身份证件，活动仅更换场地并未取消。  
+
+> ◆
+
+GPT-5.4:  ✔
+
+通知说明，下周四的 DataBridge 研讨会改到 327 室举行，已通过 CampusConnect 报名的学生需携带学生证，活动并未取消。  
+
+> ◆
+
+Llama 3:  × CC-LW 
+
+La DataBridge workshop se mudará a la habitación 327 el próximo jueves.  
+
+> ◆
+
+Gemini 2.5 Flash:  × response-language failure 
+
+El taller de DataBridge se reubicará del salón 401 al 327 el próximo jueves. 
+
+Case 2 · English Structural Tokens 
+
+Item: LMC08_C3  Triplet: (en, en, es)  Family: C · Language purity 
+
+Content:  The NorthLab roundtable moves from Building B to Building D, Room 410; it still starts at 11:00 and remains active. 
+
+Question:  Summarize the update in Spanish, localizing venue words such as building and room. 
+
+Gold:  La mesa redonda NorthLab se trasladó al edificio D, sala 410, y sigue en pie.  
+
+> ◆
+
+Qwen3 Max:  ✔
+
+La mesa redonda de NorthLab se trasladó al Edificio D, Sala 410 en lugar del Edificio B, pero sigue comenzando a las 11:00 y la inscripción continúa abierta a través de MeetDesk, ya que solo cambió la ubicación.  
+
+> ◆
+
+DeepSeek V3.2:  ✔
+
+La mesa redonda de NorthLab se realizará en el Edificio D, Sala 410 en lugar del Edificio B, manteniendo su inicio a las 11:00 y el registro abierto a través de MeetDesk, con solo un cambio de ubicación.  
+
+> ◆
+
+Gemini 2.5 Flash:  ✔
+
+La mesa redonda de NorthLab se realizará en el Edificio D, Salón 410 en lugar del Edificio B, comenzando a las 11:00 con registro abierto a través de MeetDesk, manteniendo el evento en curso con solo un cambio de ubicación.  
+
+> ◆
+
+GPT-5.4:  × CC-LW 
+
+La mesa redonda de NorthLab se celebrará en el  Building D, Room 410  en lugar del 
+
+Building B  , seguirá comenzando a las 11:00, la inscripción continúa abierta a través de MeetDesk y el evento sigue en pie.  
+
+> ◆
+
+Claude Haiku:  × CC-LW 
+
+La mesa redonda de NorthLab se trasladará a  Building D, Room 410  en lugar de 
+
+Building B  , pero mantiene su hora de inicio a las 11:00 y el evento procede normalmente. 
+
+Figure 9: Representative output cases for language-purity tasks. Case 1 shows a Chinese-response item in which some models identify the correct update but respond in Spanish. Case 2 shows Spanish responses that preserve the correct update while retaining English structural tokens. 
+
+19 Case 3 · Correct Entity, Wrong Form 
+
+Item: LMB03_C3  Triplet: (en, en, es)  Family: B · Final-state extraction 
+
+Content:  The lost-item procedure first says to register at the front desk; the final valid contact is Professor Rivera. 
+
+Question:  Only output the final person to contact in Spanish. 
+
+Gold:  el profesor Rivera 
+
+◆ GPT-5.4:  ✔
+
+El profesor Rivera. 
+
+◆ Claude Haiku:  ✔
+
+Profesor Rivera 
+
+◆ DeepSeek V3.2:  × CC-LW 
+
+Professor  Rivera. 
+
+◆ Gemini 2.5 Flash:  × CC-LW 
+
+Professor  Rivera 
+
+◆ Claude Sonnet:  × constraint violation 
+
+Primero registrar el artículo en la recepción, luego contactar al Profesor Rivera. 
+
+Case 4 · Only-output Violation 
+
+Item: LMB01_C4  Triplet: (zh, en, en)  Family: B · Final-state extraction 
+
+Content:  The deadline was first Wednesday, then Thursday; the final announcement says Friday at 4 PM. 
+
+Question:  Only output the final valid deadline in English; do not explain. 
+
+Gold:  Friday at 4 PM 
+
+◆ Qwen3 Max:  ✔
+
+Friday at 4 PM 
+
+◆ Claude Sonnet:  ✔
+
+Friday at 4 PM. 
+
+◆ Gemini 2.5 Flash:  ✔
+
+Friday 4 PM 
+
+◆ GPT-5.4:  × constraint violation 
+
+The final deadline is  Friday at 4 PM. 
+
+◆ Llama 3:  × constraint violation 
+
+The final deadline is  Friday at 4 PM. Figure 10: Representative output cases for final-state extraction. Case 3 shows correct identification of the final contact together with failures in target-language realization or output form. Case 4 shows only_output violations surrounding a semantically correct final deadline. 
+
+20 Case 5 · Final Submission Requirements 
+
+Item: LMB06_C14  Triplet: (zh, en, zh)  Family: B · Final-state extraction 
+
+Content:  The instructions mention multiple submission requirements; the still-valid final requirement is to submit the final report and ethics form. 
+
+Question:  Output only the still-valid submission requirements in Chinese. 
+
+Gold:  最终报告和伦理表格 
+
+◆ Claude Haiku:  ✔
+
+最终报告和伦理表格。 
+
+◆ Gemini 2.5 Flash:  ✔
+
+最终报告和伦理表格。 
+
+◆ GPT-5.4:  × constraint violation 
+
+现在仍然有效的要求是：必须提交  最终报告和伦理表格。 
+
+◆ DeepSeek R1:  × constraint violation 
+
+必须提交  最终报告和伦理表格。 
+
+◆ Llama 3:  × LC-CW / CV 
+
+现在仍然有效的要求是：提交  最终报告和  道德形式  。
+
+Case 6 · Semantic Reversal, Language Mismatch 
+
+Item: LMA04_C7  Triplet: (es, en, zh)  Family: A · Semantic reversal 
+
+Content:  The review appears to praise the mayor as consistent, but later says he changes positions with public opinion and is only consistent in chasing popularity. 
+
+Question:  Answer in Chinese with No plus a brief reason. 
+
+Gold:  不。这篇评论是反讽，意思是他真正始终如一的是追逐人气，而不是原 则。 
+
+◆ GPT-5.4:  ✔
+
+不，因为这段话是在反讽：市长会随着舆论改变立场，所谓 “一贯 ”只是一直想显 得受欢迎。 
+
+◆ DeepSeek R1:  ✔
+
+不，因为评论用讽刺手法表明他的连贯性仅在于追求人气，而非坚持原则。 
+
+◆ Qwen3 Max:  × CC-LW 
+
+No 。 因为评论指出，市长的 “一致性 ”只是在于他始终追求受欢迎，而非真正坚持 原则。 
+
+◆ DeepSeek V3.2:  × CC-LW 
+
+No, porque la reseña usa la ironía para criticar que su consistencia era solo en querer 
+
+parecer popular, no en sus principios. 
+
+◆ Llama 3:  × total failure 
+
+No (, yīn wèi zhè jiā píng gù le shì tā de xìng xiàn zài zhōu yú gōng jìng biàn huì, bù shì 
+
+tā de zhēn chéng xìng xiàn). Figure 11: Representative output cases for final-state extraction and semantic reversal. Case 5 shows submission-requirement outputs where some models identify the correct final requirement but violate the requested output form. Case 6 shows semantic-reversal outputs with failures in the required response language. 
+
+21 Case 7 · Correct Stance, Code Switching 
+
+Item: LMA05_C2  Triplet: (en, en, zh)  Family: A · Semantic reversal 
+
+Content:  The text seems to blame younger staff, but the later reversal makes the true target the supervisors who kept changing instructions. 
+
+Question:  Identify in Chinese who is truly being criticized. 
+
+Gold:  作者真正批评的是那些不断更改指示、制造混乱的主管。 
+
+◆ GPT-5.4:  ✔
+
+作者真正批评的对象是那些反复无预警更改指示、在上层制造混乱的主管。 
+
+◆ Claude Sonnet:  ✔
+
+作者真正批评的对象是那些不断随意更改指示的主管人员。 
+
+◆ Qwen3.5 Plus:  × CC-LW 
+
+作者真正的批评对象是那些不断无故更改指令、从而制造混乱的  supervisors  （主 管）。 
+
+◆ Llama 3:  × CC-LW 
+
+作者的真正批评对象是高层管理人员，因为他们不断变更指令而没有警告，导致 下属的错误。  (The author's real target of criticism is the senior management 
+
+personnel, because they kept changing instructions without warning.) 
+
+◆ Claude Haiku:  ✔
+
+根据文章内容，作者真正批评的对象是那些不断改变指示的主管，而不是年轻员 工。 
+
+Case 8 · Full Mismatch, Wrong Response Language 
+
+Item: LMC08_C7  Triplet: (es, en, zh)  Family: C · Language purity 
+
+Content:  The NorthLab roundtable changes location to Building D, Room 410; time and registration stay the same, and the event continues. 
+
+Question:  Summarize the update in Chinese without non-target language framing. 
+
+Gold:  NorthLab 圆桌讨论改到 D楼410 室举行，并将继续进行。 
+
+◆ Claude Sonnet:  ✔
+
+NorthLab 圆桌会议地点已从 B楼改至 D楼410 室，时间和报名方式不变。 
+
+◆ DeepSeek V3.2:  ✔
+
+NorthLab 圆桌会议地点改为 D楼410 室而非 B楼，时间、注册方式及活动安排不 变。 
+
+◆ Qwen3.5 Plus:  ✔
+
+NorthLab 圆桌会议仍将于 11:00 举行并通过 MeetDesk 开放注册，但地点已改为 D
+
+楼 410 室。 
+
+◆ Gemini 2.5 Flash:  × CC-LW 
+
+La mesa redonda de NorthLab se trasladará al Edificio D, Sala 410. 
+
+◆ MiniMax M2.5:  × response-language failure 
+
+La mesa redonda de NorthLab se cambió a la sala 410 del edificio D (en lugar del B), 
+
+pero seguirá inicie a las 11:00 y el registro bleibt abierta a través de MeetDesk. Figure 12: Representative output cases for semantic reversal and full mismatch. Case 7 illustrates code-switching in a Chinese semantic-reversal item, while Case 8 shows full-mismatch examples where the update is semantically close but produced in the wrong response language. 
+
+22

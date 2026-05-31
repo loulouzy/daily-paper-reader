@@ -1,0 +1,1199 @@
+Title: Semantic Flow Regularization: Teaching LLMs to Generate Diverse Yet Coherent Responses
+
+URL Source: https://arxiv.org/pdf/2605.27971v1
+
+Published Time: Thu, 28 May 2026 00:40:07 GMT
+
+Number of Pages: 20
+
+Markdown Content:
+# Semantic Flow Regularization: Teaching LLMs to Generate Diverse Yet Coherent Responses 
+
+Kerui Peng, Feifei Li, Xingyu Fan, Wenhui Que *
+
+WeChat, Tencent Inc., Beijing, China 
+
+{keruipeng, niyali, fanxfan, victorque}@tencent.com 
+
+Abstract 
+
+When large language models are fine-tuned to generate persona- or tone-conditioned re-sponses, their output diversity is severely limited—a failure we term Cross-Style Col-lapse . We trace this collapse to the cross-entropy objective, which under shared repre-sentations tends to suppress diverse continua-tions. We propose Semantic Flow Regular-ization (SFR) , a lightweight auxiliary objec-tive that supervises the backbone with contin-uous sentence-encoder embeddings of future segments via conditional flow matching. The stochastic flow source preserves multi-modality by construction; the flow-matching head is discarded at inference, adding zero deploy-ment cost . On a large-scale industrial dia-logue dataset (Qwen3-32B, 9 personas), SFR improves output diversity, style fidelity, and re-sponse quality over SFT. We further validate on the public LiveCodeBench-v5 (Qwen2.5-Coder-7B-Instruct), where SFR consistently improves pass@k, confirming generality be-yond stylized dialogue. A controlled compari-son on MBPP reveals Multi-Token Prediction to be a degenerate special case of SFR. 
+
+1 Introduction 
+
+Conversational agents powered by large language models (LLMs) are now deployed in scenarios that demand not only factual correctness but also stylis-tic diversity, from voice assistants that mirror a brand’s tone, to industrial official-account bots that must reply in the personal communication style of each account author while staying grounded in the author’s published content. In all such settings the same underlying query can admit many valid responses whose surface forms differ sharply de-pending on the target persona. Standard supervised fine-tuning (SFT) optimizes a token-level cross-entropy (CE) loss. When valid continuations are multi-modal, whether across dif-
+
+> *Corresponding author.
+
+ferent style conditions or across multiple valid so-lutions under the same condition, CE under finite-capacity shared representations tends to encourage shared high-probability continuations, suppressing output diversity even when the underlying target distribution is rich. In the stylized-dialogue set-ting this manifests as what we term Cross-Style Collapse, echoing the text degeneration (Holtzman et al., 2020) and persona homogenization (Xiao et al., 2026) observed in prior work: swapping the persona on a fixed query often flips only a greet-ing token while the response body stays nearly unchanged. A related symptom appears in code generation, where pass@ k gains plateau because the model collapses to a single template despite multiple correct solutions existing. Several families of existing work address aspects of this gap, but none fully resolves it. Decoding-time methods such as nucleus sampling (Holtzman et al., 2020), contrastive decoding (Li et al., 2023), classifier-guided decoders (Keskar et al., 2019; Yang and Klein, 2021; Krause et al., 2021) reweight logits without changing the backbone’s internal representations, so the underlying mode-averaging persists. Per-style fine-tuning (Fan et al., 2025) trains a separate parameter set for each persona, achieving strong stylistic control but incurring stor-age and maintenance costs that grow linearly with the number of styles. Training-time discrete exten-sions such as unlikelihood (Welleck et al., 2020), SimCTG (Su et al., 2022), and multi-token predic-tion (Gloeckle et al., 2024) extend the supervision horizon yet remain in one-hot geometry and do not explicitly model the multi-modal distribution over styles. We propose Semantic Flow Regularization (SFR) , a single auxiliary objective added dur-ing fine-tuning that addresses the problem from a different angle: teaching the backbone to see 
+
+the future stylistic configuration of each response. At every response position t a lightweight flow-matching (FM) head vϕ learns to transport a Gaus-
+
+> arXiv:2605.27971v1 [cs.CL] 27 May 2026
+
+sian sample z0 to the sentence-encoder embedding 
+
+z(t)1 = E(yt+1: t+k) of the upcoming suffix, condi-tioned on the backbone hidden state ht. Because the source is stochastic, the learned vector field pre-serves the full conditional distribution rather than collapsing to its mean (Section A); the backbone is thus encouraged to encode style-discriminative information at every position. At inference time 
+
+vϕ and E are simply deleted—the deployed model is bit-identical to a standard AR LM with no addi-tional latency or memory. Our contributions: • We introduce SFR, a training-time auxiliary that injects continuous, segment-level future supervision into AR language models at zero inference cost, specifically targeting the mode-averaging problem in multi-style fine-tuning. • We show theoretically that stochastic flow-matching supervision preserves conditional multi-modality where deterministic regression alternatives provably cannot. • We validate SFR on a large-scale industrial stylized-dialogue dataset, showing significant improvements in both output diversity and style fidelity; since this dataset is proprietary, we further confirm the generality of SFR on the public LiveCodeBench-v5 benchmark with consistent pass@k gains. A controlled comparison on MBPP additionally connects SFR to Multi-Token Prediction as a degener-ate special case. 
+
+2 Related Work 
+
+2.1 Stylized and persona-grounded generation 
+
+Style-controllable dialogue spans both benchmarks and methods. PersonaChat (Zhang et al., 2018; Di-nan et al., 2020), LIGHT (Urbanek et al., 2019), RoleLLM (Wang et al., 2024) and Character-GLM (Zhou et al., 2023) supply persona profiles and evaluate consistency. On the method side, per-style fine-tuning (Fan et al., 2025) trains a dedi-cated parameter set (or LoRA adapter) per persona, yielding strong control but linear storage cost in the number of styles. Decoding-time approaches steer logits without touching the backbone, such as CTRL (Keskar et al., 2019), FUDGE (Yang and Klein, 2021), GeDi (Krause et al., 2021), PPLM (Dathathri et al., 2020), so the backbone’s representations remain mode-averaged and insen-sitive to the persona prompt. SFR takes a middle path: one unified training objective that makes the backbone itself style-sensitive, requiring neither per-persona parameters nor decoding-time classi-fiers. 
+
+2.2 Training-time future supervision 
+
+Several methods augment CE with longer-horizon targets. Unlikelihood (Welleck et al., 2020), SimCTG (Su et al., 2022) and MixCE (Zhang et al., 2023) penalise degeneration at horizon 1.MTP (Gloeckle et al., 2024; DeepSeek-AI et al., 2025) predicts K future tokens but remains in dis-crete one-hot space. Continuous-target alternatives move into embedding space: representation align-ment via MSE or cosine (LCM team et al., 2024) re-gresses to a fixed embedding, while JEPA (Assran et al., 2023) and V-JEPA (Bardes et al., 2024) pre-dict latent representations of future inputs in vision. JEPA is architecturally the closest predecessor— it also uses a predictor network conditioned on context to forecast future embeddings. However, JEPA operates in the vision domain without an autoregressive generator, its predictor is determin-istic (collapsing to the conditional mean; Propo-sition A.1), and it is not designed as a drop-in auxiliary for zero-overhead AR deployment. SFR differs on all three counts: it is integrated with an AR LLM that directly generates text, it uses a stochastic FM source to preserve multi-modality, and the FM head is deleted at deployment with zero inference overhead. Concurrent work (Zhang et al., 2026) observes that token positions divide into Locks (one domi-nant continuation) and Forks (multiple valid contin-uations), but does not explicitly focus on locating which positions fall into which category. In Sec-tion 5.2 we show that the FM head trained by SFR yields an explicit per-position Lock/Fork diagnos-tic. 
+
+2.3 Flow and diffusion language models 
+
+Diffusion-LM (Li et al., 2022), SEDD (Lou et al., 2024), Plaid (Gulrajani and Hashimoto, 2023) and RFFlow (Liu, 2022) model continuous multi-modal sequence distributions but replace the AR decoder with an iterative denoiser, breaking compatibility with standard serving stacks. The key distinction is that these methods use flow/diffusion as the gener-ation mechanism, whereas SFR uses it purely as a training-time regularizer : the flow head is dis-carded before deployment, leaving a plain AR LM with zero architectural or inference-cost overhead. Training Inference    
+
+> Backbone
+> future
+> suffix
+> LM
+> head
+> prompt
+> Frozen
+> encoder SFR target
+> CE target
+> Backbone
+> next token
+> FM
+> head
+> LM
+> head
+> 𝐹 !
+> 𝑊 "#
+> 𝑣 $
+> 𝐿 "#
+> 𝐿 %&#
+> 𝐸
+> 𝑥 𝑦 '()
+> 𝑦 '():'(+𝑧 )
+> 𝑧 ,
+
+, 𝜏                   
+
+> ℎ'
+> 𝐹 !
+> 𝑊 "#
+> 𝑣 $𝐸 and removed
+> prompt 𝑥
+> ℎ'
+> Training Inference Pragmatic style
+> Humorous style
+> Gentle style
+> LLM backbone
+> Tomorrow ‘s weather forecast
+> LM head
+> FM head Target
+> Manifold
+> .
+> .
+> .
+> Umbrella recommended.
+> Swimsuit optional
+> Expect rain.
+> Bring umbrella
+> Rainy tomorrow!
+> Stay dry
+> Humorous style
+> Pragmatic style
+> Gentle style
+> Next token
+> Expect …
+> Umbrella …
+> Rainy …
+
+Figure 1: Left: Training and inference architecture of SFR. During training, the backbone Fθ produces hidden states ht consumed by both the LM head WAR (standard next-token loss LAR ) and the auxiliary FM head vϕ
+
+(flow-matching loss LSFR , supervised by the frozen encoder target z1 = E(yt+1: t+k)). At inference, vϕ and E are discarded; the deployed model is a standard AR LM. Right: Illustration of style-discriminative generation. The input prompt consists of a style description concatenated with the user query. Without SFR, the next-token-only LM head tends toward style-collapsed outputs. The FM head regularizes the backbone toward distinct regions on the target embedding manifold for each style, enabling the model to produce genuinely differentiated responses across personas. 
+
+3 Method 
+
+3.1 Overall framework 
+
+The backbone Fθ and the LM head WAR are un-changed. We attach a lightweight conditional vector-field head vϕ(zτ , τ ; ht) that participates only in the auxiliary loss and is dropped at inference. Training minimizes 
+
+Ltotal = LAR + λ · L SFR , (1) where LAR is the mean next-token cross-entropy over all response positions and LSFR is the mean flow-matching loss defined in (3) below. Figure 1 (left) summarizes the training-time data flow and the deployment-time graph, which is identical to a vanilla AR LM, while Figure 1 (right) illustrates how the FM head encourages style-discriminative backbone representations. In principle, vϕ can be attached after any in-termediate layer of the backbone: an earlier tap gives the FM head access to lower-level features but also requires a larger predictor to bridge the representational gap between that layer and the fi-nal semantic target z1. We attach vϕ after the last Transformer layer, so that the conditioning ht is the same representation that the LM head (i.e. the final un-embedding projection followed by softmax) op-erates on. This choice maximizes the information available to vϕ while keeping the predictor small (a 3-layer MLP suffices), and ensures that the FM gradient reshapes precisely the representation that the AR head consumes. The FM head itself is a plain conditional MLP with hidden dimension set to half the backbone’s hidden size and depth of 3–5 layers depending on backbone scale and suffix horizon k. A simple architecture is intentional: the FM head’s role is to supply gradient signal to the backbone rather than to solve the flow task itself, so limited capacity prevents it from short-circuiting the auxiliary objective (cf. Section 3.4). We validate the framework in the SFT setting; however, because the FM head only consumes hid-den states and a target embedding, it could in prin-ciple be applied to pretraining, LoRA, or RLHF —we leave this to future work. 
+
+3.2 Auxiliary objective 
+
+For each response position t, the auxiliary target is the L2-normalized sentence-encoder embedding of the next k tokens, 
+
+z(t)1 = E yt+1 , . . . , y t+k
+
+ ∈ Sdz −1, (2) where E is a frozen sentence encoder (BGE-Large (Xiao et al., 2024) in our experiments) and 
+
+k is the suffix horizon. We supervise the FM head with conditional FM (CFM; Lipman et al., 2023; Liu et al., 2023b): given a random source 
+
+z0 ∼ N (0 , I ), uniform τ ∼ U [0 , 1] , and straight-line interpolation zτ = (1 −τ )z0 + τ z (t)1 , the loss at position t is 
+
+L(t)SFR = Eτ,z 0 vϕ(zτ , τ ; ht)−(z(t)1 −z0) 22. (3) The full training loss LSFR is the mean of (3) over all response positions. Each ht therefore receives a continuous , dz -dimensional target rather than a one-hot symbol, and a segment-level target spanning the next k to-kens rather than only yt+1 . The randomness of z0 is also essential rather than cosmetic: Proposition A.2 (Section A) shows that with a stochastic source the optimum of (3) can represent the full conditional multi-modal structure of P (z1 | ht) rather than collapsing to a single embedding; replacing z0 by a fixed point would collapse (3) into a determin-istic regression whose optimum is the conditional mean (Proposition A.1). The motivation for choos-ing flow matching over MSE / cosine alignment or diffusion denoising is discussed in Section 6.1. The exact per-position encoding in (2) costs 
+
+O(L) calls to E per training example. We reduce this to O(L/s ) by sparse anchor encoding : E is invoked only every s tokens, and intermediate po-sitions reuse the nearest anchor’s target. The stride ablation in Section G shows that quality is roughly flat from s=1 to s=16 while training time drops by ∼24% ; in practice s can be chosen jointly with the suffix length k.
+
+3.3 Inference 
+
+At deployment, vϕ and E are removed and only 
+
+(Fθ, W AR ) is loaded. The resulting checkpoint has the same architecture and inference graph as a vanilla AR LM and can be served by any standard tool (vLLM (Kwon et al., 2023), SGLang (Zheng et al., 2024), LoRA merging, GPTQ (Frantar et al., 2022)/AWQ (Lin et al., 2024) quantization) with-out modification; at deployment SFR adds no extra parameters, no extra latency, and no extra decoding logic. The argument for why this is sound is that vϕ
+
+has already done its work by the end of training: through backpropagation it has shaped θ so that 
+
+ht encodes future-aware, condition-discriminative information, and this property travels with θ re-gardless of whether vϕ is loaded at inference. Sec-tion 5.1 verifies this directly by showing that the matched-position hidden states hq,s 1 
+
+> t
+
+, . . . , h q,s m 
+
+> t
+
+be-come well-separated clusters under SFR, even though vϕ is no longer in the forward graph. 
+
+3.4 Training stabilisation 
+
+Naïvely adding λLSFR to LAR exhibits two fail-ure modes. The first is head short-circuiting : vϕ
+
+learns the suffix mapping faster than the backbone reorganizes, LSFR collapses to near zero, and the auxiliary gradient stops flowing back into θ. The second is early-step shock : a randomly initialized 
+
+vϕ produces large initial gradients that destabilize the pretrained backbone before any useful auxil-iary signal has formed. We address both with three mechanisms that must act jointly—removing any one of them causes training to diverge (either the backbone loss oscillates violently or the FM head ceases to influence the backbone at all). First, the output projection of vϕ is zero-initialized, so that ˆv ≡ 0 at step 0 and LSFR starts at the benign constant E∥z1−z0∥22, preventing early-step shock. Second, a two-phase warmup blocks FM gradients from propagating into the backbone for the first Th steps (only vϕ updates during this period), after which λ ramps linearly from 0 to its target value over the next Tℓ steps. Third, an expo-nential moving average with decay μ is maintained on vϕ’s parameters, making the predictor a slow-moving target that the backbone can track without the predictor racing ahead. Implementation details and schedule values are given in Sections C and D; Section F provides the complete training algorithm and Section E a taxonomy of the design space. 
+
+4 Experiments 
+
+We evaluate SFR in three settings: (i) a large-scale industrial stylized-dialogue task that stress-tests output diversity under persona conditioning (§4.1), (ii) the public LiveCodeBench-v5 benchmark that confirms generality on code generation (§4.2), and (iii) a controlled comparison with MTP on MBPP (§4.3). Single-factor ablations on λ, k, s, and the three stabilizers are deferred to Section G. 
+
+4.1 Stylized dialogue 
+
+To the best of our knowledge, there exists no public dataset that simultaneously provides articles, user queries, and large-scale stylized replies from mil-lions of authors. We therefore evaluate directly on proprietary data from a widely-used, real-world industrial official-accounts platform. We fine-tune 
+
+Qwen3-32B (Yang et al., 2025) on ∼170 k multi-persona dialogue examples covering nine stylis-tic personas (Section B.1 details the full construc-tion pipeline); the held-out evaluation set contains 
+
+∼150 queries, and for each method we generate one response per (query, persona) pair. We compare against a Base reference (the frozen Qwen3-32B backbone with persona prompt, with-Table 1: Cross-style Self-BLEU (CS-SB n, n ∈{1, 2, 3, 4}, lower is better) at T = 0 .6 on Qwen3-32B, 
+
+averaged over the 148 -query test set. Parenthesized percentages denote relative reduction from Base. 
+
+Base SFT SFR 
+
+CS-SB 1 0.904 0.798 ( −11.7%) 0.783 (−13.4%) CS-SB 2 0.831 0.655 ( −21.2%) 0.628 (−24.4%) CS-SB 3 0.766 0.542 ( −29.2%) 0.509 (−33.6%) CS-SB 4 0.710 0.452 ( −36.3%) 0.418 (−41.1%) 
+
+Table 2: Stylized-dialogue LLM-judge scores ( 1–5) at 
+
+T = 0 .8 on Qwen3-32B. Average : mean across all nine styles. Full per-style breakdown in Section I. 
+
+R1-prompt SFT SFR 
+
+style-0 Ctx 4.5 4.568 4.622 
+
+style-0 Rel 4.662 4.764 4.77 
+
+style-0 SS 4.654 4.588 4.905 
+
+style-0 Flu 4.838 4.831 4.905 
+
+style-1 Ctx 4.175 4.216 4.257 
+
+style-1 Rel 4.562 4.581 4.628 
+
+style-1 SS 3.117 2.858 3.135 
+
+style-1 Flu 4.781 4.838 4.791 style-2 Ctx 4.117 4.169 4.128 style-2 Rel 4.285 4.311 4.223 style-2 SS 4.766 4.73 4.824 
+
+style-2 Flu 4.964 4.98 4.993 
+
+style-3 Ctx 4.511 4.568 4.696 
+
+style-3 Rel 4.759 4.818 4.851 
+
+style-3 SS 3.891 3.932 4.73 
+
+style-3 Flu 4.796 4.831 4.98 
+
+The remaining five styles are reported in Table 13. 
+
+Average Ctx 4.368 4.427 4.463 Average Rel 4.604 4.661 4.666 Average SS 4.329 4.243 4.401 Average Flu 4.811 4.86 4.881 
+
+out any fine-tuning) and SFT (standard super-vised fine-tuning on the same multi-persona cor-pus). Our method, SFR , is trained on top of the same SFT recipe with the auxiliary flow-matching objective of (3) . For the LLM-judge evaluation we additionally include DeepSeek-R1-prompt , a strong prompt-only baseline that calls a frozen DeepSeek-R1 (Guo et al., 2025) with the same persona prompt. For cross-style multi-modality we report Cross-Style Self-BLEU (CS-SB; Zhu et al., 2018): for each query, we generate one reply per style and compute the pairwise Self-BLEU among the nine resulting replies; the final score averages over all queries in the test set. Lower CS-SB indicates that the model produces genuinely distinct replies under different persona prompts on the same query. We additionally report four LLM-judge metrics scored by Qwen3-235B on a 1–5 Likert scale: context 4.15 4.20 4.25 4.30 4.35 4.40 4.45 4.50                          
+
+> SS (avg)
+> 4.40
+> 4.45
+> 4.50
+> 4.55
+> 4.60
+> 4.65
+> 4.70
+> 4.75
+> Other Metrics Avg
+> (Ctx + Rel + Flu) / 3
+> SS vs Other Metrics Average
+> SFR (Pareto Front)
+> SFT (Pareto Front) T=0.2
+> T=0.4
+> T=0.6
+> T=0.8
+> T=1.0
+> T=1.2
+> T=1.4
+> T=1.6
+> T=0.2
+> T=0.4
+> T=0.6
+> T=0.8
+> T=1.0
+> T=1.2
+> T=1.4
+> T=1.6
+> 4.15 4.20 4.25 4.30 4.35 4.40 4.45 4.50
+> SS (avg)
+> 4.15
+> 4.20
+> 4.25
+> 4.30
+> 4.35
+> 4.40
+> 4.45
+> 4.50
+> 4.55
+> Ctx (avg)
+> SS vs Ctx
+> SFR (Pareto Front)
+> SFT (Pareto Front)
+> T=0.2
+> T=0.4
+> T=0.6
+> T=0.8
+> T=1.0
+> T=1.2
+> T=1.4
+> T=1.6
+> T=0.2
+> T=0.4
+> T=0.6
+> T=0.8
+> T=1.0
+> T=1.2
+> T=1.4
+> T=1.6
+> 4.15 4.20 4.25 4.30 4.35 4.40 4.45 4.50
+> SS (avg)
+> 4.40
+> 4.45
+> 4.50
+> 4.55
+> 4.60
+> 4.65
+> 4.70
+> 4.75
+> Rel (avg)
+> SS vs Rel
+> SFR (Pareto Front)
+> SFT (Pareto Front)
+> T=0.2
+> T=0.4
+> T=0.6
+> T=0.8
+> T=1.0
+> T=1.2
+> T=1.4
+> T=1.6
+> T=0.2
+> T=0.4
+> T=0.6
+> T=0.8
+> T=1.0
+> T=1.2
+> T=1.4
+> T=1.6
+> 4.15 4.20 4.25 4.30 4.35 4.40 4.45 4.50
+> SS (avg)
+> 4.60
+> 4.65
+> 4.70
+> 4.75
+> 4.80
+> 4.85
+> 4.90
+> 4.95
+> Flu (avg)
+> SS vs Flu
+> SFR (Pareto Front)
+> SFT (Pareto Front)
+> T=0.2
+> T=0.4 T=0.6
+> T=0.8
+> T=1.0
+> T=1.2
+> T=1.4
+> T=1.6
+> T=0.2
+> T=0.4 T=0.6 T=0.8
+> T=1.0
+> T=1.2
+> T=1.4
+> T=1.6
+
+Figure 2: Style strength (SS) versus other quality met-rics (Ctx, Rel, Flu) at varying decoding temperatures 
+
+T ∈ { 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6} on Qwen3-32B. SFR yields a better SS–overall-quality trade-off across temperatures, with small metric-specific excep-tions at high T where both methods degrade. 
+
+coherence (Ctx), measuring whether the response stays on-topic with respect to the query; query rel-evance (Rel), measuring whether the response ac-tually answers what the user asked; style strength 
+
+(SS), measuring how strongly the response exhibits the target persona; and fluency (Flu). We aggregate these scores at the style level, reporting both the per-style value and the across-style average. Table 1 reports CS-SB averaged across all queries. Note that absolute CS-SB values are rela-tively high because the prompt supplies a style-free reference answer and the source article, so the se-mantic core of all replies is shared by design; the metric therefore isolates surface-level stylistic vari-ation. SFR consistently outperforms SFT across all n-gram orders, e.g. 41 .1% reduction from Base at n=4 versus 36 .3% for SFT, indicating that the flow-matching regularizer further diversifies stylis-tic surface form beyond what SFT alone provides. The gain is particularly pronounced on open-ended, opinion-rich queries where the stylistic space is large (over 33% relative CS-SB reduction over SFT), and smallest on factual or procedural queries with constrained answer forms; see Section H for a per-query breakdown and qualitative analysis. Table 2 further shows the four LLM-judge met-rics broken down by representative styles and av-eraged at T = 0.8. SFR improves over both DeepSeek-R1-prompt and SFT on most styles in aggregate across the four metrics, with the largest Table 3: LiveCodeBench-v5 pass@ k at T = 0 .8 on Qwen2.5-Coder-7B-Instruct ( 10 samples per problem), across three matched training-token budgets ( 3B/ 6B/ 12 B).                                                              
+
+> pass@ 1pass@ 5
+> Budget Method all easy medium hard all easy medium hard
+> 3BSFT 44.8 92.3 51.0 13.9 58.2 97.2 75.1 24.4
+> SFR 46.7 92.0 55.6 15.1 60.1 96.7 78.5 26.6
+> 6BSFT 46.5 92.9 53.8 15.4 60.7 97.8 77.3 28.1
+> SFR 50.2 94.1 59.8 19.0 64.2 97.5 80.6 33.9
+> 12 BSFT 52.2 94.9 62.6 21.0 65.7 97.5 84.5 34.7
+> SFR 54.4 95.9 64.0 24.4 68.7 97.5 86.7 39.1
+
+gain on style strength and context coherence; the simultaneous lift on the average scores indicates that the gain is genuinely representational rather than achieved by sacrificing relevance. A random subsample was additionally scored by human an-notators; rankings agreed with the LLM-judge on all four dimensions. Reading the two tables together with the temper-ature sweep, the picture is consistent: SFR simul-taneously raises the four quality scores of Table 2 and lowers the cross-style sameness of Table 1, and this remains true across the temperature sweep of Figure 2. This is the regime in which SFR is de-signed to help: at low temperature SFT collapses to a near-shared template across personas, while SFR keeps the persona signal alive throughout the response. 
+
+4.2 Generalization to open-ended code generation 
+
+The diversity-preserving mechanism of SFR is not specific to stylistic variation. It applies whenever the model must maintain multiple valid generation modes under different conditions. Code genera-tion, where a single specification admits diverse correct implementations, provides a natural stress test: here “conditions” are problem descriptions rather than style prompts, and “modes” are func-tionally equivalent but structurally distinct solu-tions. Since the stylized-dialogue dataset is propri-etary, we further validate on a public benchmark— LiveCodeBench-v5 (Jain et al., 2025). We fine-tune 
+
+Qwen2.5-Coder-7B-Instruct (Hui et al., 2024) on ∼380 k chain-of-thought samples cleaned from rStar-Code (Liu et al., 2025) (Section B.2) and stop at three matched training-token budgets: 3B,
+
+6B, and 12 B, comparing SFT against SFR un-der matched data, optimizer, and step counts. Decoding uses temperature T = 0.8; we re-port pass@ 1 and pass@ 5 computed over 10 in-dependent samples per problem, broken down by LiveCodeBench’s official difficulty splits (Easy, Medium, Hard) and overall (All). The result is reported in Table 3. On the overall (All) split, SFR improves pass@ 1 over SFT at ev-ery budget ( +1 .9, +3 .7, +2 .2 at 3B/ 6B/ 12 B), and improves pass@ 5 consistently ( +1 .9 at 3B, +3 .5
+
+at 6B, +3 .0 at 12 B). The gain is most pronounced on the Medium and Hard splits, where SFR domi-nates SFT at every budget on pass@ 1 (e.g. Medium: 
+
++4 .6, +6 .0, +1 .4; Hard: +1 .2, +3 .6, +3 .4); on the Easy split the two methods are comparable, which is unsurprising because Easy problems leave little room for multi-modal coverage to matter. The advantage holds at the largest budget ( 12 B) on both pass@ 1 and pass@ 5 across all splits (e.g. pass@ 5
+
+Medium: 86 .7 vs 84 .5; Hard: 39 .1 vs 34 .7). The consistent pass@ 1 improvement is in line with the reading of SFR as enhancing conditional discrimi-nation at the single-sample level: even when cover-age is already high, per-sample quality continues to benefit. 
+
+4.3 Controlled comparison on MBPP 
+
+This set of experiments compares SFR against both SFT and multi-token prediction under strictly matched conditions. On Qwen3-4B-Base (Yang et al., 2025) we train three objectives on ∼500 k quality-filtered samples from OpenCode-Instruct (Ahmad et al., 2025) (Section B.3), under matched optimizer and step counts: SFT, MTP with 
+
+K=4 prediction heads, and SFR encoding the next 
+
+k=32 tokens as its target (Equation (3)), stride 1.All three checkpoints are evaluated on MBPP and on the harder MBPP + split (Austin et al., 2021; Liu et al., 2023a) at T = 0 .6; we report pass@ 1,pass@ 5, and pass@ 10 , each computed over 16 in-dependent samples per problem. Table 4 gives the result. SFR achieves the Table 4: MBPP and MBPP + pass@ k at T = 0 .6 on Qwen3-4B-Base ( 16 samples per problem). SFR leads on all metrics across both splits. 
+
+Method Split pass@1 pass@5 pass@10 SFT Base 77.2 85.6 88.1 MTP Base 77.1 85.8 88.1 
+
+SFR Base 78.3 87.4 89.2 
+
+SFT Plus 67 74.4 76.7 MTP Plus 67.2 75.4 77.3 
+
+SFR Plus 67.7 76.8 79.0 
+
+highest scores on both splits across all three met-rics, with a clear margin over both SFT and MTP on pass@ 5 and pass@ 10 (e.g. MBPP + pass@ 10 :
+
+79 .0 vs 77 .3 for MTP and 76 .7 for SFT; MBPP-Base pass@ 5: 87 .4 vs 85 .8 for MTP and 85 .6 for SFT). On pass@ 1, SFR also leads on both splits (MBPP-Base: 78 .3 vs 77 .2/77 .1; MBPP +: 67 .7
+
+vs 67 .2/67 .0), though the margin is narrower; the advantage widens at higher k, consistent with the interpretation that continuous future supervision enriches the backbone’s coverage of alternative so-lution paths in addition to single-shot accuracy. Combined with the dialogue and the open-ended code-generation results, the three experiments tell a consistent story: the auxiliary flow-matching loss reshapes the backbone’s hidden state so that ht en-codes future-aware, condition-discriminative infor-mation, which manifests as cross-style distinctive-ness in dialogue and as higher pass@ k coverage in code generation. Inference cost is identical to vanilla SFT in all three cases. 
+
+5 Analysis 
+
+We probe two properties of the trained model: how cleanly the backbone hidden state separates by conditioning prompt (Section 5.1), and how the discarded flow-matching head, when re-attached 
+
+offline , can be used to read out a token-level un-certainty signal that the autoregressive head alone does not expose (Section 5.2). 
+
+5.1 Hidden states separate by persona 
+
+For each method we collect {hq,s t : q ∈ Qeval , s ∈
+
+S, t = t0}, where Qeval is the evaluation query set and S the set of nine personas, at a fixed response position t0 (the third response token in the headline result), visualize the resulting vectors with t-SNE (van der Maaten and Hin-ton, 2008) in Figure 3, and quantify style sep-aration with a Style Separability Index , SSI =
+
+Table 5: Style Separability Index (SSI, lower is better) of the backbone hidden state at increasing response po-sitions t0. Ratio is SFT /SFR ; values above 1 indicate that SFR produces better-separated persona groups. 
+
+t0 SFT SFR ratio 1 0.9705 0.9589 1.0121 2 0.6793 0.5434 1.2501 3 0.8052 0.5992 1.3439 5 0.7915 0.6943 1.1401 10 1.0467 1.0029 1.0437 20 1.0431 1.0234 1.0193 40 1.1030 1.0962 1.0061 10 5 0 5 10 15       
+
+> t-SNE dim 1
+> 10
+> 5
+> 0
+> 5
+> 10
+> t-SNE dim 2
+> SFT (Baseline)
+> SSI = 0.8052
+> Style 1
+> Style 2
+> Style 3
+> Style 4
+> Style 5
+> Style 6
+> Style 7
+> Style 8
+> Style 9
+> 10 50510 15 20
+> t-SNE dim 1
+> 5
+> 0
+> 5
+> 10
+> 15
+> t-SNE dim 2
+> SFR (Style-enhanced)
+> SSI = 0.5992
+> Style 1
+> Style 2
+> Style 3
+> Style 4
+> Style 5
+> Style 6
+> Style 7
+> Style 8
+> Style 9
+
+Figure 3: Hidden-state geometry under cross-persona conditioning. t-SNE of hq,s t for ten queries × nine personas. Under SFT the per-persona styles mix across queries; under SFR the styles show clearer persona-wise separation across the sampled queries. 
+
+Es var q(hq,s t )/Eq var s(hq,s t ), i.e. within-style scat-ter divided by between-style scatter (lower is bet-ter). At t0=3 the personas overlap heavily under SFT and SSI is large ( 0.8052 ); under SFR the same styles separate cleanly and SSI drops to 0.5992 ,yielding a SFT /SFR ratio of 1.34 . The persona prompt has therefore been written into the back-bone’s representation under SFR and only weakly so under SFT. Table 5 sweeps the response position t0 and shows the same trend: SFR’s SSI is at or below SFT’s at every t0 we examined, with the largest gap concentrated in the t0 ∈ [2 , 5] range, where the persona signal is most actively shaping the early body of the reply; later positions converge as both methods commit to a particular continuation. 
+
+5.2 Semantic endpoint dispersion as a Lock/Fork diagnostic 
+
+Recent work (Zhang et al., 2026) distinguishes 
+
+Lock positions (one dominant continuation; precision-critical) from Fork positions (multiple valid continuations; exploration-critical), but does not provide a mechanism to locate which positions are Locks or Forks—the distinction is implicit in the self-distillation process. SFR’s discarded FM Table 6: Lock/Fork diagnosis via SED t on a sampled completion (excerpt). SED t values are normalized to [0 , 1] 
+
+by dividing by the per-sequence maximum; the Lock/Fork label is assigned by thresholding at the per-sequence median. 
+
+Prompt: Write Python code for quicksort. 
+
+Completion: ``` python \ndef quicksort(arr):\n """\n Sorts an array using the quicksort algorithm.\n\n Parameters:\n arr (list): The list of elements to be sorted.\n\n Returns:\n list: A new list containing all elements from the input list in sorted order.\n """\n if len(arr) <= 1:\n return arr\n else:\n pivot = arr[len(arr) // 2]\n left = [x for x in arr if x < pivot]\n middle = [x for x in arr if x == pivot]\n right = [x for x in arr if x > pivot]\n return quicksort(left) + middle + quicksort(right)\n ``` 
+
+Token Parameters Returns arr left right return 
+
+SED t 0.669 0.8239 0.7148 0.5951 0.4049 0.3873 Label Fork Fork Fork Lock Lock Lock 
+
+head offers an explicit diagnostic: at position t we fix ht, draw N =64 independent source samples 
+
+z(i)0 ∼ N (0 , I ), and integrate the learned ODE 
+
+˙zτ = vϕ(zτ , τ ; ht) for 50 Euler steps from τ =0 to 
+
+τ =1 , yielding endpoints ˆz(i)1 . We then compute the 
+
+semantic endpoint dispersion 
+
+SED t = tr Cov i(ˆ z(i)1 ), (4) which measures the spread of predicted future se-mantic endpoints. Unlike softmax entropy, SED is intrinsic to the learned flow field and indepen-dent of any decoding temperature. Low SED ⇒
+
+Lock; high SED ⇒ Fork at segment level rather than single-token level. Table 6 shows a con-crete example on a quicksort completion. To-kens whose continuations are nearly deterministic given the algorithm, such as the idiomatic variable names left /right and the keyword return , all receive low SED and are classified as Locks. In contrast, Parameters and Returns introduce free-form natural-language descriptions where multiple valid phrasings exist, and arr appears at the pivot selection line where the partitioning strategy is gen-uinely underdetermined; all three exhibit high SED and are classified as Forks. We note that the per-sequence median threshold is used here for illustra-tion; calibrating a task-specific threshold is left for future work. 
+
+6 Discussion 
+
+6.1 Why flow matching 
+
+Deterministic regression (MSE / cosine to the en-coder target) collapses to the conditional mean 
+
+E[z1 | c] (Proposition A.1), which mode-averages across conditioning prompts—precisely the pathol-ogy we set out to cure. The randomness of z0 in (3) is what makes the optimum equal to the full conditional vector field (Proposition A.2); swap-ping FM for MSE or cosine erases most of the gain (Section G). FM’s constant-magnitude target and single-step regression are also far simpler to tune than diffusion DSM as a small auxiliary loss, and the straight-line formulation makes the MTP inclu-sion (Theorem A.6) almost trivial to prove; the full discussion is deferred to Section A.6. 
+
+6.2 Scope 
+
+SFR does not change the inference graph: the de-ployed checkpoint has the same architecture as a vanilla AR LM and runs on any existing serving stack. It also does not verify factual consistency of responses against the persona specification—that is an orthogonal fact-checking problem. As Figure 2 shows, SFR’s practical edge is largest in the low-temperature regime that production systems prefer; at T ≥ 1.0 sampling randomness dominates and the two methods converge. The formal relation-ship between SFR and multi-token prediction is detailed in Section A. 
+
+7 Conclusion 
+
+We identified Cross-Style Collapse, the failure of fine-tuned LLMs to produce diverse outputs under varying conditioning, and proposed Semantic Flow Regularization (SFR), a conditional flow-matching auxiliary loss whose head is discarded at inference for zero deployment cost. On industrial dialogue (Qwen3-32B, 9 personas), SFR improves cross-style diversity while raising quality. Public vali-dation on LiveCodeBench-v5 and MBPP confirms generality: SFR consistently lifts pass@ k and the-oretically subsumes Multi-Token Prediction as a special case. As a byproduct, the offline FM head yields a segment-level Lock/Fork uncertainty probe beyond the AR softmax. Extending SFR to pre-training and RLHF is future work. Limitations 
+
+Hyperparameter sensitivity. SFR introduces several hyperparameters beyond vanilla SFT: the loss weight λ, suffix length k, stride s, warmup schedule, and EMA decay, as well as the choice of sentence encoder E itself. The ablations in Sec-tion G demonstrate broad robustness across reason-able ranges, but finding an optimal configuration still requires non-trivial grid search; no single de-fault set works universally across all backbones and tasks. 
+
+Training dynamics of the FM head. The flow-matching loss interacts with the main CE loss in subtle ways. If λ is set too high or the FM head warms up too quickly, it can “short-circuit” the backbone by dominating the gradient signal before the AR head has converged, degrading next-token accuracy. Conversely, insufficient warmup leads to large initial FM errors that propagate noisy gra-dients into the backbone. In practice we find it necessary to monitor the FM loss curve throughout training and adjust the warmup length accordingly— an extra operational burden absent in standard SFT. 
+
+Style data coverage and distribution. Our ex-periments use a fixed set of nine hand-curated per-sonas with roughly balanced data. When the num-ber of styles grows substantially (e.g. hundreds of personas) or the per-style data distribution is highly imbalanced, minority styles may receive insuffi-cient gradient signal from the flow-matching objec-tive, causing the backbone to under-represent them. Whether curriculum sampling or per-style reweight-ing can mitigate this is left to future work. More broadly, our stylized benchmark does not cover continuous-spectrum styles or cross-language styl-ization. 
+
+Scaling to larger backbones. Our largest backbone is 32B parameters. Online encoding of suffix targets adds roughly 10% to training wall-clock time at stride 4 (and proportionally less at larger strides), which is the explicit cost paid for zero inference overhead. Whether the regulariza-tion effect strengthens or weakens at 70 B+ scales, and whether the additional memory footprint of the FM head and encoder becomes a practical bottle-neck at such scales, remain open questions. 
+
+Potential risks. By explicitly encouraging out-put diversity, SFR may amplify the generation of undesirable content if the training data contains harmful, biased, or toxic material—the method does not distinguish between “diverse but safe” and “diverse but harmful” continuations. Standard content-filtering and alignment safeguards (e.g. RLHF, safety classifiers) remain necessary down-stream. Additionally, improved style-mimicking ability could facilitate misuse in impersonation or disinformation scenarios; deployers should apply appropriate access controls and monitoring. 
+
+References                         
+
+> Wasi Uddin Ahmad, Aleksander Ficek, Mehrzad Samadi, Jocelyn Huang, Vahid Noroozi, Somshubra Majumdar, and Boris Ginsburg. 2025. Opencodein-struct: A large-scale instruction tuning dataset for code llms. CoRR , abs/2504.04030. Mahmoud Assran, Quentin Duval, Ishan Misra, Pi-otr Bojanowski, Pascal Vincent, Michael G. Rab-bat, Yann LeCun, and Nicolas Ballas. 2023. Self-supervised learning from images with ajoint-embedding predictive architecture. In IEEE/CVF Conference on Computer Vision and Pattern Recog-nition, CVPR 2023, Vancouver, BC, Canada, June 17-24, 2023 , pages 15619–15629. IEEE. Jacob Austin, Augustus Odena, Maxwell I. Nye, Maarten Bosma, Henryk Michalewski, David Dohan, Ellen Jiang, Carrie J. Cai, Michael Terry, Quoc V. Le, and Charles Sutton. 2021. Program synthesis with large language models. CoRR , abs/2108.07732. Adrien Bardes, Quentin Garrido, Jean Ponce, Xinlei Chen, Michael Rabbat, Yann LeCun, Mido Assran, and Nicolas Ballas. 2024. Revisiting feature predic-tion for learning visual representations from video.
+> Trans. Mach. Learn. Res. , 2024. Sumanth Dathathri, Andrea Madotto, Janice Lan, Jane Hung, Eric Frank, Piero Molino, Jason Yosinski, and Rosanne Liu. 2020. Plug and play language models: A simple approach to controlled text generation. In
+> 8th International Conference on Learning Represen-tations, ICLR 2020, Addis Ababa, Ethiopia, April 26-30, 2020 . OpenReview.net. DeepSeek-AI, Aixin Liu, Bei Feng, Bing Xue, Bingx-uan Wang, Bochao Wu, Chengda Lu, Chenggang Zhao, Chengqi Deng, Chenyu Zhang, Chong Ruan, Damai Dai, Daya Guo, Dejian Yang, Deli Chen, Dongjie Ji, Erhang Li, Fangyun Lin, Fucong Dai, and 181 others. 2025. Deepseek-v3 technical report.
+> Preprint , arXiv:2412.19437. Emily Dinan, Varvara Logacheva, Valentin Malykh, Alexander Miller, Kurt Shuster, Jack Urbanek, Douwe Kiela, Arthur Szlam, Iulian Serban, Ryan Lowe, Shrimai Prabhumoye, Alan W. Black, Alexan-der Rudnicky, Jason Williams, Joelle Pineau, Mikhail Burtsev, and Jason Weston. 2020. The second con-versational intelligence challenge (convai2). In The NeurIPS ’18 Competition , The Springer Series on Challenges in Machine Learning, pages 187–208, Cham. Springer.
+
+Xingyu Fan, Feifei Li, Wenhui Que, and Hailong Li. 2025. One agent to serve all: a lite-adaptive styl-ized AI assistant for millions of multi-style official accounts. CoRR , abs/2509.17788. Elias Frantar, Saleh Ashkboos, Torsten Hoefler, and Dan Alistarh. 2022. GPTQ: accurate post-training quantization for generative pre-trained transformers. 
+
+CoRR , abs/2210.17323. Fabian Gloeckle, Badr Youbi Idrissi, Baptiste Rozière, David Lopez-Paz, and Gabriel Synnaeve. 2024. Bet-ter & faster large language models via multi-token prediction. In Forty-first International Conference on Machine Learning, ICML 2024, Vienna, Austria, July 21-27, 2024 , Proceedings of Machine Learn-ing Research, pages 15706–15734. PMLR / OpenRe-view.net. Tilmann Gneiting and Adrian E. Raftery. 2007. Strictly proper scoring rules, prediction, and estimation. 
+
+Journal of the American Statistical Association ,102(477):359–378. Ishaan Gulrajani and Tatsunori B. Hashimoto. 2023. Likelihood-based diffusion language models. In Ad-vances in Neural Information Processing Systems 36: Annual Conference on Neural Information Process-ing Systems 2023, NeurIPS 2023, New Orleans, LA, USA, December 10 - 16, 2023 .Daya Guo, Dejian Yang, Haowei Zhang, Junxiao Song, Peiyi Wang, Qihao Zhu, Runxin Xu, Ruoyu Zhang, Shirong Ma, Xiao Bi, Xiaokang Zhang, Xingkai Yu, Yu Wu, Z. F. Wu, Zhibin Gou, Zhihong Shao, Zhu-oshu Li, Ziyi Gao, Aixin Liu, and 175 others. 2025. Deepseek-r1 incentivizes reasoning in LLMs through reinforcement learning. Nature , 645(8081):633–638. Tiankai Hang, Shuyang Gu, Chen Li, Jianmin Bao, Dong Chen, Han Hu, Xin Geng, and Baining Guo. 2023. Efficient diffusion training via min-snr weight-ing strategy. In IEEE/CVF International Conference on Computer Vision, ICCV 2023, Paris, France, Oc-tober 1-6, 2023 , pages 7407–7417. IEEE. Ari Holtzman, Jan Buys, Li Du, Maxwell Forbes, and Yejin Choi. 2020. The curious case of neural text degeneration. In 8th International Conference on Learning Representations, ICLR 2020, Addis Ababa, Ethiopia, April 26-30, 2020 . OpenReview.net. Binyuan Hui, Jian Yang, Zeyu Cui, Jiaxi Yang, Day-iheng Liu, Lei Zhang, Tianyu Liu, Jiajun Zhang, Bowen Yu, Kai Dang, An Yang, Rui Men, Fei Huang, Xingzhang Ren, Xuancheng Ren, Jingren Zhou, and Junyang Lin. 2024. Qwen2.5-coder technical report. 
+
+CoRR , abs/2409.12186. Naman Jain, King Han, Alex Gu, Wen-Ding Li, Fanjia Yan, Tianjun Zhang, Sida Wang, Armando Solar-Lezama, Koushik Sen, and Ion Stoica. 2025. Live-CodeBench: Holistic and contamination free evalua-tion of large language models for code. In The Thir-teenth International Conference on Learning Repre-sentations, ICLR 2025, Singapore, April 24-28, 2025 .OpenReview.net. Tero Karras, Miika Aittala, Timo Aila, and Samuli Laine. 2022. Elucidating the design space of diffusion-based generative models. In Advances in Neural Information Processing Systems 35: Annual Conference on Neural Information Processing Sys-tems 2022, NeurIPS 2022, New Orleans, LA, USA, November 28 - December 9, 2022 .Nitish Shirish Keskar, Bryan McCann, Lav R. Varshney, Caiming Xiong, and Richard Socher. 2019. CTRL: A conditional transformer language model for con-trollable generation. CoRR , abs/1909.05858. Ben Krause, Akhilesh Deepak Gotmare, Bryan McCann, Nitish Shirish Keskar, Shafiq R. Joty, Richard Socher, and Nazneen Fatema Rajani. 2021. Gedi: Generative discriminator guided sequence generation. In Find-ings of the Association for Computational Linguistics: EMNLP 2021, Virtual Event / Punta Cana, Domini-can Republic, 16-20 November, 2021 , Findings of ACL, pages 4929–4952. Association for Computa-tional Linguistics. Woosuk Kwon, Zhuohan Li, Siyuan Zhuang, Ying Sheng, Lianmin Zheng, Cody Hao Yu, Joseph Gon-zalez, Hao Zhang, and Ion Stoica. 2023. Efficient memory management for large language model serv-ing with PagedAttention. pages 611–626. LCM team, Loïc Barrault, Paul-Ambroise Duquenne, Maha Elbayad, Artyom Kozhevnikov, Belen Alas-truey, Pierre Andrews, Mariano Coria, Guillaume Couairon, Marta R. Costa-jussà, David Dale, Hady Elsahar, Kevin Heffernan, João Maria Janeiro, Tuan Tran, Christophe Ropers, Eduardo Sánchez, Robin San Roman, Alexandre Mourachko, and 2 others. 2024. Large concept models: Language modeling in a sentence representation space. CoRR ,abs/2412.08821. Xiang Lisa Li, Ari Holtzman, Daniel Fried, Percy Liang, Jason Eisner, Tatsunori Hashimoto, Luke Zettlemoyer, and Mike Lewis. 2023. Contrastive decoding: Open-ended text generation as optimiza-tion. In Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Vol-ume 1: Long Papers), ACL 2023, Toronto, Canada, July 9-14, 2023 , pages 12286–12312. Association for Computational Linguistics. Xiang Lisa Li, John Thickstun, Ishaan Gulrajani, Percy Liang, and Tatsunori B. Hashimoto. 2022. Diffusion-lm improves controllable text generation. In Ad-vances in Neural Information Processing Systems 35: Annual Conference on Neural Information Pro-cessing Systems 2022, NeurIPS 2022, New Orleans, LA, USA, November 28 - December 9, 2022 .Ji Lin, Jiaming Tang, Haotian Tang, Shang Yang, Wei-Ming Chen, Wei-Chen Wang, Guangxuan Xiao, Xingyu Dang, Chuang Gan, and Song Han. 2024. AWQ: activation-aware weight quantization for on-device LLM compression and acceleration. In Pro-ceedings of the Seventh Annual Conference on Ma-chine Learning and Systems, MLSys 2024, Santa Clara, CA, USA, May 13-16, 2024 . mlsys.org. Yaron Lipman, Ricky T. Q. Chen, Heli Ben-Hamu, Max-imilian Nickel, and Matthew Le. 2023. Flow match-ing for generative modeling. In The Eleventh Inter-national Conference on Learning Representations, ICLR 2023, Kigali, Rwanda, May 1-5, 2023 . Open-Review.net. Jiawei Liu, Chunqiu Steven Xia, Yuyao Wang, and Ling-ming Zhang. 2023a. Is your code generated by chat-gpt really correct? rigorous evaluation of large lan-guage models for code generation. In Advances in Neural Information Processing Systems 36: Annual Conference on Neural Information Processing Sys-tems 2023, NeurIPS 2023, New Orleans, LA, USA, December 10 - 16, 2023 .Qiang Liu. 2022. Rectified flow: A marginal pre-serving approach to optimal transport. CoRR ,abs/2209.14577. Xingchao Liu, Chengyue Gong, and Qiang Liu. 2023b. Flow straight and fast: Learning to generate and trans-fer data with rectified flow. In The Eleventh Inter-national Conference on Learning Representations, ICLR 2023, Kigali, Rwanda, May 1-5, 2023 . Open-Review.net. Yifei Liu, Li Lyna Zhang, Yi Zhu, Bingcheng Dong, Xudong Zhou, Ning Shang, Fan Yang, and Mao Yang. 2025. rstar-coder: Scaling competitive code reasoning with a large-scale verified dataset. CoRR ,abs/2505.21297. Aaron Lou, Chenlin Meng, and Stefano Ermon. 2024. Discrete diffusion modeling by estimating the ra-tios of the data distribution. In Forty-first Interna-tional Conference on Machine Learning, ICML 2024, Vienna, Austria, July 21-27, 2024 , Proceedings of Machine Learning Research, pages 32819–32848. PMLR / OpenReview.net. Phil Ostheimer, Mayank Nagda, Marius Kloft, and So-phie Fellenz. 2024. Text style transfer evaluation using large language models. In Proceedings of the 2024 Joint International Conference on Computa-tional Linguistics, Language Resources and Evalu-ation (LREC-COLING 2024) , pages 15802–15822, Torino, Italia. ELRA and ICCL. Samyam Rajbhandari, Jeff Rasley, Olatunji Ruwase, and Yuxiong He. 2020. Zero: memory optimizations toward training trillion parameter models. In Pro-ceedings of the International Conference for High Performance Computing, Networking, Storage and Analysis, SC 2020, Virtual Event / Atlanta, Georgia, USA, November 9-19, 2020 , page 20. IEEE/ACM. Tim Salimans and Jonathan Ho. 2022. Progressive dis-tillation for fast sampling of diffusion models. In The Tenth International Conference on Learning Repre-sentations, ICLR 2022, Virtual Event, April 25-29, 2022 . OpenReview.net. Yixuan Su, Tian Lan, Yan Wang, Dani Yogatama, Ling-peng Kong, and Nigel Collier. 2022. A contrastive framework for neural text generation. In Advances in Neural Information Processing Systems 35: Annual Conference on Neural Information Processing Sys-tems 2022, NeurIPS 2022, New Orleans, LA, USA, November 28 - December 9, 2022 .Jack Urbanek, Angela Fan, Siddharth Karamcheti, Saachi Jain, Samuel Humeau, Emily Dinan, Tim Rocktäschel, Douwe Kiela, Arthur Szlam, and Ja-son Weston. 2019. Learning to speak and act in a fantasy text adventure game. In Proceedings of the 2019 Conference on Empirical Methods in Natu-ral Language Processing and the 9th International Joint Conference on Natural Language Processing, EMNLP-IJCNLP 2019, Hong Kong, China, Novem-ber 3-7, 2019 , pages 673–683. Association for Com-putational Linguistics. Laurens van der Maaten and Geoffrey Hinton. 2008. Visualizing data using t-SNE. Journal of Machine Learning Research , 9(86):2579–2605. Noah Wang, Zhongyuan Peng, Haoran Que, Jiaheng Liu, Wangchunshu Zhou, Yuhan Wu, Hongcheng Guo, Ruitong Gan, Zehao Ni, Jian Yang, Man Zhang, Zhaoxiang Zhang, Wanli Ouyang, Ke Xu, Wenhao Huang, Jie Fu, and Junran Peng. 2024. RoleLLM: Benchmarking, eliciting, and enhancing role-playing abilities of large language models. In Findings of the Association for Computational Linguistics, ACL 2024, Bangkok, Thailand and virtual meeting, August 11-16, 2024 , Findings of ACL, pages 14743–14777. Association for Computational Linguistics. Sean Welleck, Ilia Kulikov, Stephen Roller, Emily Di-nan, Kyunghyun Cho, and Jason Weston. 2020. Neu-ral text generation with unlikelihood training. In 
+
+8th International Conference on Learning Represen-tations, ICLR 2020, Addis Ababa, Ethiopia, April 26-30, 2020 . OpenReview.net. Shitao Xiao, Zheng Liu, Peitian Zhang, Niklas Muen-nighoff, Defu Lian, and Jian-Yun Nie. 2024. C-pack: Packed resources for general chinese embeddings. pages 641–649. Yunze Xiao, Vivienne J. Zhang, Chenghao Yang, Ning-shan Ma, Weihao Xuan, and Jen-Tse Huang. 2026. The chameleon’s limit: Investigating persona col-lapse and homogenization in large language models. 
+
+CoRR , arXiv:2604.24698. An Yang, Anfeng Li, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu, Chang Gao, Chengen Huang, Chenxu Lv, Chujie Zheng, Day-iheng Liu, Fan Zhou, Fei Huang, Feng Hu, Hao Ge, Haoran Wei, Huan Lin, Jialong Tang, and 41 others. 2025. Qwen3 technical report. Preprint ,arXiv:2505.09388. Kevin Yang and Dan Klein. 2021. FUDGE: controlled text generation with future discriminators. In Pro-ceedings of the 2021 Conference of the North Amer-ican Chapter of the Association for Computational Linguistics: Human Language Technologies, NAACL-HLT 2021, Online, June 6-11, 2021 , pages 3511– 3535. Association for Computational Linguistics. Ruixiang Zhang, Richard He Bai, Huangjie Zheng, Navdeep Jaitly, Ronan Collobert, and Yizhe Zhang. 2026. Embarrassingly simple self-distillation im-proves code generation. CoRR , abs/2604.01193. Saizheng Zhang, Emily Dinan, Jack Urbanek, Arthur Szlam, Douwe Kiela, and Jason Weston. 2018. Per-sonalizing dialogue agents: I have a dog, do you have pets too? Shiyue Zhang, Shijie Wu, Ozan Irsoy, Steven Lu, Mo-hit Bansal, Mark Dredze, and David S. Rosenberg. 2023. Mixce: Training autoregressive language mod-els by mixing forward and reverse cross-entropies. In Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers), ACL 2023, Toronto, Canada, July 9-14, 2023 , pages 9027–9050. Association for Com-putational Linguistics. Lianmin Zheng, Liangsheng Yin, Zhiqiang Xie, Chuyue Sun, Jeff Huang, Cody Hao Yu, Shiyi Cao, Christos Kozyrakis, Ion Stoica, Joseph E. Gonzalez, Clark W. Barrett, and Ying Sheng. 2024. Sglang: Efficient execution of structured language model programs. In 
+
+Advances in Neural Information Processing Systems 38: Annual Conference on Neural Information Pro-cessing Systems 2024, NeurIPS 2024, Vancouver, BC, Canada, December 10 - 15, 2024 .Jinfeng Zhou, Zhuang Chen, Dazhen Wan, Bosi Wen, Yi Song, Jifan Yu, Yongkang Huang, Libiao Peng, Jiaming Yang, Xiyao Xiao, Sahand Sabour, Xiaohan Zhang, Wenjing Hou, Yijia Zhang, Yuxiao Dong, Jie Tang, and Minlie Huang. 2023. CharacterGLM: Customizing chinese conversational AI characters with large language models. CoRR , abs/2311.16832. Yaoming Zhu, Sidi Lu, Lei Zheng, Jiaxian Guo, Weinan Zhang, Jun Wang, and Yong Yu. 2018. Texygen: A benchmarking platform for text generation models. In The 41st International ACM SIGIR Conference on Research & Development in Information Retrieval, SIGIR 2018, Ann Arbor, MI, USA, July 08-12, 2018 ,pages 1097–1100. ACM. 
+
+A Theoretical Foundations 
+
+This appendix collects the formal statements and full proofs that support the claims made in Sec-tions 3.2, 6.1 and 6.2. We first set up notation (Sec-tion A.1), then prove the multi-modality argument for choosing CFM over deterministic alignment (Section A.2), then prove the strict-equivalence re-sults that place MTP as a special case of SFR (Sec-tion A.3), and finally summarize the resulting inclu-sion chain (Section A.4). Section A.6 addresses the related question of why CFM rather than diffusion. 
+
+A.1 Notation and the variational view 
+
+Let V be the vocabulary, |V | its size, and ∆ := ∆|V |− 1 the probability simplex. For a token v ∈ V
+
+write e(v) ∈ ∆ for its one-hot embedding. We use 
+
+ht ∈ Rd for a backbone hidden state and z1 ∈ Rdz
+
+for an auxiliary target (a continuous embedding in the body of the paper, a point on ∆K in Defini-tion A.4). The token-level CE loss and the FM auxiliary loss used in the body are 
+
+LAR = X
+
+> t
+
+CE  softmax( WAR ht), y t+1 
+
+, (5) 
+
+LSFR = Eτ,z 0 vϕ(zτ , τ ; ht) − (z1 − z0) 22, (6) with τ ∼ U [0 , 1] , z0 ∼ p0, and the path zτ =(1 − τ )z0 + τ z 1.
+
+Variational view (post-hoc interpretation). The following is a retrospective probabilistic reading of the training objective, not the generative model from which the algorithm is derived. Introduce a continuous latent z ∈ Z representing the global semantic intent of a response. Marginalizing, 
+
+P (y | x, s ) = 
+
+Z
+
+> Z
+
+PAR (y | z, x, s ) PSFR (z | x, s ) dz. 
+
+(7) Pure SFT corresponds to the degenerate choice 
+
+PSFR (z | x, s ) = δz⋆(x,s ), i.e. a single prescribed semantic intent for each (x, s ). SFR replaces this Dirac by an explicit continuous distribution that the auxiliary head vϕ approximates via flow matching. An informal ELBO-style motivation that rational-izes adding λLSFR to LAR is given in Section A.5 below. 
+
+A.2 Why FM and not deterministic regression 
+
+The following two propositions formalise the choice in Section 3.2. Proposition A.1 states that any deterministic predictor of z1 is a conditional-mean estimator and therefore mode-averages; Proposition A.2 states that CFM with random source preserves all modes of P (z1 | c).
+
+Proposition A.1 (Mode averaging) . Let P (z1 |
+
+c) be a conditional distribution on Rdz with fi-nite second moment. The unique minimiser of 
+
+min f E∥f (c) − z1∥22 in the class of measurable functions f is the conditional mean f ⋆(c) = E[z1 |
+
+c]. If P (z1 | c) is multi-modal, f ⋆(c) does not co-incide with any mode and may lie in a low-density region. Proof. Let μ(c) = E[z1 | c] and decompose z1 =μ(c) + ε with E[ε | c] = 0 . For any measurable f ,
+
+E∥f (c) − z1∥22 = E∥f (c) − μ(c) − ε∥22
+
+= E∥f (c) − μ(c)∥22 + E∥ε∥22,
+
+(8) because the cross term E⟨f (c) − μ(c), ε ⟩ van-ishes by the tower property. Both terms are non-negative; the second is independent of f . Equal-ity holds iff f = μ a.e. For two well-separated modes {z(a)1 , z (b)1 } with masses p, 1 − p, μ(c) = 
+
+p z (a)1 + (1 − p) z(b)1 lies on the line segment be-tween them, and hence in a low-density region of 
+
+P (z1 | c).
+
+Proposition A.2 (Multi-modal capacity of CFM) .
+
+Let p0 be a source distribution on Rdz with finite second moment, p1(· | c) a target conditional, and consider the straight-line interpolation zτ = (1 −
+
+τ )z0 + τ z 1 with z0 ∼ p0, z1 ∼ p1(· | c), τ ∼U[0 , 1] . Define the marginal velocity v⋆(z, τ, c ) = 
+
+E[z1 − z0 | zτ = z, c ]. Then v⋆ is the unique minimiser of LSFR in L2, and the deterministic ODE ˙zτ = v⋆(zτ , τ, c ) with initial condition z0 ∼
+
+p0 transports p0 to p1(· | c) at τ = 1 .Proof. Step 1. By the tower property, 
+
+Eτ,z 0,z 1 ∥vϕ(zτ , τ, c ) − (z1 − z0)∥2 =
+
+Eτ,z τ Ez0,z 1|zτ ,c ∥vϕ(zτ , τ, c ) − (z1 − z0)∥2.
+
+The inner expectation is the L2 distance from a deterministic point to the random vector z1 − z0,whose L2 projection is its conditional mean 
+
+v⋆(z, τ, c ) by Proposition A.1. 
+
+Step 2. Using zτ = (1 −τ )z0+τ z 1, ˙zτ = z1−z0.By the tower property E[ ˙ zτ | zτ = z, c ] =
+
+v⋆(z, τ, c ). The marginal density satisfies the con-tinuity equation 
+
+∂τ pτ (z | c) + ∇z·  pτ (z | c)v⋆(z, τ, c ) = 0 , (9) so the deterministic ODE generated by v⋆ trans-ports p0 to p1(· | c) at τ = 1 . Multi-modality of 
+
+p1 is preserved at the distributional level because the terminal marginal of the probability path equals 
+
+p1(· | c) under the exact marginal velocity field. See (Lipman et al., 2023, Thm. 3) for the full state-ment. 
+
+Remark A.3 (Engineering consequence) . Replac-ing z0 ∼ N (0 , I ) in (6) by a constant z0 ≡ c0
+
+collapses LSFR to E∥f (ht) − z1∥2 with f (ht) := 
+
+vϕ(·; ht)+ c0, hence to deterministic regression. By Proposition A.1 this objective then mode-averages. The randomness of z0 is therefore essential and not a hyperparameter. 
+
+A.3 MTP as a strict special case of SFR Definition A.4 (MTP-instance of the SFR family) .
+
+For a fixed reference π ∈ int(∆) and horizon K ≥
+
+0, the MTP-instance of SFR is obtained by: 1. taking the state space to be ∆K ;2. taking the per-position target to be the one-hot stack z(t)1 = [ e(yt+1 ), . . . , e (yt+K )] ∈ ∆K ;3. taking the source to be the constant p0 =
+
+δ[π,...,π ];4. using the straight-line path z(t) 
+
+> τ,k
+
+= (1 − τ )π +
+
+τ e (yt+k);5. restricting the head to a constant-velocity field 
+
+vϕ,k (zτ , τ ; ht) := qϕ,k (· | ht) − π that is in-dependent of (zτ , τ ), where qϕ,k (· | ht) = softmax( Wkht + bk) ∈ ∆.
+
+Lemma A.5 (Velocity-matching ≡ endpoint– matching) . Under Definition A.4, the tangent space of the simplex ∆ is T ∆ = {u ∈ R|V | | P 
+
+> i
+
+ui =0}. For any divergence D on T ∆ induced by a divergence D∆ on ∆ via the translation bijection 
+
+u 7 → u + π, i.e., D(u∥v) = D∆(u + π∥v + π)
+
+for u, v ∈ T ∆, one has: D vϕ,k (·; ht) u(t)
+
+> ⋆,k
+
+ =
+
+D∆
+
+ qϕ,k (· | ht) e(yt+k).
+
+Proof. By Definition A.4(5), vϕ,k = qϕ,k − π and 
+
+u(t) 
+
+> ⋆,k
+
+= e(yt+k) − π. Since qϕ,k , e (yt+k) ∈ ∆, both 
+
+vϕ,k and u(t) 
+
+> ⋆,k
+
+lie in the tangent space T ∆. Under the translation bijection, we have: 
+
+D vϕ,k (·; ht) u(t)
+
+> ⋆,k
+
+
+
+= D∆
+
+ vϕ,k (·; ht) + π u(t) 
+
+> ⋆,k
+
++ π
+
+= D∆
+
+ qϕ,k (· | ht) e(yt+k).
+
+Euclidean case: For D∆(p∥q) = ∥p − q∥22, this translation yields: 
+
+∥vϕ,k − u(t)
+
+> ⋆,k
+
+∥22 = ∥(qϕ,k − π) − (e(yt+k) − π)∥22
+
+= ∥qϕ,k − e(yt+k)∥22.
+
+Bregman / KL case: Since the Bregman diver-gence DΨ(p∥q) = P 
+
+> i
+
+pi log( pi/q i) is defined on 
+
+∆, and the constant-velocity parameterisation pro-vides a bijection between velocity space ∆ − π and endpoint space ∆, we define the velocity-matching loss in this geometry as DΨ(e(yt+k)∥qϕ,k )—the unique divergence on the endpoint space that the bijection vϕ,k ↔ qϕ,k induces. We define 
+
+LMTP = X
+
+> tK
+
+X
+
+> k=1
+
+αk CE  qϕ,k (· | ht), y t+k
+
+,
+
+(10) the standard MTP loss with non-negative weights 
+
+αk.
+
+Theorem A.6 (SFR ≡ MTP under Bregman / KL geometry) . Let Ψ( p) = P 
+
+> i
+
+pi log pi be the negative-entropy potential on ∆, with Bregman di-vergence DΨ(p∥q) = Ψ( p) − Ψ( q) − ⟨∇ Ψ( q), p −
+
+q⟩. For one-hot p = e(y), DΨ(e(y)∥q) =
+
+− log qy = KL( e(y)∥q). Under Definition A.4, the corresponding SFR loss 
+
+LΨSFR = X
+
+> tK
+
+X
+
+> k=1
+
+αk DΨ
+
+ e(yt+k) qϕ,k (· | ht)
+
+(11) 
+
+satisfies the strict identity LΨSFR ≡ L MTP .Proof. By Lemma A.5 with D = DΨ, the velocity-matching loss reduces to the endpoint-matching loss (11) . Each term equals DΨ(e(yt+k)∥qϕ,k ) = 
+
+− log qϕ,k (yt+k | ht), the per-token CE term in (10). 
+
+Theorem A.7 (Brier-MTP relative under Euclidean geometry) . Replacing DΨ in (11) by squared Eu-clidean distance, D(p∥q) := ∥p − q∥22, gives a near-cousin Lℓ2 
+
+> SFR
+
+= P
+
+> t
+
+P 
+
+> k
+
+αk∥qϕ,k − e(yt+k)∥22
+
+whose population minimiser coincides with that of 
+
+LMTP : q⋆ϕ,k (v | ht) = P ⋆(yt+k = v | ht). The two losses differ only in their gradient geometry; Euclidean penalizes confident mistakes substan-tially less aggressively than Bregman / log-loss. Proof. Both − log qy and ∥q − e(y)∥22 are strictly proper scoring rules on ∆ (Gneiting and Raftery, 2007), so each is uniquely minimized at q = p
+
+in expectation under any conditional distribution 
+
+P ⋆(· | c). The gradient remark follows from 
+
+∂q(− log qy) = −ey ⊘ q (unbounded as qy → 0)versus ∂q∥q − e(y)∥22 = 2( q − e(y)) (bounded by 
+
+2√2 on ∆). 
+
+A.4 Inclusion chain Corollary A.8 (Inclusion chain) . Let FNT =
+
+{L AR }, FMTP = {L AR + λLMTP }, F∆-FM the family obtained by varying Definition A.4 only over the head’s parameterisation, and FSFR the general continuous-target family of the body. Then 
+
+FNT ⊊ FMTP = F∆-FM ⊊ FSFR . (12) 
+
+Proof. Setting K = 0 in Definition A.4 recovers 
+
+LAR , giving the first strict inclusion. The middle equality is Theorem A.6. For the last strict in-clusion we exhibit two structural gaps that F∆-FM 
+
+cannot bridge: 1. Source randomness: F∆-FM fixes p0 =
+
+δ[π,...,π ], so its velocity field is deterministic given ht; it models token-level uncertainty in the discrete simplex but lacks stochastic con-tinuous source modeling and segment-level semantic targets. FSFR with z0 ∼ N (0 , I )
+
+preserves all modes (Proposition A.2). 2. Target dimensionality: ∆K is a K(|V |− 1) -dimensional bounded polytope that encodes only the identity of the next K tokens; it can-not represent continuous semantic attributes (style intensity, syntactic structure, or dis-course coherence) that live in directions or-thogonal to the one-hot vertices. The contin-uous target z1 ∈ Rdz of FSFR has no such restriction. Either gap alone suffices for strict inclusion. Table 4 of the body provides the empirical in-stantiation of this chain on Qwen3-4B / MBPP. 
+
+A.5 ELBO interpretation (informal motivation) 
+
+The purpose of this subsection is to provide an 
+
+informal variational motivation for adding λLSFR 
+
+to LAR . The argument is heuristic rather than a rigorous bound, since the actual training procedure does not instantiate a proper latent variable model at inference time. 
+
+Setup. Consider the hypothetical generative model of (7) : draw z ∼ PSFR (z | x, s ) then 
+
+y ∼ PAR (y | z, x, s ). Let rϕ(z | h) be the varia-tional distribution implied by the auxiliary head— under SFR, the law of the time-1 marginal of the ODE ˙zτ = vϕ(zτ , τ ; h) with z0 ∼ p0; under de-terministic alignment, the Dirac δfϕ(h). Applying Jensen’s inequality to (7) and following the stan-dard ELBO derivation, 
+
+log P (y | x, s ) ≥ Ez∼rϕ(z|h)log PAR (y | z, x, s )
+
+− KL  rϕ(z | h) PSFR (z | x, s ).
+
+(13) 
+
+Informal identification with training losses. In our actual model, ht does not condition on an ex-plicit z at inference; rather, the backbone is shaped 
+
+by the FM gradient so that ht implicitly encodes future-aware information. Under this lens: • The reconstruction term Ez∼rϕ log PAR (y |
+
+z, x, s ) plays the role analogous to −L AR :maximizing the likelihood of the response given the latent plan. • The KL term KL( rϕ∥PSFR ) is related to 
+
+LSFR : under regularity conditions the FM loss controls the distance between the learned push-forward rϕ and the data distribution 
+
+p1(· | c), since minimizing the velocity-matching objective drives the generated marginal toward the target (Lipman et al., 2023). Combining, LAR + λLSFR can be viewed as an approximate β-ELBO surrogate of log P (y | x, s )
+
+with λ = β. We emphasize that this is a motiva-tional analogy —the formal contributions of this appendix rest on Propositions A.1 and A.2, theo-rems A.6 and A.7, and corollary A.8, which do not depend on this ELBO interpretation. 
+
+A.6 Why CFM and not diffusion as the auxiliary loss 
+
+The substantive question is not whether CFM and diffusion can each be used, but which one is bet-ter suited as a small auxiliary on top of an AR loss. We give three reasons; the same argument is summarized in Section 6.1. 
+
+Single-step, simulation-free, O(1) -magnitude target. The CFM target z1 − z0 is a constant vector with O(1) norm under L2-normalized z1,sampled via one straight-line interpolation. The DSM-style diffusion loss Et[w(t)∥ϵθ(zt, t ) − ϵ∥2]
+
+requires choosing the noise schedule, the weighting 
+
+w(t), and (for stable training) the parameterisation among ϵ, x0, v, with established literature on Min-SNR weighting (Hang et al., 2023), EDM precondi-tioning (Karras et al., 2022), and v-prediction (Sal-imans and Ho, 2022). When the diffusion loss is the primary objective, this engineering is well-understood; when it is added as a small fraction of an AR loss, the per-batch loss variance under typ-ical schedules is orders of magnitude higher than 
+
+LAR , making the effective λ extremely sensitive. 
+
+Algebraic naturalness of the MTP correspon-dence. Theorem A.6 relies on three structural properties of straight-line CFM: a constant target velocity, a translation-invariant divergence, and a constant-velocity head. The diffusion equivalent of this argument requires reparameterizing MTP as a noise-conditional softmax with a learned vari-ance schedule, which is mathematically possible but obscures the connection. 
+
+Empirical separation from JEPA / alignment. 
+
+Proposition A.1 formalizes the failure mode that JEPA-style EMA-teacher predictors share with MSE/cosine alignment: their optima collapse to the conditional mean. The randomness of z0 in CFM, by contrast, is what makes the objective pre-serve all modes of P (z1 | c). This is the precise sense in which FM-based SFR is not a relabelling of JEPA. We remark that under straight-line probability paths, CFM and score-based diffusion are mathe-matically equivalent at the level of marginal proba-bility paths (Liu et al., 2023b; Lipman et al., 2023); the distinction in this appendix is at the level of the loss form and its hyperparameter sensitivity, not the hypothesis class. 
+
+B Data construction 
+
+This appendix details the training and evaluation data for each experiment. Upon publication we will release de-identified evaluation subsets and related materials to facilitate reproducibility. 
+
+B.1 Stylized dialogue (Experiment 1) Source. We use proprietary data from a widely-used industrial official-accounts platform (as of April 2026). The platform contains over one mil-lion accounts; the raw data includes published articles and authentic user-comment–author-reply pairs. 
+
+Training set construction. Following the style-extraction pipeline of Fan et al. (2025), we iden-tify nine representative stylistic personas from the platform corpus. We then prompt an LLM to cross-generate stylized QA pairs: for each (con-text, query, answer) triple, the model produces a response conditioned on each of the nine styles. The prompt templates for both style extraction and cross-style generation follow the designs of Fan et al. (2025). We score every generated sample on four dimensions—context coherence (Ctx), query relevance (Rel), style strength (SS), and fluency (Flu)—using a judge LLM, following prior prac-tice (Wang et al., 2024; Ostheimer et al., 2024). Only top-scoring samples are retained, yielding approximately 170 k training examples for full-parameter fine-tuning. 
+
+Evaluation set. To the best of our knowledge, no public dataset simultaneously provides articles, user queries, and large-scale stylized replies from millions of authors. We construct a held-out set of ∼150 examples: one portion consists of human-curated stylized QA pairs drawn directly from real platform interactions, and the remaining portion is synthesized and filtered with the same pipeline as the training set (but on disjoint queries). 
+
+B.2 LiveCodeBench (Experiment 2) 
+
+We use the open-source rStar-Code dataset (Liu et al., 2025), which contains long chain-of-thought code solutions. The cleaning pipeline is: 1. Retain only samples marked both verified and 
+
+is_passed .2. Remove samples whose chain-of-thought ex-ceeds 16 k tokens. 3. Deduplicate problems by adjacent-hash match-ing on the problem statement. After filtering, approximately 380 k training exam-ples remain. 
+
+B.3 MBPP (Experiment 3) 
+
+We use the open-source OpenCodeInstruct dataset (Ahmad et al., 2025) (solutions without a reasoning trace). The filtering criteria are: 1. LLM-judged requirement_conformance = 5 
+
+and logical_correctness = 5 .2. LLM-judged edge_case_consideration ≥ 4.3. All unit tests pass (tests_execution_status ). 4. Exact-match deduplication on the problem in-put (retaining the highest-scoring, most concise solution per problem). After filtering, approximately 500 k training exam-ples remain. 
+
+C Implementation notes 
+
+C.1 Why we avoid runtime requires_grad 
+
+toggling 
+
+Under DeepSpeed ZeRO-3 (Rajbhandari et al., 2020), the optimizer’s parameter groups are bound once at accelerator.prepare() and the gradient-allreduce graph is materialized at the first back-ward call. Switching individual parameters’  
+
+> requires_grad
+
+between steps causes the actual gra-dient state to drift out of sync with the parameter-group view, which manifests as silent NCCL hangs at the very step the toggle happens. We therefore implement Phase A by setting h_for_fm = h.detach() 
+
+inside the FM branch only; the backbone parame-ters’ requires_grad are left unchanged for the entire training run. 
+
+C.2 Submodule-order consistency under ZeRO-3 
+
+ZeRO-3 tracks the per-rank order in which sub-modules are visited during forward to coordinate parameter gather/scatter. If a rank skips the FM-head forward (e.g. a sample with no response to-kens), the order diverges and NCCL deadlocks. We therefore execute a tiny “dummy forward” through the FM head (single dummy token, no gradient) on any rank that would otherwise skip it. 
+
+C.3 Cross-rank synchronization of stochastic decisions 
+
+Three quantities are synchronized via collectives: (i) the gradient-gating decision ( all_reduce_MAX so any rank that wants to gate causes all ranks to gate); (ii) the running EMA of fm_loss (all_reduce_SUM ,divided by world size); and (iii) the EMA-teacher update step is performed identically on every rank because the student parameters are already synchro-nized after the optimizer step. 
+
+C.4 Online suffix encoding under multi-GPU training 
+
+For the token-level suffix mode we load a frozen encoder onto each local GPU outside the ZeRO-3 scope (see above). To minimize encoder calls we use sparse anchors with stride s; non-anchor posi-tions inherit the embedding of their nearest anchor. The encoder’s parameters are explicitly excluded from the optimizer and from checkpointing. 
+
+C.5 FM-head detachment at save_model 
+
+At checkpoint time we temporarily pop the FM-head out of the model’s submodule dict on every rank, run super().save_model , then re-attach. This keeps the published checkpoint structurally iden-tical to a plain AR LM, ensuring that downstream tools ( from_pretrained , vLLM, LoRA merging, GP-TQ/AWQ quantization) work without modifica-tion. 
+
+D Hyper-parameters and configurations 
+
+Table 7 lists the recommended FM hyper-parameters for each model scale used in our ex-periments. 
+
+E Design space table 
+
+Table 8 situates our method within the broader de-sign space of future-target supervision approaches. Table 7: Recommended FM configurations by scale.                                                    
+
+> 4B-base 7B-instr. 32B
+> λ00.20.10.1
+> learning rate 3.0e-5 3.0e-5 1.0e-5 global batch size 128 128 128 epochs 242schedule cosine cosine cosine warmup steps 200 400 200
+> Tℓ(loss ramp) 300 300 300
+> suffix k32 64 32
+> stride s142
+> EMA μ0.999 0.999 0.999
+> grad gating γ=1 .2same same inserted index −1−1−1
+> fm head width 1024 2048 2048
+> fm head depth 335
+> target encoder BGE-Large same same
+
+Table 8: Future-target flow design space. Existing meth-ods occupy restricted corners; ours fills the remaining cell.                               
+
+> Method space Source p0Geometry Horizon Next-token CE ∆—Bregman 1
+> MTP-CE ∆KδπBregman K
+> MTP-Brier ∆KδπEuclidean K
+> Cosine align. Rdzδ0Cosine full MSE align. Rdzδ0Euclidean full
+> FM (ours) RdzN(0 , I )Euclidean suffix-k
+
+Reading the table. Moving down a row gen-erally enlarges the function class. Moving from “δπ” to “ N (0 , I )” is what unlocks multi-modal tar-get distributions (Proposition A.2). Moving from “Bregman” to “Euclidean” on the same row pre-serves the optimum but changes the gradient ge-ometry (Theorem A.7). Moving from “ ∆K ” to “Rdz ” is what lets a single auxiliary head encode segment-level rather than token-level future infor-mation (Corollary A.8). 
+
+F Training-time pseudocode 
+
+The complete training procedure is given in Algo-rithm 1. 
+
+G Single-factor ablation on Qwen3-4B-Base / MBPP 
+
+All ablations below are evaluated on MBPP (Base) and MBPP + (Plus) at T =0 .6, reporting pass@ 1,pass@ 5, pass@ 10 . Unless otherwise noted, the de-fault configuration for the suffix and stride sweeps is λ=0 .1, suffix tokens k=32 , stride s=1 . The main-text result (Table 4) uses the best configura-tion λ=0 .2. SFT baseline (no FM): 77.2 / 67.0 / 85.6 / 74.4 / 88.1 / 76.7 on Base/Plus pass@1/5/10. 
+
+Table 9: Loss-weight λ sweep (fixed k=32 , s=1 ).                                             
+
+> pass@1 pass@5 pass@10
+> λBase Plus Base Plus Base Plus 0.01 77.9 66.5 87.0 75.3 89.5 78.0 0.05 75.5 64.7 84.4 74.3 86.8 77.1 0.1 75.6 65.4 84.8 73.7 87.9 76.8 0.2 78.3 67.7 87.4 76.8 89.2 79.0
+> 0.5 77.1 65.8 85.8 74.3 87.7 76.1 1.0 76.7 66.3 85.7 74.7 88.6 78.0
+
+Table 10: Suffix-token horizon k sweep (fixed λ=0 .1,
+
+s=1 ).                                       
+
+> pass@1 pass@5 pass@10
+> kBase Plus Base Plus Base Plus 273.8 63.6 83.8 73.3 86.5 76.2 476.3 65.3 86.1 74.6 88.7 77.1 875.3 64.9 84.7 74.4 87.3 77.0 16 76.2 65.7 85.5 74.8 87.9 77.2
+> 32 75.6 65.4 84.8 73.7 87.9 76.8
+
+The λ sweep (Table 9) shows that λ=0 .2 per-forms best overall; larger values ( λ ∈ [0 .5, 1.0] )still improve over SFT on most metrics, but very small or mismatched λ (e.g. 0.05 , 0.1) can under-perform SFT on individual splits, indicating that the FM gradient must be sufficiently strong to re-shape the backbone. The suffix-token sweep (Ta-ble 10) shows that k=4 already recovers much of the high-k pass@ 5/pass@ 10 gain, although pass@ 1 remains below SFT at small horizons; di-minishing returns set in beyond k=16 . The stride sweep (Table 11) confirms that quality is roughly flat from s=1 to s=16 while training time drops from 20h40m to 15h47m (compared with SFT at 14h43m), making s=16 a strong efficiency–quality trade-off that adds roughly ∼10% over vanilla SFT. 
+
+H Per-query Cross-Style Self-BLEU analysis 
+
+Rather than listing all 148 queries, we highlight the queries where SFR most outperforms SFT in terms of relative CS-SB reduction, and discuss the qualitative pattern. 
+
+Pattern. The queries where SFR yields the largest diversity gains share three characteristics: (i) they are open-ended and admit many structurally distinct valid answers; (ii) they require opinion or analytical reasoning rather than factual recall; and (iii) they span diverse domains (relationships, cul-ture, medicine, management), giving each persona Table 11: Stride s sweep (fixed λ=0 .1, k=32 ). Training wall-clock time is also reported.                                      
+
+> pass@1 pass@5 pass@10
+> sBase Plus Base Plus Base Plus Time 175.6 65.4 84.8 73.7 87.9 76.8 20h40m 277.1 66.0 86.0 75.2 88.5 77.7 18h24m 475.9 65.0 84.0 73.7 86.5 76.6 16h56m 16 75.9 65.4 85.8 75.3 88.4 78.3 15h47m
+
+ample room to exhibit a distinctive voice. Conversely, the queries where SFT matches or slightly outperforms SFR tend to be closed-form or 
+
+factual (e.g. “Which documents must be submitted for drug procurement?”, “Which year is my Hong-Luan star year if my zodiac is Horse?”). In such cases the answer space is inherently narrow, leaving little room for stylistic diversification regardless of method. This confirms that SFR’s multi-modal preserva-tion mechanism is most impactful precisely where Cross-Style Collapse is most severe: open, subjec-tive queries whose valid response space is large and style-sensitive. 
+
+I Full per-style LLM-judge scores 
+
+Table 2 in the main text reports four representative styles (style-0–3) and the nine-style average. Ta-ble 13 below gives the complete breakdown for all nine stylistic personas. 
+
+J Use of AI Assistants 
+
+We used AI-based tools during the preparation of this work in the following capacities: • Code debugging: AI coding assistants were used to identify and fix implementation bugs in the training pipeline (vibe coding / interac-tive debugging). • Writing assistance: AI writing tools were used for translating between Chinese and En-glish drafts and for polishing prose. All AI-generated text was reviewed and revised by the authors. No AI tool was used to generate experimental re-sults, trainning data, or core scientific content. Table 12: Top-10 queries by average relative CS-SB reduction of SFR over SFT. “ ∆” is the mean relative improvement across CS-SB 1–4. Queries shown are de-identified excerpts from the proprietary platform. 
+
+# Query (de-identified) ∆
+
+1 在一段真正健康的亲密关系中，最重要的情感支持应该具备哪些特征？ 33.4% 2 青年在传承历史 文脉和推动中华文化创新发展过程中，如何将航天领域取得的重要成就与
+
+赓续历史 文脉相结合？
+
+23.7% 3 某些历史 科学研究成果是如何被曲解并影响公众对特定生物学特征的认知的？ 22.2% 4 某作者在文中指出左翼媒体生态发生了哪些关键性转变？ 19.3% 5 某品牌最新400cc 摩托车系列在2023 年的市场策略对消费者选购有何促 进作用？ 19.2% 6 九十年代中 期香港电影产业 在类型片发展上有何特点？ 18.1% 7 被匿名水军攻击时如何固定符合诉讼 标准的证据？ 16.5% 8 从管理学效率的角度看，如何通过优化资源分配和精力管理来实现在相同工作时间内产出
+
+更多价值？
+
+16.3% 9 游客在前往某些热门旅游目的 地时可能会遇到哪些需要特别警惕的情况？ 15.5% 10 在临床实践中如何通过呼气峰流量和呼 气时间常数的异常值来区分不同病理状态？ 15.2% 
+
+Algorithm 1: AR + Flow Matching joint training (one step). 
+
+Input: Backbone Fθ , FM head vϕ (zero-init output proj.), frozen target encoder E, dataset D, suffix length k, stride s,schedule parameters (λ0, T h, T ℓ, T max ), EMA decay μ, gating EMA μg , gating sensitivity γ. 
+
+> 1
+
+for step n = 1 , . . . , T max do  
+
+> 2
+
+(x, y ) ∼ D ; 
+
+> 3
+
+h1: N ← Fθ (x ∥ y<N ) ; // causal  
+
+> 4
+
+LAR ← P 
+
+> i
+
+CE(softmax( WAR hi), y i+1 );
+
+// Phase A ( n < T h): only vϕ trains; backbone frozen for FM  
+
+> 5
+
+if n < T h then  
+
+> 6
+
+hfm ← detach( h) 
+
+> 7
+
+end  
+
+> 8
+
+else  
+
+> 9
+
+hfm ← h 
+
+> 10
+
+end  
+
+> 11
+
+Compute anchor positions on response w/ stride s; 
+
+> 12
+
+z(i)1 ← E(yi+1: i+k ) at each anchor; nearest-anchor fill;  
+
+> 13
+
+Sample z(i)0 ∼ N (0 , I ), τ ∼ U [0 , 1] ; 
+
+> 14
+
+zτ ← (1 − τ )z0 + τ z 1; 
+
+> 15
+
+ˆv ← vϕ(zτ , τ ; hfm ); 
+
+> 16
+
+ℓi ← ∥ ˆv − (z1 − z0)∥22 (mean over dz );  
+
+> 17
+
+]LSFR ← 1
+
+> |A|
+
+P 
+
+> i∈A
+
+ℓi;
+
+// λ schedule: Phase A trains vϕ only (backbone detached)  
+
+> 18
+
+if n < T h then  
+
+> 19
+
+λ(n) ← λ0 ; // gradient only reaches vϕ 
+
+> 20
+
+else  
+
+> 21
+
+λ(n) ← λ0 · min  1, (n−Th)/T ℓ
+
+ ; // Phase B: ramp into backbone  
+
+> 22
+
+end 
+
+// Adaptive grad gating  
+
+> 23
+
+Update ¯L ← μg ¯L + (1 − μg ) ]LSFR ; 
+
+> 24
+
+if ]LSFR < ¯L/γ (synchronized via all_reduce MAX) then  
+
+> 25
+
+hfm ← detach( hfm ); recompute ]LSFR ; 
+
+> 26
+
+end  
+
+> 27
+
+if n < T h then  
+
+> 28
+
+Ltotal ← λ(n) ]LSFR ; // Phase A: no LAR , only vϕ updates  
+
+> 29
+
+else  
+
+> 30
+
+Ltotal ← L AR + λ(n) ]LSFR ; 
+
+> 31
+
+end  
+
+> 32
+
+Backprop Ltotal ; optimizer step on (θ, ϕ );
+
+// EMA teacher: only after Phase A  
+
+> 33
+
+if n ≥ Th then  
+
+> 34
+
+ϕ(ema) ← μϕ (ema) + (1 − μ)ϕ; 
+
+> 35
+
+ϕ ← ϕ(ema) ; 
+
+> 36
+
+end  
+
+> 37
+
+end Table 13: Full stylized-dialogue LLM-judge scores at T = 0 .8 on Qwen3-32B across all nine styles. Bold indicates the best score among the three methods. 
+
+R1-prompt SFT SFR 
+
+style-0 Ctx 4.5 4.568 4.622 
+
+style-0 Rel 4.662 4.764 4.77 
+
+style-0 SS 4.654 4.588 4.905 
+
+style-0 Flu 4.838 4.831 4.905 
+
+style-1 Ctx 4.175 4.216 4.257 
+
+style-1 Rel 4.562 4.581 4.628 
+
+style-1 SS 3.117 2.858 3.135 
+
+style-1 Flu 4.781 4.838 4.791 style-2 Ctx 4.117 4.169 4.128 style-2 Rel 4.285 4.311 4.223 style-2 SS 4.766 4.73 4.824 
+
+style-2 Flu 4.964 4.98 4.993 
+
+style-3 Ctx 4.511 4.568 4.696 
+
+style-3 Rel 4.759 4.818 4.851 
+
+style-3 SS 3.891 3.932 4.73 
+
+style-3 Flu 4.796 4.831 4.98 
+
+style-4 Ctx 4.182 4.297 4.372 
+
+style-4 Rel 4.416 4.527 4.534 
+
+style-4 SS 4.657 4.689 4.662 style-4 Flu 4.942 4.919 4.926 style-5 Ctx 4.456 4.52 4.48 style-5 Rel 4.699 4.764 4.743 style-5 SS 4.132 3.932 4.027 style-5 Flu 4.64 4.757 4.797 
+
+style-6 Ctx 4.387 4.419 4.514 
+
+style-6 Rel 4.628 4.703 4.777 
+
+style-6 SS 4.146 3.75 3.709 style-6 Flu 4.788 4.797 4.791 style-7 Ctx 4.522 4.554 4.541 style-7 Rel 4.706 4.73 4.736 
+
+style-7 SS 4.904 4.986 4.905 style-7 Flu 4.794 4.912 4.885 style-8 Ctx 4.467 4.534 4.561 
+
+style-8 Rel 4.723 4.757 4.73 style-8 SS 4.701 4.723 4.709 style-8 Flu 4.752 4.878 4.858 
+
+Average Ctx 4.368 4.427 4.463 Average Rel 4.604 4.661 4.666 Average SS 4.329 4.243 4.401 Average Flu 4.811 4.86 4.881

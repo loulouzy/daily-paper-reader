@@ -1,0 +1,1760 @@
+Title: ATLAS: All-round Testing of Long-context Abilities across Scales
+
+URL Source: https://arxiv.org/pdf/2605.28079v1
+
+Published Time: Thu, 28 May 2026 00:49:17 GMT
+
+Number of Pages: 29
+
+Markdown Content:
+## ATLAS: All-round Testing of Long-context Abilities across Scales 
+
+Deli Huang ♢,♣,* Cunguang Wang ♢,† Hongyin Tang ♢ Zhe Tang ♢
+
+Linsen Guo ♢ Dongyu Ru ♢ Ruoshi Yuan ♢ Ziyue Zhu ♢,♣,* 
+
+Xiaoyu Li ♢ Ziwen Wang ♢ Chen Zhang ♢ Anchun Gui ♢
+
+Wen Zan ♢ Jiaqi Zhang ♢ Xuezhi Cao ♢,† Jingang Wang ♢
+
+Xunliang Cai ♢ Yixin Cao ♣
+
+♢ Meituan ♣ Fudan University 
+
+Abstract 
+
+Long-context language models now advertise context windows up to millions of tokens, yet evaluations typically report a single length or a narrow task family, masking two failure modes: performance can collapse as length grows, and strong retrieval need not transfer to downstream use. We present ATLAS, a benchmarking framework that redefines long-context evaluation as length-dependent capa-bility profiling. ATLAS contributes three methodological principles: (i) a layered taxon-omy separating foundational operations from application workloads so failures can be at-tributed, (ii) length-aware AUC scoring that integrates score–length curves over a fixed 8K– 1M grid, replacing single-point metrics with full degradation profiles, and (iii) ATLAScore, a harmonic-mean aggregate over taxonomy cat-egories that penalizes imbalanced profiles, with end-to-end uncertainty propagation from sub-set scores through the nonlinear final aggregate. We instantiate the framework across eight ca-pability dimensions with nine auditable compo-nents and 6,438 instances, and evaluate 26 mod-els. Gemini-3.1-Pro-Preview leads at 128K, Claude-Opus-4.6 leads at 1M. Rankings reshuf-fle substantially between ATLAScore@8K-128K and ATLAScore@8K-1M: 7 models move by at least two ranks, and the two tax-onomy layers share only 61% of cross-model variance, with individual rank gaps up to 12 positions. These results support reporting long-context quality by capability and length, not by a single headline score. 
+
+1 Introduction 
+
+As context windows expand from thousands to mil-lions of tokens (OpenAI, 2023; Gemini Team et al., 
+
+> *Work done during the internship at Meituan.
+> †Correspondence: wangcunguang@meituan.com, caox-uezhi@meituan.com.
+
+2024; Anthropic, 2024), users increasingly expect a single model call to read lengthy documents, in-spect full repositories, maintain long-range con-versational memory, and reason across heteroge-neous evidence. The advertised maximum window, however, is not the same as effective long-context capability. Models may perform well at moderate lengths while degrading sharply near their nominal maximum, and success on retrieval-style probes may not transfer to application workloads such as in-context learning, code understanding, or cross-document analysis. Existing evaluation does not yet capture these distinctions systematically. Synthetic probes such as needle-in-a-haystack, MRCR, BABILong, and GraphWalks isolate controlled operations but cover only a narrow slice of model behavior (Kamradt, 2023; OpenAI, 2025b; Kuratov et al., 2024; Ope-nAI, 2025a). Long-text and multitask suites such as SCROLLS, ZeroSCROLLS, L-Eval, LongBench, and HELMET broaden task coverage, but they ei-ther operate mostly at moderate lengths or stop at 128K (Shaham et al., 2022, 2023; An et al., 2024; Bai et al., 2024; Yen et al., 2025). Ultra-long benchmarks such as ∞Bench, LOFT, and Long-CodeBench reach larger scales, but they do not provide a unified, length-aware diagnostic profile across capability dimensions (Zhang et al., 2024; Lee et al., 2024; Rando et al., 2025). Figure 1 sum-marizes this gap: current benchmarks tend to be either broad but short, or long but narrow. We introduce ATLAS, a benchmarking frame-work that evaluates long-context language models as length-dependent capability profiles rather than single-point scores. ATLAS is built around a sim-ple premise: a reliable long-context benchmark should answer both what a model can do and how long it can continue doing it. To this end, it decom-1
+
+> arXiv:2605.28079v1 [cs.CL] 27 May 2026 ATLAS: All-round Testing of Long-context Abilities across Scales
+
+0 1 2 3 4 5 6 7 8 9
+
+> Number of capability dimensions
+
+64K 
+
+128K 
+
+256K 
+
+512K 
+
+1M+    
+
+> Maximum evaluated context length
+> 128K
+> Multi-task suite Synthetic probe Domain-specific ATLAS (Ours)
+> LongBench
+> ∞Bench
+> LongBench v2
+> HELMET RULER
+> MRCR
+> GraphWalks
+> LOFT
+> LongCodeBench
+> OOLong
+> Amembench
+> AA-LCR
+> ATLAS
+
+Figure 1: Positioning of ATLAS relative to representative long-context benchmarks by capability breadth (x-axis) and maximum evaluated context length (y-axis, log scale). Marker shapes distinguish multi-task suites, synthetic probes, and domain-specific benchmarks. Markers with identical coordinates are slightly offset for visibility. ATLAS occupies the upper-right corner by combining eight capability dimensions, evaluation up to 1M tokens, and length-aware AUC scoring. 
+
+poses long-context ability into a layered capability taxonomy, evaluates each dimension across a geo-metric length grid, and summarizes performance with curve-integrated scores that separate medium-length quality from ultra-long robustness. The empirical message is direct: single-window evaluation can change the apparent model conclu-sion. Seven of 26 models shift by two or more ranks when the reporting scope extends from 128K to 1M—including one frontier model that drops four positions—demonstrating that medium-length quality and ultra-long robustness are distinct sig-nals that a framework must report separately. The taxonomy also matters: foundational and applica-tion aggregates share only 61% of cross-model vari-ance at 128K, with individual models shifting by up to 12 positions between the two layer rankings, confirming that no single task dimension suffices. We make three contributions: 1. We formalize a layered evaluation framework for long-context models, defining what must be measured (a 3+5 capability taxonomy with empirically validated non-redundancy) and how 
+
+it should be scored. Instead of selecting a sin-gle operating length, ATLAS integrates each dimension’s score–length curve over a fixed 8K– 1M grid via length-aware AUC, and aggregates across categories with a harmonic mean (AT-LAScore) that penalizes imbalanced profiles. The framework is component-agnostic: individ-ual benchmarks serve as replaceable instanti-ations of each dimension, selected by explicit criteria (length extensibility, deterministic scor-ing, cross-model discrimination) and validated through leave-one-out stability analysis. 2. We provide, to our knowledge, the first end-to-end confidence-interval propagation pipeline for long-context evaluation, propagating uncer-tainty through AUC aggregation and nonlinear harmonic ATLAScore computation, with Monte Carlo validation in Appendix F. 3. We instantiate the framework’s eight dimensions with nine components spanning 6,438 instances, evaluate 26 models, and show that single-window rankings obscure length-dependent degradation and mask non-redundant capability differences between the two taxonomy layers. 
+
+2 What Long-Context Evaluation Must Measure 
+
+Long-context evaluation must separate three quan-tities that are often conflated: how much context a model accepts, which long-context operations it 2ATLAS: All-round Testing of Long-context Abilities across Scales 
+
+can perform, and how those operations degrade as input length grows. A single score at 128K can-not distinguish a model that remains stable through 1M from one that reaches a cliff immediately af-ter 128K. Prior work further shows that effective context can be shorter than nominal context and that input length, evidence position, evidence dis-persion, and task scope affect success (Liu et al., 2024; Levy et al., 2024; Hsieh et al., 2024; Gold-man et al., 2024). A benchmark therefore needs controlled length slices and degradation curves, not only endpoint scores or advertised window sizes. The remaining gap is not a shortage of long-context tasks—recent surveys already document a large benchmark and modeling landscape (Liu et al., 2025)—but the absence of a principled bench-marking framework that turns task-level observa-tions into comparable, uncertainty-quantified capa-bility profiles. Retrieval, aggregation, multi-step reasoning, in-context learning, code understanding, memory, and cross-document analysis can diverge sharply, as prior work shows for synthetic recall versus downstream performance (Yen et al., 2025) and for aggregation versus retrieval (Bertsch et al., 2025). Breadth without length-aware scoring pro-duces task-level snapshots rather than degradation profiles, and length without breadth reveals only one bottleneck. Filling this gap requires three prop-erties: a capability decomposition so that failures can be attributed rather than averaged away, a fixed length grid so that degradation is measured rather than assumed, and a compact instance budget so that the full protocol remains repeatable for model iteration. ATLAS is designed around these three properties; its specific component choices are vali-dated in Section 3.3. 
+
+3 The ATLAS Benchmark 
+
+3.1 Capability Taxonomy 
+
+ATLAS specifies dimensions and scoring seman-tics independently of the benchmarks that fill each slot; individual components are replaceable in-stantiations selected and validated in Section 3.3. The taxonomy organizes evaluation into a layered 3+5 structure. The foundational layer comprises three competence probes (retrieval, aggregation, and multi-step reasoning) whose answers are fully determined by the input, making failures easy to attribute. The application layer covers five realistic workloads (question answering, in-context learn-ing, code understanding, long-range memory, and holistic assessment) that additionally require do-main knowledge, instruction following, or conver-sational grounding. The two layers can disagree: a model may retrieve evidence reliably yet fail on downstream use, or vice versa. Reporting them sep-arately therefore yields a diagnostic profile rather than a single scalar; Section 4.4 tests whether this separation produces non-redundant empirical sig-nals. Within the application layer, the holistic assess-ment dimension is scored separately because its tasks cannot be meaningfully length-sliced—they do not admit controlled length extension without distorting the task itself. Rather than excluding these signals, ATLAS evaluates them at their orig-inal instance lengths. The scoring pipeline there-fore operates over three categories—foundational, length-sliced application, and holistic assessment— combined via harmonic aggregation (Section 3.2). This keeps the framework extensible: future tasks that resist length slicing can enter the holistic cate-gory without disrupting the AUC-based scoring of the other two. 
+
+3.2 Length-Aware Scoring 
+
+Length-aware scoring is a methodological compo-nent of ATLAS, not only a leaderboard conven-tion: it defines how discrete length slices become a comparable estimate of operating robustness. We evaluate each dimension over a fixed set of repre-sentative context lengths 
+
+L = {8K , 16K , 32K , 64K , 128K , . . . , 1M },
+
+spanning common deployment lengths and frontier ultra-long regimes. The slices are geometrically spaced, so that the benchmark observes both grad-ual degradation and abrupt cliffs without requir-ing dense measurement at every possible context length. For a reporting scope L⋆ ∈ { 128K , 1M }, let 
+
+L≤L⋆ = {ℓ0, ℓ 1, . . . , ℓ n} denote the ordered slices up to that scope. For dimension d, let sd(ℓ) ∈
+
+[0 , 100] be the normalized score at length ℓ. Fol-lowing the principle that a single-point measure-ment cannot capture how performance degrades across a continuous axis (Zhou et al., 2025), we adopt a normalized trapezoidal AUC score. With 
+
+∆i = ℓi+1 − ℓi,
+
+AUC d(L⋆) = 
+
+Pn−1 
+
+> i=0
+
+∆i [sd(ℓi) + sd(ℓi+1 )] /2
+
+ℓn − ℓ0
+
+.
+
+3ATLAS: All-round Testing of Long-context Abilities across Scales                                       
+
+> Table 1: The eight ATLAS capability dimensions and their current component instantiations. The first seven dimensions are evaluated over length slices and scored via AUC; the holistic assessment dimension is evaluated at original instance lengths.
+> Layer Dimension Component Range Metric Instances Foundational Retrieval MRCR-8 needle 8K–1M EM 792 Aggregation OOLong-Synth 8K–1M Answer-level 800 Reasoning GraphWalks Extend 8K–1M F1 800 Application QA LOFT-Text Retrieval Extend 8K–1M MRecall@K 800 ICL Helmet-ICL Extend 8K–1M Acc 800 Code LongCodeBench 32K–1M Acc / Pass@1 1,043 Memory AMemBench-ACU 8K–1M QPEM 800 Holistic assessment LongBench-v2 / AA-LCR varied Acc 603
+> Total 6,438
+
+Because the slices grow geometrically (each dou-bling), the trapezoidal rule naturally gives more weight to longer-range intervals where degradation is most consequential. ATLAScore@8K-128K and ATLAScore@8K-1M are cumulative summaries over all slices up to 128K and 1M, not scores mea-sured only at exactly those lengths. Appendix C shows that rankings are stable under alternative length weights. Let Dbase denote the three foundational dimen-sions, Dapp the four length-sliced application di-mensions, and Dhol the holistic assessment dimen-sions. We compute three category aggregates: 
+
+B(L⋆) = 1
+
+|D base |
+
+X
+
+> d∈D base
+
+AUC d(L⋆),C(L⋆) = 1
+
+|D app |
+
+X
+
+> d∈D app
+
+AUC d(L⋆),S(L⋆) = 1
+
+|D hol |
+
+X
+
+> d∈D hol
+
+sd,
+
+where S is fixed across reporting scopes because the holistic assessment dimensions are evaluated at their original instance lengths rather than over length slices. The overall score is the harmonic mean of the three category aggregates: 
+
+ATLAScore( L⋆) = 3 
+
+
+
+B(L⋆)−1 + C(L⋆)−1
+
++ S(L⋆)−1−1
+
+.
+
+The harmonic mean prevents a model from receiv-ing a high overall score by excelling in only one cat-egory; Appendix D shows that relative rankings are nevertheless robust to alternative aggregation rules. Appendix E further tests whether the holistic cate-gory’s composition or weight materially changes the ranking. Figure 2 illustrates this design. In panel (a), the cumulative AUC captures a model’s score profile across length slices rather than a single-point mea-surement, so a model that starts strong but degrades yields a lower AUC than one with modest but sta-ble performance. In panel (b), the harmonic mean is pulled toward the weakest category, so a model with one deficient dimension scores substantially lower than a balanced competitor even when their arithmetic means coincide. The two reporting scopes serve different inter-pretation needs. ATLAScore@8K-128K summa-rizes the regime most current production systems can plausibly support, while ATLAScore@8K-1M stresses frontier ultra-long use. Comparing the two is itself informative: a model that ranks highly at 128K but drops at 1M has a different deploy-ment profile from a model with slightly lower short-scope quality but stronger length robustness. We also propagate statistical uncertainty end to end through the scoring pipeline. Subset-level confidence intervals are computed with task-appropriate estimators, including cluster correction when multiple instances share a base context and weighted combination for composite components. Since AUC is a weighted average over indepen-dent length slices, its variance propagates linearly. The final harmonic ATLAScore is nonlinear, so we use the delta method to propagate category-level variances into the reported confidence intervals. Appendix F provides the derivation and a Monte Carlo validation. 4ATLAS: All-round Testing of Long-context Abilities across Scales 8K 16K 32K 64K 128K 256K 512K 1M      
+
+> Context Length Slice
+> 0
+> 20
+> 40
+> 60
+> 80
+> 100
+> Score (0–100)
+> @128K
+> scope
+> AUC@128K = 78.5
+> AUC@1M = 62.6
+> AUC@128K = 77.9
+> AUC@1M = 76.0
+> @1M scope (all 8 slices)
+> Model A (decaying)
+> Model B (robust)
+> (a) Length-aware AUC Foundational
+> (B)
+> Application
+> (C)
+> Holistic
+> (S)
+> 0
+> 20
+> 40
+> 60
+> 80
+> 100
+> Category Score  HM(X) = 70.0
+> HM(Y) = 53.4
+> AM(Y) = 68.3 harmonic
+> penalty
+> Model X (balanced)
+> Model Y (imbalanced) (b) Harmonic ATLAScore
+
+Figure 2: Geometric intuition for the ATLAS scoring pipeline. (a) Length-aware AUC aggregates scores across length slices up to the reporting scope. (b) Harmonic mean (HM) penalizes category imbalance relative to the arithmetic mean (AM). 
+
+3.3 Component Selection and Validation 
+
+Table 1 lists the nine components that currently instantiate the eight taxonomy dimensions. Each framework dimension is filled by a component sat-isfying three necessary criteria: length extensibility, deterministic scoring, and cross-model discrimina-tion. Components are replaceable: leave-one-out ablation preserves the full ranking, and future com-ponents meeting the same criteria can be substi-tuted without changing the scoring pipeline. Open-ended summarization is excluded from the current release because evaluator-independent scoring for long summaries remains unreliable: n-gram over-lap metrics are weak proxies for summary qual-ity, while model-based judging introduces judge-version dependence (Lin, 2004; Fabbri et al., 2021; Zheng et al., 2023). Several components required controlled length extension. GraphWalks officially provides 128K and 1M slices; we synthesize intermediate slices using the official generation procedure. HELMET-ICL supports configurable generation through pub-lic scripts, and LOFT-Text Retrieval adapts LOFT’s text-retrieval instances into a HELMET-style long-context retrieval format, with context length con-trolled by padding to fill all eight slices. The assistant conversation understanding version of AMemBench (AMemBench-ACU) converts gener-ated long-horizon interaction transcripts into static atomic-content-unit extraction instances. Long-CodeBench starts at 32K because repository-scale inputs cannot be meaningfully compressed to 8K or 16K; its unsupported 8K and 16K slices are omit-ted from per-slice application aggregation. The holistic assessment category is currently instanti-ated by LongBench-v2, which evaluates realistic long-context multitask reasoning, and AA-LCR, which evaluates cross-document analytical reason-ing, both at their original instance lengths. Ap-pendix A describes each component and extension procedure. The resulting set of dimensions is empirically broad rather than redundant. At 128K, the seven length-sliced dimensions have mean pairwise Spearman correlation ¯ρ = 0 .64 across 26 models, with 6 of 21 unrounded pairs below ρ = 0 .50 .Code is the most independent dimension: its cor-relations with Retrieval ( ρ = 0 .07 ) and Reasoning (ρ = 0 .17 ) are not statistically significant. Each dimension also separates models: cross-model stan-dard deviation is at least 8.9 at 128K, with Retrieval and ICL among the most discriminative dimen-sions. A leave-one-dimension-out analysis shows that removing any single length-sliced dimension preserves the full ranking with Spearman ρ ≥ 0.97 
+
+at 128K and ρ ≥ 0.96 at 1M, indicating that no single dimension dominates the score. Appendix B provides the full correlation, discriminability, and leave-one-dimension-out analyses. ATLAS is compact by design: 6,438 total in-stances cover all dimensions and length slices, which keeps the full protocol repeatable for model iteration. For faster development loops, Ap-pendix H evaluates a reduced ATLAS-Lite screen-ing protocol and clarifies why it should not replace full ATLAScore reporting. 5ATLAS: All-round Testing of Long-context Abilities across Scales 
+
+4 Empirical Study 
+
+4.1 Evaluation Setup 
+
+We evaluate 26 proprietary and open-weight long-context language models over the eight ATLAS length slices. We use each provider’s recommended inference settings to reflect realistic deployment conditions and keep task instructions and scoring semantics fixed across models. If a model’s ad-vertised context length falls below a target slice, the evaluation harness applies middle truncation and the score reflects the model’s actual capability under its context-length constraint, following prior long-context evaluation practice (Bai et al., 2025). Full category leaderboards and confidence in-tervals are in Appendix G; the main text fo-cuses on the empirical claims needed to validate the benchmark design. Specifically, the exper-iments address three questions: (1) comparing the 128K and 1M reporting scopes tests whether length-aware scoring changes model conclusions; (2) analyzing dimension-level decay patterns tests whether long-context degradation is capability-specific; (3) contrasting foundational and applica-tion scores tests whether the layered taxonomy cap-tures non-redundant signals. For cost-constrained screening, Appendix H analyzes ATLAS-Lite as a 128K-only development protocol rather than a substitute for full reporting. Some main-text figures use representative model subsets for readability, and each caption states the displayed scope. 
+
+4.2 Length-Aware Scoring Changes Model Rankings 
+
+Figure 3 compares ATLAScore@8K-128K with ATLAScore@8K-1M for eight representative mod-els. Across the full set, rankings change substan-tially when the reporting scope extends to the ultra-long regime: 20 of 26 models shift position, with 7 moving by two or more ranks. The upper tier changes order: Gemini-3.1-Pro-Preview leads at 128K, Claude-Opus-4.6 leads at 1M, and GPT-5.5 remains third in both scopes. GPT-5.2 drops from 4th to 8th—losing over 15 points—because its degradation is far steeper than that of the 1M leaders. Conversely, Gemini-3-Flash-Preview rises from 7th to 5th because its longer-context degrada-tion is milder than several models ranked above it at 128K. Among open-weight models, DeepSeek-V4-Pro remains closer to the frontier group than Qwen3.5-397B-A17B and Kimi-K2.6 at 1M. To quantify this variation, we define rel-ative decay as (ATLAScore@8K-128K −
+
+ATLAScore@8K-1M ) / ATLAScore@8K-128K .The mean relative decay across all 26 models is 24.3%, but the spread is large. Claude-Opus-4.6 has the lowest decay at 8.5%, while GLM-4.7 (Non-reasoning) loses 60.5%. This variation is precisely what single-scope reporting hides: amodel’s rank at 128K does not reliably predict its rank once the operating regime approaches 1M. These rank changes are not artifacts of noise: 95% confidence intervals on ATLAScore (Tables 10–11) are typically 1–2 points, well below the 5–16 point gaps driving the reshuffling. Appendix J visualizes the full rank migration pattern. 
+
+4.3 Long-Context Degradation Is Capability-Specific 
+
+The rank reshuffling is caused by heterogeneous dimension-level decay, not uniform score shrink-age. Figure 4 decomposes the relative drop from the 128K scope to the 1M scope for the representative models across capability dimen-sions and aggregate scores. For dimension columns, decay is measured as (AUC@8K-128K −
+
+AUC@8K-1M ) / AUC@8K-128K ; for aggregate columns, the same ratio is applied to the corre-sponding aggregate score. This isolates each capa-bility’s degradation independently of the aggregate ATLAScore reported in Section 4.2. Retrieval and QA are the most decay-prone dimensions: multiple models lose more than 40% of their 128K score when the evaluation extends to 1M, with extreme cases exceeding 70%. By contrast, Code under-standing shows lower and more uniform decay for many models, suggesting that repository-scale code tasks stress a different bottleneck than evidence re-trieval over unstructured text. Within-model variation is often as important as cross-model variation. GPT-5.2 remains extremely strong on ICL at 1M (97.96) but drops sharply on Retrieval (decay 46.4% from 88.21 to 47.31) and QA (decay 59.2% from 74.87 to 30.51), explain-ing its fall from 4th to 8th overall. The full de-cay analysis shows similar asymmetries elsewhere: Gemini-3.1-Pro-Preview retains high ICL perfor-mance (98.32), but its Retrieval score falls 41.5% from 84.96 to 49.67. Appendix I.2 complements this ratio-based view with per-slice ATLAScore tra-jectories. These profiles indicate that "long-context degradation" is not a single failure mode. A model may preserve in-context learning while losing evi-6ATLAS: All-round Testing of Long-context Abilities across Scales 8K-128K 8K-1M 
+
+50 
+
+55 
+
+60 
+
+65 
+
+70 
+
+75 
+
+80         
+
+> ATLAScore
+> 77.10
+> Claude-Opus-4.6 70.55
+> 77.83
+> Gemini-3.1-Pro-Preview 68.52
+> 74.63
+> GPT-5.5 67.77
+> 71.96
+> Gemini-3-Flash-Preview 63.13
+> 71.56
+> DeepSeek-V4-Pro 59.11
+> 73.71
+> GPT-5.2 58.20
+> 71.03
+> Qwen3.5-397B-A17B 54.43
+> 64.44
+> Kimi-K2.6 50.47
+
+Figure 3: ATLAScore comparison between the 128K and 1M reporting scopes for eight representative models (frontier leaders, a notable-drop case, and open-weight representatives). Full 26-model results in Appendix G. Retrieval                                                                         
+
+> Aggregation
+> Reasoning
+> QA
+> ICL
+> Code
+> Memory
+> Foundational
+> Application
+> ATLAScore
+> Claude-Opus-4.6 ⚡
+> Gemini-3.1-Pro-Preview ⚡
+> GPT-5.5 ⚡
+> Gemini-3-Flash-Preview ⚡
+> DeepSeek-V4-Pro ⚡
+> GPT-5.2 ⚡
+> Qwen3.5-397B-A17B ⚡
+> Kimi-K2.6 ⚡
+> 8.5% 27.3% 6.6% 24.9% -2.9% 9.4% 25.0% 13.2% 12.2% 8.5%
+> 41.5% 23.4% 6.7% 21.4% -0.8% 7.7% 23.1% 23.3% 11.4% 12.0%
+> 13.1% 17.2% 6.7% 19.1% -0.9% 20.5% 32.0% 12.0% 14.3% 9.2%
+> 23.6% 30.9% 8.0% 21.6% -2.9% 32.9% 21.1% 20.0% 15.7% 12.3%
+> 20.9% 41.9% 32.5% 28.2% 10.2% 9.2% 28.5% 31.3% 17.7% 17.4%
+> 46.4% 36.9% 18.7% 59.2% -1.9% 20.1% 29.9% 33.3% 25.0% 21.0%
+> 51.5% 24.5% 25.5% 69.2% -1.4% 23.1% 43.0% 34.5% 30.2% 23.4%
+> 41.7% 17.9% 29.7% 70.0% 2.1% 27.9% 32.3% 28.2% 30.1% 21.7%
+> 0%
+> 20%
+> 40%
+> 60%
+> 80%
+> Decay Rate (%)
+> ⚡ = Reasoning Model
+
+Figure 4: Capability decay from the 128K to 1M reporting scope for eight representative models, decomposed by seven length-sliced dimensions and three aggregate scores. Models are ordered by ATLAScore@8K-1M (highest at top). Blue = low decay; red = severe degradation. The vertical divider separates dimension-level scores from aggregate scores. The full 26-model heatmap is reported in Appendix I. 
+
+dence retrieval, or retain structured code behavior while failing open-document QA. A descriptive pattern emerges when grouping by inference configuration. We classify a model as a reasoning model if its officially recommended setting produces explicit chain-of-thought (CoT) traces (Wei et al., 2023) during inference—i.e., models equipped with an extended “thinking” mode. Under this criterion, reasoning models ex-hibit systematically lower overall decay than non-reasoning models. Eleven of fifteen reasoning mod-els have ATLAScore decay below 25%, whereas non-reasoning models span a much wider range (19.8% to 60.5%). This is a correlation under de-ployed settings rather than a causal attribution: dis-entangling the roles of extended generation bud-gets, reinforcement-learning-based training, and data composition requires controlled ablations be-yond the scope of this benchmark study. 
+
+4.4 The Layered Taxonomy Captures Non-Redundant Signals 
+
+The foundational and application layers are de-signed to capture non-redundant signals. Prior work shows that synthetic retrieval performance can correlate poorly with downstream long-context task performance (Yen et al., 2025; Bertsch et al., 2025); we test whether this holds in ATLAS by comparing the foundational aggregate B(L⋆) with the application aggregate C(L⋆) (defined in Sec-tion 3.2) across all 26 models. The original-length holistic assessment category S is excluded from 7ATLAS: All-round Testing of Long-context Abilities across Scales 0 20 40 60 80    
+
+> Foundational Layer Score (Basic)
+> 0
+> 20
+> 40
+> 60
+> 80
+> Application Layer Score (Comprehensive)  Claude-Opus-4.5 ⚡ (Δr=8)
+> DeepSeek-V3.1 (Δr=4) DeepSeek-V3.2 (Δr=6)
+> GLM-5 (Δr=4)
+> GPT-5.2 ⚡ (Δr=9)
+> GPT-5.5 ⚡ (Δr=7)
+> Gemini-3-Flash ⚡ (Δr=7)
+> Gemini-3-Pro ⚡ (Δr=4)
+> Kimi-K2-0905 (Δr=5)
+> Kimi-K2.5 ⚡ (Δr=6)
+> Kimi-K2.6 ⚡ (Δr=12)
+> Kimi-Linear (Δr=7)
+> Qwen3.5-397B-A17B (Δr=6)
+> Qwen3.5-397B-A17B ⚡ (Δr=5)
+> Qwen3.6-Plus ⚡ (Δr=9)
+> |Δrank| ≥ 4 |Δrank| 2–3 |Δrank| ≤ 1
+
+(a) 128K Context 0 20 40 60 80    
+
+> Foundational Layer Score (Basic)
+> 0
+> 20
+> 40
+> 60
+> 80
+> Application Layer Score (Comprehensive)
+> Claude-Opus-4.5 ⚡
+> DeepSeek-V3.1 (Δr=4)
+> DeepSeek-V3.2 (Δr=6)
+> GLM-5 (Δr=5)
+> GPT-5.2 ⚡
+> GPT-5.5 ⚡ (Δr=4)
+> Gemini-3-Pro ⚡ (Δr=4)
+> Kimi-K2-0905 (Δr=4)
+> Kimi-K2.5 (Δr=5)
+> Kimi-K2.5 ⚡ (Δr=5)
+> Kimi-K2.6 ⚡ (Δr=7)
+> Kimi-Linear (Δr=7)
+> Qwen3-235B-A22B-2507-Instruct (Δr=5)
+> |Δrank| ≥ 4 |Δrank| 2–3 |Δrank| ≤ 1
+
+(b) 1M Context 
+
+Figure 5: Foundational–application layer scores for all 26 models at (a) 128K and (b) 1M. The dashed line marks score parity. Diamond markers highlight models with |∆rank | = |rank B − rank C | ≥ 4, the absolute gap between foundational-layer and application-layer ranks within the same reporting scope; selected point labels abbreviate this gap as ∆r.
+
+this layer comparison because it is scored outside the ATLAS length grid. At 128K, B and C have Pearson R2 = 0 .61 and Spearman ρ = 0 .74 ; at 1M, they have R2 = 0 .73 and ρ = 0 .88 . The pos-itive correlation is expected, but the unexplained variance is large enough to change model interpre-tation. Figure 5 shows these discrepancies: points far from the parity line have mismatched foundational and application scores, while diamond markers identify models whose layer-rank gap is large enough to change qualitative interpretation. At 128K, 15 models shift by at least four positions be-tween the foundational and application layer rank-ings, and the maximum shift is 12 positions. Kimi-K2.6 ranks 18th on foundational tasks but 6th on application tasks, while GPT-5.2 ranks 3rd on foun-dational tasks but 12th on length-sliced application tasks. Qwen3.6-Plus shows a similar foundational-heavy imbalance, ranking 7th on the foundational layer but 16th on applications. The discrepancy per-sists at 1M: although the two aggregates are more aligned ( R2 = 0 .73 , ρ = 0 .88 ), 11 of 26 models still have |∆rank | ≥ 4, with a maximum shift of 7 positions. These are not small presentation dif-ferences; they identify distinct failure modes that a single composite score would obscure. Dimension-level profiles make these discrep-ancies actionable. A deployment that depends on multi-reference retrieval-augmented generation (RAG) (Lewis et al., 2020) should not treat high ICL or holistic assessment scores as a substitute for retrieval robustness. A repository assistant should not over-weight general QA strength if the Code dimension is weak. Conversely, a demonstration-heavy classification workflow may prefer a model with high ICL even if it is not the strongest syn-thetic retriever. Appendix K decomposes represen-tative layer gaps at 128K, and Appendix L extends the profile view with radar charts for all 26 models at both reporting scopes. 
+
+5 Conclusion 
+
+We presented ATLAS, a length-aware and multi-dimensional benchmark framework for long-context language models. The key design choice is to treat long-context quality as a profile over both capability dimensions and context lengths, rather than as a single score at an advertised window size. Across 26 models, this design changes model in-terpretation: rankings reshuffle between 128K and 1M, degradation is highly capability-specific, and foundational strength explains only part of length-sliced application performance. These results sup-port a stricter reporting norm for long-context mod-els: public comparisons should state both the evalu-ated length scope and the capability profile behind the aggregate score. 
+
+Limitations 
+
+The current ATLAS release is bounded in scope: it is English-only; holistic assessment uses origi-8ATLAS: All-round Testing of Long-context Abilities across Scales 
+
+nal benchmark lengths; AMemBench-ACU relies on model-generated transcripts; LongCodeBench begins at 32K; and open-ended summarization is omitted because evaluator-independent scoring re-mains unreliable. Public benchmark components also require periodic refresh to reduce contamina-tion risk (Jacovi et al., 2023). Future work will add multilingual and open-ended generation cover-age, stronger refresh mechanisms, and analyses of training choices for ultra-long robustness. We will release the data, scoring scripts, and construction code upon publication. 
+
+Ethical considerations 
+
+ATLAS is intended to improve transparency in long-context model evaluation rather than to pro-mote a single universal ranking. Because bench-mark scores can influence model selection and deployment decisions, we report both aggregate scores and capability-level profiles to reduce the risk of overclaiming from a single number. The benchmark uses public or constructed evaluation components and avoids collecting private user data. For model-generated AMemBench-ACU tran-scripts, we treat generation bias as both a method-ological and ethical concern: such data may fa-vor models similar to the generators, so we docu-ment the construction procedure and identify this limitation explicitly. Public releases should pre-serve dataset licenses and avoid exposing propri-etary model outputs beyond what is permitted by the corresponding providers. As with other bench-marks, ATLAS may be misused for leaderboard optimization or selective reporting; we therefore recommend reporting the evaluated length scope, component scores, and known limitations along-side any headline ATLAScore. 
+
+Acknowledgments 
+
+We thank Zhejun Liu, Jiaqi Fan, Hang Zhou, Guangmeng Wang, Xiao Liu, Ruiqi Xu, Xing Hu, Rumei Li, Yunke Zhao, Xu Han, Shuai Liang, Huantian Lv, Dengchang Zhao, Guanyu Wu, Xu-rui Yang, Guoyuan Lin, and Fengcun Li for their helpful discussions and support. 
+
+References 
+
+Chenxin An, Shansan Gong, Ming Zhong, Xingjian Zhao, Mukai Li, Jun Zhang, Lingpeng Kong, and Xipeng Qiu. 2024. L-eval: Instituting standardized evaluation for long context language models. In Pro-ceedings of the 62nd Annual Meeting of the Associa-tion for Computational Linguistics (Volume 1: Long Papers) , pages 14388–14411. Anthropic. 2024. The claude 3 model family: Opus, sonnet, haiku. Model card. Artificial Analysis. 2025. Announcing artificial anal-ysis long context reasoning (AA-LCR). Artificial Analysis article. Yushi Bai, Xin Lv, Jiajie Zhang, Hongchang Lyu, Jiankai Tang, Zhidian Huang, Zhengxiao Du, Xiao Liu, Aohan Zeng, Lei Hou, Yuxiao Dong, Jie Tang, and Juanzi Li. 2024. LongBench: A bilingual, multi-task benchmark for long context understanding. In 
+
+Proceedings of the 62nd Annual Meeting of the As-sociation for Computational Linguistics (Volume 1: Long Papers) , pages 3119–3137, Bangkok, Thailand. Association for Computational Linguistics. Yushi Bai, Shangqing Tu, Jiajie Zhang, Hao Peng, Xi-aozhi Wang, Xin Lv, Shulin Cao, Jiazheng Xu, Lei Hou, Yuxiao Dong, Jie Tang, and Juanzi Li. 2025. LongBench v2: Towards deeper understanding and reasoning on realistic long-context multitasks. In 
+
+Proceedings of the 63rd Annual Meeting of the As-sociation for Computational Linguistics (Volume 1: Long Papers) , pages 3639–3664, Vienna, Austria. Association for Computational Linguistics. Amanda Bertsch, Adithya Pratapa, Teruko Mitamura, Graham Neubig, and Matthew R. Gormley. 2025. Oolong: Evaluating long context reasoning and ag-gregation capabilities. Preprint , arXiv:2511.02817. Alexander R. Fabbri, Wojciech Kry´ sci´ nski, Bryan Mc-Cann, Caiming Xiong, Richard Socher, and Dragomir Radev. 2021. Summeval: Re-evaluating summariza-tion evaluation. Transactions of the Association for Computational Linguistics , 9:391–409. Gemini Team, Petko Georgiev, Ving Ian Lei, Ryan Bur-nell, Libin Bai, Anmol Gulati, and 1 others. 2024. Gemini 1.5: Unlocking multimodal understanding across millions of tokens of context. Preprint ,arXiv:2403.05530. Omer Goldman, Alon Jacovi, Aviv Slobodkin, Aviya Maimon, Ido Dagan, and Reut Tsarfaty. 2024. Is it re-ally long context if all you need is retrieval? towards genuinely difficult long context NLP. In Proceed-ings of the 2024 Conference on Empirical Methods in Natural Language Processing , pages 16576–16586, Miami, Florida, USA. Association for Computational Linguistics. Cheng-Ping Hsieh, Simeng Sun, Samuel Kriman, Shan-tanu Acharya, Dima Rekesh, Fei Jia, Yang Zhang, and Boris Ginsburg. 2024. Ruler: What’s the real context size of your long-context language models? 
+
+arXiv preprint arXiv:2404.06654 .Zhongzhan Huang, Guoming Ling, Shanshan Zhong, Hefeng Wu, and Liang Lin. 2025. MiniLongBench: 
+
+9ATLAS: All-round Testing of Long-context Abilities across Scales 
+
+The low-cost long context understanding benchmark for large language models. In Proceedings of the 63rd Annual Meeting of the Association for Compu-tational Linguistics (Volume 1: Long Papers) , pages 11442–11460, Vienna, Austria. Association for Com-putational Linguistics. Alon Jacovi, Avi Caciularu, Omer Goldman, and Yoav Goldberg. 2023. Stop uploading test data in plain text: Practical strategies for mitigating data contam-ination by evaluation benchmarks. In Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing , pages 5075–5084. Cheng Jiayang, Dongyu Ru, Lin Qiu, Yiyang Li, Xuezhi Cao, Yangqiu Song, and Xunliang Cai. 2026. AMem-gym: Interactive memory benchmarking for assis-tants in long-horizon conversations. In The Four-teenth International Conference on Learning Repre-sentations .Greg Kamradt. 2023. Needle in a haystack – pressure testing llms. https://github.com/gkamradt/ LLMTest_NeedleInAHaystack .Yuri Kuratov, Aydar Bulatov, Petr Anokhin, Ivan Rod-kin, Dmitry Igorevich Sorokin, Artyom Sorokin, and Mikhail Burtsev. 2024. BABILong: Testing the limits of LLMs with long context reasoning-in-a-haystack. In The Thirty-eight Conference on Neural Information Processing Systems Datasets and Bench-marks Track .Jinhyuk Lee, Anthony Chen, Zhuyun Dai, Dheeru Dua, Devendra Singh Sachan, Michael Boratko, Yi Luan, Sebastien M. R. Arnold, Vincent Perot, Siddharth Dalmia, Hexiang Hu, Xudong Lin, Panupong Pasu-pat, Aida Amini, Jeremy R. Cole, Sebastian Riedel, Iftekhar Naim, Ming-Wei Chang, and Kelvin Guu. 2024. Can long-context language models subsume retrieval, rag, sql, and more? arXiv preprint arXiv:2406.13121 .Mosh Levy, Alon Jacoby, and Yoav Goldberg. 2024. Same task, more tokens: the impact of input length on the reasoning performance of large language mod-els. In Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Vol-ume 1: Long Papers) , pages 15339–15353, Bangkok, Thailand. Association for Computational Linguistics. Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Hein-rich Küttler, Mike Lewis, Wen-tau Yih, Tim Rock-täschel, Sebastian Riedel, and Douwe Kiela. 2020. Retrieval-augmented generation for knowledge-intensive nlp tasks. In Advances in Neural Infor-mation Processing Systems , volume 33, pages 9459– 9474. Curran Associates, Inc. Chin-Yew Lin. 2004. ROUGE: A package for auto-matic evaluation of summaries. In Text Summariza-tion Branches Out , pages 74–81, Barcelona, Spain. Association for Computational Linguistics. Jiaheng Liu, Dawei Zhu, Zhiqi Bai, Yancheng He, Huanxuan Liao, Haoran Que, Zekun Wang, Chenchen Zhang, Ge Zhang, Jiebin Zhang, Yuanx-ing Zhang, Zhuo Chen, Hangyu Guo, Shilong Li, Ziqiang Liu, Yong Shan, Yifan Song, Jiayi Tian, Wen-hao Wu, and 18 others. 2025. A comprehensive sur-vey on long context language modeling. Preprint ,arXiv:2503.17407. Nelson F. Liu, Kevin Lin, John Hewitt, Ashwin Paran-jape, Michele Bevilacqua, Fabio Petroni, and Percy Liang. 2024. Lost in the middle: How language mod-els use long contexts. Transactions of the Association for Computational Linguistics , 12:157–173. OpenAI. 2023. Gpt-4 technical report. Preprint ,arXiv:2303.08774. OpenAI. 2025a. GraphWalks: a multi hop reasoning long context benchmark. Hugging Face dataset. OpenAI. 2025b. OpenAI MRCR: Long context multi-ple needle in a haystack benchmark. Hugging Face dataset. Stefano Rando, Luca Romani, Alessio Sampieri, Luca Franco, John Yang, Yuta Kyuragi, Fabio Galasso, and Tatsunori Hashimoto. 2025. Longcodebench: Evalu-ating coding llms at 1m context windows. Preprint ,arXiv:2505.07897. Uri Shaham, Maor Ivgi, Avia Efrat, Jonathan Berant, and Omer Levy. 2023. Zeroscrolls: A zero-shot benchmark for long text understanding. In Find-ings of the Association for Computational Linguis-tics: EMNLP 2023 , pages 7977–7989. Uri Shaham, Elad Segal, Maor Ivgi, Avia Efrat, Ori Yoran, Adi Haviv, Ankit Gupta, Wenhan Xiong, Mor Geva, Jonathan Berant, and Omer Levy. 2022. Scrolls: Standardized comparison over long language sequences. In Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing ,pages 12007–12021. Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei Xia, Ed Chi, Quoc Le, and Denny Zhou. 2023. Chain-of-thought prompting elic-its reasoning in large language models. Preprint ,arXiv:2201.11903. Howard Yen, Tianyu Gao, Minmin Hou, Ke Ding, Daniel Fleischer, Peter Izsak, Moshe Wasserblat, and Danqi Chen. 2025. HELMET: How to evaluate long-context models effectively and thoroughly. In 
+
+The Thirteenth International Conference on Learning Representations .Xinrong Zhang, Yingfa Chen, Shengding Hu, Zihang Xu, Junhao Chen, Moo Hao, Xu Han, Zhen Thai, Shuo Wang, Zhiyuan Liu, and Maosong Sun. 2024. 
+
+∞Bench: Extending long context evaluation beyond 100K tokens. In Proceedings of the 62nd Annual Meeting of the Association for Computational Lin-guistics (Volume 1: Long Papers) , pages 15262– 15277, Bangkok, Thailand. Association for Compu-tational Linguistics. 
+
+10 ATLAS: All-round Testing of Long-context Abilities across Scales     
+
+> Lianmin Zheng, Wei-Lin Chiang, Ying Sheng, Siyuan Zhuang, Zhanghao Wu, Yonghao Zhuang, Zi Lin, Zhuohan Li, Dacheng Li, Eric Xing, Hao Zhang, Joseph E. Gonzalez, and Ion Stoica. 2023. Judg-ing llm-as-a-judge with mt-bench and chatbot arena. In Thirty-seventh Conference on Neural Information Processing Systems Datasets and Benchmarks Track .Yang Zhou, Hongyi Liu, Zhuoming Chen, Yuandong Tian, and Beidi Chen. 2025. Gsm-infinite: How do your llms behave over infinitely increasing con-text length and reasoning complexity? Preprint ,arXiv:2502.05252.
+
+The appendix is organized in three parts. Ap-pendices A–B describe the benchmark components and validate component selection. Appendices C– F detail the scoring methodology and robustness checks. Appendices G–L present the full leader-boards, screening analyses, and extended empirical analyses. 
+
+A Component Descriptions 
+
+This appendix provides detailed descriptions of each benchmark component in ATLAS, including construction methodology, length extension proce-dures where applicable, and selection rationale. 
+
+MRCR-8 needle (OpenAI, 2025b). Multi-Round Co-Reference Resolution (MRCR) is a syn-thetic retrieval benchmark released by OpenAI. Each instance embeds a chain of co-referential needles at controlled positions throughout a long context and asks the model to resolve the chain end-to-end. The original dataset supports 2-, 4-, and 8-needle variants; ATLAS retains only the 8-needle setting, which maximizes difficulty and cross-model discrimination. Scoring uses exact match (EM) on the resolved entity. Because mul-tiple instances share the same base context, confi-dence intervals are computed with the cluster-based correction described in Appendix F. 
+
+OOLong-Synth (Bertsch et al., 2025). OOLong-Synth (OOLong, synthetic split) evaluates scattered-information extraction: the model must locate and aggregate multiple related facts distributed across distant segments of the input. It replaces RULER’s aggregation tasks, which we found to be saturated for frontier models. Scoring uses an answer-level score: categorical and date answers require exact matches after lightweight parsing, numeric answers receive exponentially decayed partial credit based on absolute error, and frequency-comparison answers are matched against the normalized label. Instances are approximately independent, so standard CLT-based confidence intervals apply. 
+
+GraphWalks Extend (OpenAI, 2025a). Graph-Walks is a synthetic graph reasoning benchmark released by OpenAI. Each instance presents a di-rected graph as an edge list and asks the model to perform an operation—either breadth-first search (BFS) at a specified depth or parent-node enumera-tion. The graph size controls prompt length. The official release provides data at only 128K and 1M 11 ATLAS: All-round Testing of Long-context Abilities across Scales 
+
+context lengths; we synthesized the remaining six ATLAS slices (8K, 16K, 32K, 64K, 256K, 512K) using the same generation procedure described in the official dataset documentation. Scoring uses F1 between the predicted and gold node sets. 
+
+LOFT-Text Retrieval Extend (Lee et al., 2024; Yen et al., 2025). LOFT-Text Retrieval is a retrieval-oriented QA component that combines retrieval scenarios from LOFT (Lee et al., 2024) with RAG question-answering instances from HEL-MET (Yen et al., 2025). LOFT embeds gold pas-sages into a large corpus of distractor passages and asks the model to identify the relevant evi-dence for a query; HELMET-RAG follows a simi-lar evidence-grounding paradigm with its own ques-tion sets. The official LOFT release covers 32K, 128K, and 1M context lengths; we kept these slices intact and obtained the remaining five slices (8K, 16K, 64K, 256K, 512K) by downsampling pas-sages from the 1M Retrieval subset. Scoring uses LOFT’s MRecall@K: an instance receives 1 only when the top-K predicted IDs contain min( K, |G| )
+
+distinct gold IDs from the gold set G, and 0 other-wise. 
+
+Helmet-ICL Extend (Yen et al., 2025). Helmet-ICL evaluates in-context learning by presenting a large block of labeled demonstrations followed by a test query. It was selected from multiple candi-date ICL tasks because it exhibits high cross-model discrimination (standard deviation σ = 24 .0 at 128K and σ = 31 .8 at 1M across 26 models). Scor-ing uses classification accuracy (Acc). The offi-cial HELMET release provides construction scripts that generate ICL instances at configurable context lengths; we used these scripts 1 to produce instances at the ATLAS length slices not covered by the orig-inal release. 
+
+LongCodeBench (Rando et al., 2025). Long-CodeBench tests repository-scale code understand-ing through two subtasks: LongCodeQA (natural-language questions about repository logic) and LongSWE (software engineering modifications). Because repository-scale inputs have a natural min-imum length, coverage begins at 32K rather than 8K, and instance counts vary across slices (see Table 2). Scoring follows each subtask’s native verifier: LongCodeQA is scored by exact matching the predicted option letter against the gold answer, 
+
+> 1https://github.com/princeton-nlp/HELMET
+
+while LongSWE is scored by functional resolu-tion of a single generated patch (Pass@1). The re-ported LongCodeBench score is the instance-count-weighted mean of binary success scores across the two subtasks. LongCodeBench has comparatively low cross-model separation ( σ = 10 .9 at 128K) and the lowest correlations with other dimensions, indicating that it captures a relatively independent capability. 
+
+AMemBench-ACU (Jiayang et al., 2026). 
+
+AMemBench-ACU measures long-range memory from ultra-long conversational streams. The origi-nal Amembench benchmark provides an interactive memory evaluation paradigm; we extended it to the ATLAS length slices by having frontier mod-els generate multi-turn interaction processes at the required context lengths, then converting the result-ing transcripts into static evaluation instances. Scor-ing uses quasi-prefix exact match (QPEM): after lowercasing, punctuation removal, and whitespace normalization, an instance receives 1 if the nor-malized prediction starts with any normalized gold ACU and 0 otherwise. For fixed output mappings, we use exact match after mapping to avoid prefix collisions between similar options. A limitation of this extension procedure is that the evaluation data is generated by language models, which introduces a potential distribution-match bias: models sharing architectural or training similarities with the gener-ator may find the resulting conversational patterns easier to process. We partially mitigate this by us-ing multiple generator models and verifying that the generated transcripts satisfy target length and content-diversity constraints, but the bias cannot be fully eliminated. Future releases should explore human-authored or hybrid generation approaches for the memory dimension. 
+
+LongBench-v2 (Bai et al., 2025) and AA-LCR (Artificial Analysis, 2025). These two components form the Holistic Assessment scor-ing category, contributing to ATLAScore as a third harmonic-mean term alongside the Founda-tional and length-sliced Application aggregates. LongBench-v2 provides 503 challenging four-choice questions spanning six realistic long-context task categories: single-document QA, multi-document QA, long in-context learning, long-dialogue history understanding, code repository understanding, and long structured data understand-ing. Its contexts range from 8K to 2M words, and its official difficulty split contains 192 easy 12 ATLAS: All-round Testing of Long-context Abilities across Scales 
+
+and 311 hard instances. AA-LCR provides cross-document analytical reasoning questions (100 in-stances). Both are evaluated at their original in-stance lengths rather than the ATLAS length slices, and both use classification accuracy (Acc) as the metric. Because these component scores are not re-computed by reporting scope, their aggregate score 
+
+S(L⋆) is identical for both the @128K and @1M scopes. 
+
+Per-subset instance counts. Table 2 provides the per-subset instance counts at each length slice, com-plementing the aggregate totals in Table 1. Most subsets maintain 100 instances per length slice by design. Notable exceptions include MRCR, whose instance counts vary slightly across lengths due to the constraint that multi-needle chains must fit within the target context window, and Long-CodeBench, whose repository-scale inputs lead to non-uniform counts. LongBench-v2 and AA-LCR are evaluated at their original instance lengths rather than the ATLAS length slices. 
+
+B Component Selection Validation 
+
+This appendix provides quantitative evidence that the seven length-sliced ATLAS components sat-isfy the selection criteria stated in Section 3.3: controllable length coverage across the ATLAS grid where supported, sufficient cross-model dis-crimination, and low inter-component redundancy. LongCodeBench starts at 32K because repository-scale inputs cannot be meaningfully compressed to shorter contexts, as described in Appendix A. The two holistic assessment components (LongBench-v2, AA-LCR) are evaluated at original instance lengths and form a separate scoring category. We further validate the robustness of the overall rank-ing through a leave-one-dimension-out analysis. 
+
+B.1 Inter-Dimension Correlation 
+
+Table 3 reports the pairwise Spearman rank cor-relations among the seven length-sliced capability dimensions at 128K across all 26 models. The mean off-diagonal correlation is ¯ρ = 0 .64 (median 
+
+0.76 ), with 6 of 21 unrounded pairs falling below 
+
+ρ = 0 .50 and none exceeding ρ = 0 .90 . Code is the most independent dimension, with a maxi-mum pairwise ρ of about 0.49 ; its correlations with Retrieval ( ρ = 0 .07 , p = 0 .746 ) and Reasoning (ρ = 0 .17 , p = 0 .416 ) are not statistically signifi-cant, confirming that code understanding captures a distinct capability not reducible to retrieval or reasoning strength. Correlations within the foun-dational layer (mean ρ = 0 .82 ) are higher than within the application layer (mean ρ = 0 .59 ) or across layers (mean ρ = 0 .63 ), consistent with the two-layer design in which foundational dimen-sions share a common synthetic, knowledge-free structure while application dimensions target het-erogeneous downstream capabilities. At the 1M scope, the overall correlation structure is similar (mean ¯ρ = 0 .68 , median 0.76 ), with five dimension pairs below ρ = 0 .50 .Figure 6 visualizes the full correlation matri-ces at both 128K and 1M for all nine components (seven length-sliced plus two holistic assessment), and Figure 7 shows the per-component discrim-inability. 
+
+B.2 Cross-Model Discriminability 
+
+Table 4 reports the cross-model standard devia-tion ( σ) for each dimension, measuring how well the dimension separates strong from weak long-context models. All seven length-sliced dimen-sions achieve σ ≥ 8.9 at 128K and σ ≥ 9.2 at 1M, confirming that every dimension contributes meaningful discriminative power to the benchmark. Retrieval ( σ = 28 .6) and ICL ( σ = 23 .9) are the two most discriminative dimensions at 128K, while ICL ( σ = 31 .8) and Reasoning ( σ = 23 .1) lead at 1M. Even the least discriminative dimension, Code (σ = 8 .9 at 128K), retains sufficient spread for meaningful model differentiation. 
+
+B.3 Leave-One-Dimension-Out Robustness 
+
+To verify that no single dimension dominates or distorts the overall ranking, we perform a leave-one-dimension-out analysis: for each of the seven length-sliced dimensions, we remove it, recompute the ATLAScore using the remaining dimensions (preserving the three-category harmonic-mean ag-gregation), and measure the rank correlation be-tween the reduced ranking and the full ranking across all 26 models. Table 5 reports the results. All seven leave-one-out rankings maintain Spearman ρ ≥ 0.97 (128K) and ρ ≥ 0.96 (1M) with the full ranking. The mean 
+
+ρ across all seven ablations is 0.987 (128K) and 
+
+0.992 (1M), confirming that the overall ranking is robust and not dominated by any single dimension. Retrieval produces the largest perturbation at 128K when removed (maximum rank shift of 6 positions), while ICL produces the largest pertur-bation at 1M ( ρ = 0 .966 , maximum rank shift of 13 ATLAS: All-round Testing of Long-context Abilities across Scales 
+
+Table 2: Per-subset instance counts at each length slice. Dashes indicate that the subset does not cover that length; LongCodeBench’s unsupported 8K and 16K slices are omitted from per-slice application aggregation. Holistic assessment components (LongBench-v2, AA-LCR) are evaluated at their original instance lengths; counts are totals rather than per-slice. 
+
+Subset Metric 8K 16K 32K 64K 128K 256K 512K 1M MRCR-8 needle EM 106 96 98 100 100 100 100 92 OOLong-Synth Answer-level 100 100 100 100 100 100 100 100 GraphWalks Extend F1 100 100 100 100 100 100 100 100 LOFT-Text Retrieval Extend MRecall@K 100 100 100 100 100 100 100 100 Helmet-ICL Extend Acc 100 100 100 100 100 100 100 100 LongCodeBench Acc / Pass@1 – – 213 176 192 165 147 150 AMemBench-ACU QPEM 100 100 100 100 100 100 100 100 LongBench-v2 Acc 503 AA-LCR Acc 100 
+
+Table 3: Pairwise Spearman ρ among the seven length-sliced capability dimensions at 128K ( N = 26 models). Values are rounded to two decimals; threshold counts in the text use unrounded values. Significance: ∗∗ p < 0.01 ,
+
+∗ p < 0.05 ; unmarked pairs are not significant at p = 0 .05 . Dimensions above the mid-rule are foundational; below are application. 
+
+Retrieval Aggregation Reasoning QA ICL Code Memory Retrieval 1.00 0.80 ∗∗ 0.86 ∗∗ 0.70 ∗∗ 0.80 ∗∗ 0.07 0.69 ∗∗ 
+
+Aggregation 1.00 0.79 ∗∗ 0.87 ∗∗ 0.82 ∗∗ 0.39 ∗ 0.87 ∗∗ 
+
+Reasoning 1.00 0.71 ∗∗ 0.76 ∗∗ 0.17 0.72 ∗∗ 
+
+QA 1.00 0.77 ∗∗ 0.45 ∗ 0.80 ∗∗ 
+
+ICL 1.00 0.25 0.77 ∗∗ 
+
+Code 1.00 0.49 ∗
+
+Memory 1.00 MRCR-8 needle 
+
+> OOLong-Synth
+> GraphWalks
+> LOFT-Text Retrieval
+> Helmet-ICL
+> LongCodeBench
+> AMemBench-ACU
+> AA-LCR
+> LongBench-v2
+
+MRCR-8 needle 
+
+OOLong-Synth 
+
+GraphWalks 
+
+LOFT-Text Retrieval 
+
+Helmet-ICL 
+
+LongCodeBench 
+
+AMemBench-ACU 
+
+AA-LCR 
+
+LongBench-v2                                                                         
+
+> 1.00 0.80** 0.86** 0.70** 0.80** 0.07 0.69** 0.73** 0.72**
+> 0.80** 1.00 0.79** 0.87** 0.82** 0.39* 0.87** 0.94** 0.95**
+> 0.86** 0.79** 1.00 0.71** 0.76** 0.17 0.72** 0.79** 0.74**
+> 0.70** 0.87** 0.71** 1.00 0.77** 0.45* 0.80** 0.86** 0.84**
+> 0.80** 0.82** 0.76** 0.77** 1.00 0.25 0.77** 0.84** 0.74**
+> 0.07 0.39* 0.17 0.45* 0.25 1.00 0.49* 0.37 0.52**
+> 0.69** 0.87** 0.72** 0.80** 0.77** 0.49* 1.00 0.87** 0.87**
+> 0.73** 0.94** 0.79** 0.86** 0.84** 0.37 0.87** 1.00 0.86**
+> 0.72** 0.95** 0.74** 0.84** 0.74** 0.52** 0.87** 0.86** 1.00
+> 0
+> 0.25
+> 0.5
+> 0.75
+> 1.0
+
+(a) 128K Context MRCR-8 needle 
+
+> OOLong-Synth
+> GraphWalks
+> LOFT-Text Retrieval
+> Helmet-ICL
+> LongCodeBench
+> AMemBench-ACU
+> AA-LCR
+> LongBench-v2
+
+MRCR-8 needle 
+
+OOLong-Synth 
+
+GraphWalks 
+
+LOFT-Text Retrieval 
+
+Helmet-ICL 
+
+LongCodeBench 
+
+AMemBench-ACU 
+
+AA-LCR 
+
+LongBench-v2                                                                          
+
+> 1.00 0.69** 0.86** 0.88** 0.66** 0.27 0.76** 0.68** 0.72**
+> 0.69** 1.00 0.86** 0.77** 0.77** 0.43* 0.86** 0.89** 0.90**
+> 0.86** 0.86** 1.00 0.92** 0.77** 0.33 0.87** 0.86** 0.81**
+> 0.88** 0.77** 0.92** 1.00 0.70** 0.36 0.88** 0.80** 0.77**
+> 0.66** 0.77** 0.77** 0.70** 1.00 0.34 0.74** 0.76** 0.71**
+> 0.27 0.43* 0.33 0.36 0.34 1.00 0.56** 0.40* 0.57**
+> 0.76** 0.86** 0.87** 0.88** 0.74** 0.56** 1.00 0.88** 0.91**
+> 0.68** 0.89** 0.86** 0.80** 0.76** 0.40* 0.88** 1.00 0.86**
+> 0.72** 0.90** 0.81** 0.77** 0.71** 0.57** 0.91** 0.86** 1.00
+> 0
+> 0.25
+> 0.5
+> 0.75
+> 1.0
+
+(b) 1M Context 
+
+Figure 6: Pairwise Spearman ρ among all nine ATLAS components (seven length-sliced + two holistic assessment) at 128K (a) and 1M (b). Significance levels are annotated in each cell (* p < 0.05 , ** p < 0.01 ). 
+
+14 ATLAS: All-round Testing of Long-context Abilities across Scales 0 5 10 15 20 25 30 
+
+> Score Std Dev (across models)
+> LongCodeBench
+> AMemBench-ACU
+> LongBench-v2
+> LOFT-Text Retrieval
+> OOLong-Synth
+> GraphWalks
+> AA-LCR
+> Helmet-ICL
+> MRCR-8 needle
+> 8.89
+> 9.10
+> 11.11
+> 12.83
+> 13.58
+> 14.45
+> 18.19
+> 23.92
+> 28.60
+> Most discriminative ★
+
+(a) 128K Context 0 5 10 15 20 25 30 35  
+
+> Score Std Dev (across models)
+> AMemBench-ACU
+> OOLong-Synth
+> LongCodeBench
+> LongBench-v2
+> AA-LCR
+> LOFT-Text Retrieval
+> MRCR-8 needle
+> GraphWalks
+> Helmet-ICL
+> 9.15
+> 9.80
+> 9.94
+> 11.11
+> 18.19
+> 19.27
+> 21.77
+> 23.10
+> 31.82
+> Most discriminative ★
+
+(b) 1M Context 
+
+Figure 7: Per-component discriminability (cross-model score standard deviation) at 128K (a) and 1M (b), including both length-sliced and holistic assessment components. Table 4: Cross-model discriminability ( σ, standard devi-ation of scores across 26 models) for each length-sliced capability dimension, sorted by σ at 128K. 
+
+Dimension Layer σ @128K σ @1M Retrieval Foundational 28.60 21.77 ICL Application 23.92 31.82 Reasoning Foundational 14.45 23.10 Aggregation Foundational 13.58 9.80 QA Application 12.83 19.27 Memory Application 9.10 9.15 Code Application 8.89 9.94 
+
+Mean 15.91 17.83 
+
+5 positions). This is expected given their high dis-criminability and their imperfect correlation with several other dimensions. Rather than indicat-ing benchmark fragility, this sensitivity confirms that retrieval and in-context learning capture non-redundant capability dimensions whose inclusion is empirically justified. At the other extreme, removing Memory yields 
+
+ρ = 0 .998 at 128K and ρ = 0 .999 at 1M, in-dicating lower marginal impact on relative rank-ings. However, each dimension remains essen-tial for diagnostic completeness: Code is the most orthogonal dimension, Memory is the sole long-range memory probe, and Aggregation is the only aggregation-specific dimension that has not satu-rated for frontier models. The top-ranked models (Gemini-3.1-Pro-Preview, Claude-Opus-4.6, and GPT-5.5) exhibit small rank shifts across the ablations, indicating that the leading positions are robust to any single dimension choice. 
+
+C Length-Slice Weights 
+
+Table 6 lists the default length-slice weights used in all experiments reported in this paper. Under uniform weights ( wℓ = 1 ), the trapezoidal AUC formula naturally assigns greater influence to wider intervals on the token-count axis, so longer-range segments (e.g., 512K →1M spans 524K tokens vs. 8K →16K spanning only 8K tokens) contribute pro-portionally more to the score. This is by design: the geometric grid ensures that performance at scale dominates the aggregate without requiring explicit weight tuning. Practitioners who wish to further penalize late-stage degradation may adopt a weighted variant of the trapezoidal rule by multiplying each segment by a nonnegative weight factor (e.g., proportional to 
+
+log 2 ℓ). The scoring framework in Section 3 gener-alizes naturally: weights modulate segment contri-butions without changing the trapezoidal structure. 
+
+Sensitivity analysis. A natural concern is whether the uniform-weight default is a consequen-tial design choice: would alternative weighting schemes change the model rankings? We com-pare three schemes— Uniform (wℓ = 1 ), Logarith-mic (wℓ = log 2(ℓ/ 4K ), which up-weights longer slices on a log scale), and Inverse Logarithmic 
+
+(wℓ = log 2(2M /ℓ ), a deployment-frequency proxy that up-weights shorter slices)—across all 26 mod-els. Table 7 reports the resulting ATLAScore and rank under each scheme for both the @128K and @1M scopes. 15 ATLAS: All-round Testing of Long-context Abilities across Scales     
+
+> Table 5: Leave-one-dimension-out analysis. ρ: Spearman rank correlation between the reduced and full ATLAScore rankings. τ: Kendall rank correlation. Max |∆r|: largest absolute rank shift for any single model under the reduced ranking.
+
+@128K @1M Dropped Dimension Layer ρ τ Max |∆r| ρ τ Max |∆r|
+
+Retrieval Foundational 0.977 0.926 6 0.992 0.945 2Aggregation Foundational 0.986 0.920 3 0.992 0.957 3Reasoning Foundational 0.985 0.926 4 0.997 0.975 1QA Application 0.990 0.938 2 0.998 0.982 1ICL Application 0.982 0.926 4 0.966 0.877 5Code Application 0.991 0.945 3 0.997 0.975 2Memory Application 0.998 0.988 2 0.999 0.994 1
+
+Mean 0.987 0.938 — 0.992 0.959 —                   
+
+> Table 6: Default length-slice weights wℓused in the ATLAS AUC computation.
+> Length ℓ8K 16K 32K 64K 128K 256K 512K 1M
+> wℓ11111111
+
+Rankings are highly stable at 128K: Spearman ρ
+
+between Uniform and Log is 1.000, and between Uniform and Inverse Logarithmic is 1.000. At 1M, both alternatives remain close to the default (Log: 
+
+ρ = 0 .999 ; Inverse Logarithmic: ρ = 0 .997 ), with a maximum rank shift of 1. These results support the uniform default: alternative length weights can express different deployment preferences, but they do not overturn the main ordering. 
+
+D Aggregation Method Sensitivity 
+
+ATLAS aggregates the three scoring-category scores ( B, C, S) using a harmonic mean by default. A natural question is whether this choice materi-ally affects model rankings relative to simpler al-ternatives. We compare four aggregation functions applied to the same category scores across all 26 models: Harmonic mean (3/(1 /B + 1 /C + 1 /S ),the default), Arithmetic mean ((B + C + S)/3), 
+
+Geometric mean ((BCS )1/3), and Minimum 
+
+(min( B, C, S )). Table 8 reports the ranking stability of each al-ternative relative to the harmonic-mean baseline. The arithmetic and geometric means produce near-identical rankings (Spearman ρ ≥ 0.995 at both scopes, maximum rank shift ≤ 3), confirming that the top-level aggregation rule is not a consequen-tial design choice for relative model comparison. The minimum function shows slightly more diver-gence ( ρ = 0 .945 at 128K and ρ = 0 .988 at 1M), because it amplifies the effect of a single weak cat-egory and therefore exposes imbalanced profiles more aggressively. The practical difference between harmonic and arithmetic aggregation is one of diagnostic philos-ophy rather than ranking fidelity: the harmonic mean penalizes extreme weakness more heavily (a model scoring 90/90/30 receives 50.6 under har-monic vs. 70.0 under arithmetic), which aligns with the design goal of preventing inflated rankings from imbalanced profiles. Since this penalty does not materially alter relative rankings ( ρ ≥ 0.995 for arithmetic and geometric aggregation), the choice is a conservative design default rather than a critical assumption. 
+
+E Holistic Assessment Category Sensitivity 
+
+The holistic assessment category S contributes one-third of the harmonic-mean weight to ATLAScore and consists of two benchmarks: LongBench-v2 (503 instances) and AA-LCR (100 instances). Be-cause AA-LCR is relatively small in scale, a le-gitimate concern is whether the overall ranking is overly sensitive to this single component or to the equal one-third weighting of the holistic category. We address this by testing five configurations that vary the composition or weight of S, while holding all other design choices fixed. Table 9 summarizes the results. Removing AA-16 ATLAS: All-round Testing of Long-context Abilities across Scales 
+
+Table 7: Sensitivity of ATLAScore rankings to length-slice weighting schemes. Superscripts denote rank. Spearman 
+
+ρ is computed against the Uniform baseline. 
+
+ATLAScore@8K-128K ATLAScore@8K-1M 
+
+Model Uniform Logarithmic Inverse Logarithmic Uniform Logarithmic Inverse Logarithmic Gemini-3.1-Pro-Preview (high) 77.8 1 77.2 1 78.3 1 68.5 2 67.5 2 71.0 2
+
+Claude-Opus-4.6 (max) 77.1 2 76.7 2 77.4 2 70.5 1 69.9 1 72.2 1
+
+GPT-5.5 (xhigh) 74.6 3 74.1 3 75.0 3 67.7 3 67.1 3 69.4 3
+
+GPT-5.2 (xhigh) 73.7 4 73.2 4 74.1 4 58.2 8 56.5 8 62.6 7
+
+GPT-5.4 (xhigh) 73.4 5 72.9 5 73.9 5 63.2 4 62.2 5 65.9 4
+
+Gemini-3-Pro-Preview (high) 73.0 6 72.2 6 73.5 6 62.6 6 61.6 6 65.3 5
+
+Gemini-3-Flash-Preview (high) 72.0 7 71.2 7 72.5 7 63.1 5 62.4 4 65.1 6
+
+DeepSeek-V4-Pro (max) 71.6 8 70.9 8 72.0 8 59.1 7 57.8 7 62.4 8
+
+Qwen3.5-397B-A17B (Reasoning) 71.0 9 70.4 9 71.5 9 54.4 10 52.7 10 58.9 10 
+
+Claude-Opus-4.5 (high) 69.9 10 69.0 10 70.5 10 51.8 11 50.1 11 56.4 11 
+
+Qwen3.6-Plus (Reasoning) 68.3 11 67.7 11 68.8 11 55.0 9 53.4 9 59.1 9
+
+Kimi-K2.6 (Reasoning) 64.4 12 63.3 12 65.2 12 50.5 13 49.0 13 54.4 12 
+
+Kimi-K2.5 (Reasoning) 64.3 13 63.3 13 65.1 13 47.1 14 45.3 14 51.7 14 
+
+GLM-5 (Reasoning) 64.3 14 63.3 14 65.1 14 44.3 16 42.3 16 49.2 16 
+
+GLM-5.1 (Reasoning) 63.9 15 62.9 15 64.6 15 46.2 15 44.5 15 50.6 15 
+
+Qwen3.5-397B-A17B (Non-reasoning) 63.1 16 62.4 16 63.6 16 50.6 12 49.3 12 54.1 13 
+
+Kimi-K2.5 (Non-reasoning) 60.1 17 59.1 17 60.7 17 40.6 17 38.4 17 46.0 17 
+
+GLM-5 (Non-reasoning) 49.5 18 48.6 18 50.1 18 37.3 18 36.3 18 40.1 18 
+
+Kimi-K2-0905-Instruct 47.6 19 46.8 19 48.2 19 33.9 20 32.4 20 37.7 20 
+
+Qwen3-235B-A22B-2507-Instruct 46.6 20 45.9 20 47.1 20 35.0 19 33.8 19 38.0 19 
+
+DeepSeek-V3.1 (Non-reasoning) 45.6 21 44.3 21 46.4 21 28.5 23 26.8 23 32.7 22 
+
+Qwen3-Next-80B-A3B-Instruct 44.6 22 43.4 22 45.4 22 28.8 22 27.2 22 32.7 23 
+
+DeepSeek-V3.2 (Non-reasoning) 43.5 23 42.5 23 44.2 23 27.6 24 26.1 24 31.5 24 
+
+Kimi-Linear-48B-A3B-Instruct 42.4 24 42.0 24 42.7 24 33.1 21 32.0 21 35.8 21 
+
+GLM-4.7 (Non-reasoning) 39.9 25 38.9 25 40.6 25 15.8 26 13.0 26 21.9 26 
+
+Qwen3-30B-A3B-2507-Instruct 33.4 26 32.3 26 34.1 26 24.5 25 23.7 25 26.6 25 
+
+Spearman ρ (Uniform vs Logarithmic) ρ = 1 .000 ρ = 0 .999 
+
+Spearman ρ (Uniform vs Inverse Logarithmic) ρ = 1 .000 ρ = 0 .997 
+
+Table 8: Sensitivity of ATLAScore rankings to the choice of aggregation method. All methods aggregate the same three category scores ( B, C, S). Spearman ρ and Kendall τ are computed against the default harmonic mean. Max |∆r| is the largest absolute rank shift for any single model relative to the default ranking. 
+
+@8K-128K @8K-1M Aggregation ρ τ Max |∆r| ρ τ Max |∆r|
+
+Harmonic mean (default) 1.000 1.000 0 1.000 1.000 0Arithmetic mean 0.995 0.975 3 0.997 0.975 1Geometric mean 0.998 0.988 2 0.999 0.988 1Minimum 0.945 0.809 7 0.988 0.932 2
+
+17 ATLAS: All-round Testing of Long-context Abilities across Scales 
+
+LCR and using only LongBench-v2 as the holistic score yields ρ = 0 .981 at 128K with a maximum rank shift of 4; using only AA-LCR yields ρ =0.995 with a maximum shift of 2. Reducing the holistic weight from 13 to 15 (weighted harmonic mean with wB =0 .4, w C =0 .4, w S =0 .2) produces 
+
+ρ = 0 .992 with a maximum shift of 3. Even the most aggressive variant—dropping S entirely and computing a two-category harmonic mean of B and 
+
+C—still yields ρ = 0 .969 at 128K and ρ = 0 .992 
+
+at 1M, with a maximum shift of 6 positions. Two patterns emerge. First, the top-ranked models (Gemini-3.1-Pro-Preview, Claude-Opus-4.6, and GPT-5.5) remain in the top tier across the variants, indicating that their leading posi-tions do not depend on the holistic category. Sec-ond, the largest rank perturbations occur for mod-els with pronounced gaps between their holis-tic scores and their foundational/length-sliced ap-plication scores—for example, Kimi-Linear-48B-A3B-Instruct climbs from 24th to 18th when S is dropped, because its very low holistic score (29.4) disproportionately penalizes it under harmonic ag-gregation. These results support the inclusion of the holis-tic category as a stabilizing third signal: it adds diagnostic value by penalizing models that score well on controlled tasks but poorly on realistic long-context reasoning and analysis, while its specific composition (AA-LCR vs. LongBench-v2) and weight have limited impact on relative rankings (ρ ≥ 0.981 for all single-component variants). 
+
+F Confidence Interval Propagation 
+
+This appendix derives the confidence interval (CI) propagation chain used to quantify the statistical uncertainty of ATLAS scores. The chain proceeds in three stages: subset-level variance estimation, AUC-level linear propagation, and ATLAScore-level delta-method propagation. All intervals are re-ported at the 95% confidence level ( z = 1 .96 ). We write h(q) for the 95% half-width of an estimator 
+
+q and ˆv(q) = ( h(q)/z )2 for its variance estimate. The propagation formulas operate on variances; CIs are obtained only at the end by multiplying the propagated standard error by z.
+
+F.1 Subset-Level Confidence Intervals 
+
+We employ three variance estimators depending on the statistical properties of each component. 
+
+CLT base method. For components whose in-stances are approximately independent (OOLong-Synth, GraphWalks, LOFT-Text Retrieval, Helmet-ICL, AMemBench-ACU, LongBench-v2), we ap-ply the central limit theorem directly. Given n
+
+instance-level scores {x1, . . . , x n} with Bessel-corrected sample standard deviation ˆσ, the variance and half-width of the subset mean are 
+
+ˆv(¯ x) = ˆσ2
+
+n , h(¯ x) = zpˆv(¯ x).
+
+Cluster method. For MRCR and AA-LCR, mul-tiple instances share the same base context, induc-ing within-group correlation that violates the inde-pendence assumption. We therefore treat each base context as a cluster Ck and use the cluster-robust variance of the sample mean: 
+
+ˆvcl (¯ x) = KK − 11
+
+n2
+
+> K
+
+X
+
+> k=1
+
+ X
+
+> i∈Ck
+
+(xi − ¯x)
+
+
+
+> 2
+
+,hcl (¯ x) = zpˆvcl (¯ x).
+
+where K is the number of base-context clusters. This estimator includes both within-cluster covari-ance and between-cluster variation while remaining nonnegative. 
+
+Weighted combination method. Long-CodeBench combines binary LongCodeQA and LongSWE scores with instance-count weights. For sub-component m, let ¯xm, ˆσm, and nm
+
+denote its mean, sample standard deviation, and instance count. With normalized aggregation weight λm = wm/ P 
+
+> j
+
+wj and independent sub-components, the composite estimator and its variance are 
+
+¯xw = X
+
+> m
+
+λm ¯xm,
+
+ˆv(¯ xw) = X
+
+> m
+
+λ2
+
+> m
+
+ˆσ2
+
+> m
+
+nm
+
+,h(¯ xw) = zpˆv(¯ xw).
+
+For instance-count weighting ( wm = nm), this reduces to ˆv(¯ xw) = P 
+
+> m
+
+nm ˆσ2
+
+> m
+
+/(P 
+
+> m
+
+nm)2.
+
+F.2 AUC Confidence Interval 
+
+As defined in Section 3.2, the AUC for dimension d
+
+up to scope L⋆ is a normalized trapezoidal integral over the ordered length slices {ℓ0, ℓ 1, . . . , ℓ n}. Let 
+
+yd,i = sd(ℓi)/100 be the slice score on the original 18 ATLAS: All-round Testing of Long-context Abilities across Scales 
+
+Table 9: Sensitivity of ATLAScore rankings to the composition and weighting of the holistic assessment category. All variants use harmonic-mean aggregation; only the holistic component or its weight changes. ρ and τ are computed against the default configuration (equal-weight mean of AA-LCR and LongBench-v2, one-third harmonic weight). Max |∆r| is the largest absolute rank shift for any single model relative to the default ranking. 
+
+@8K-128K @8K-1M Variant ρ τ Max |∆r| ρ τ Max |∆r|
+
+Default (AA-LCR + LBv2, 13 weight) 1.000 1.000 0 1.000 1.000 0
+
+S = LongBench-v2 only 0.981 0.914 4 0.999 0.988 1
+
+S = AA-LCR only 0.995 0.957 2 0.997 0.969 1Reduced S weight ( wB =0 .4, w C =0 .4, w S =0 .2) 0.992 0.951 3 0.999 0.988 1Drop S entirely (2-category H.M.) 0.969 0.877 6 0.992 0.963 4
+
+0–1 scale. The trapezoidal rule is linear in the slice scores: 
+
+AUC d(L⋆) = 100 
+
+> n
+
+X
+
+> i=0
+
+αiyd,i ,
+
+where the effective trapezoidal weights are 
+
+αi =
+
+
+
+ℓ1 − ℓ0
+
+2( ℓn − ℓ0) , i = 0 ,ℓi+1 − ℓi−1
+
+2( ℓn − ℓ0) , 0 < i < n, ℓn − ℓn−1
+
+2( ℓn − ℓ0) , i = n. 
+
+If the per-slice instance sets are independent and 
+
+ˆv(yd,i ) is the subset-level variance on the 0–1 scale, then 
+
+ˆv AUC d(L⋆) = 10 4
+
+> n
+
+X
+
+> i=0
+
+α2 
+
+> i
+
+ˆv(yd,i ),h AUC d(L⋆) = z
+
+q
+
+ˆv AUC d(L⋆).
+
+Equivalently, if the stored per-slice CI half-width is h(yd,i ), then ˆv(yd,i ) = ( h(yd,i )/z )2.
+
+F.3 ATLAScore CI via the Delta Method 
+
+The ATLAScore is defined as the harmonic mean of three category aggregates: 
+
+H = 31
+
+B(L⋆) + 1
+
+C(L⋆) + 1
+
+S(L⋆)
+
+,
+
+where B(L⋆), C(L⋆), and S(L⋆) are the arithmetic means of the foundational, application, and holistic assessment scores, respectively. Before category aggregation, all component variances are expressed on the 0–100 reporting scale; variances estimated on the 0–1 scale are multiplied by 10 4. Because 
+
+H is a nonlinear function of B, C, and S, we use the delta method (first-order Taylor expansion) to approximate its variance. The partial derivatives of H with respect to each category aggregate are: 
+
+∂H ∂B = H2
+
+3B2 , ∂H ∂C = H2
+
+3C2 , ∂H ∂S = H2
+
+3S2 .
+
+Under the working approximation that the category estimates are independent because they aggregate disjoint instance sets, the delta-method variance is 
+
+ˆv(H) ≈ H4
+
+9
+
+ ˆv(B)
+
+B4 + ˆv(C)
+
+C4 + ˆv(S)
+
+S4
+
+
+
+,
+
+where 
+
+ˆv(B) = 1
+
+|D base |2
+
+X
+
+> d∈D base
+
+ˆv(AUC d),
+
+ˆv(C) = 1
+
+|D app |2
+
+X
+
+> d∈D app
+
+ˆv(AUC d),
+
+ˆv(S) = 1
+
+|D hol |2
+
+X
+
+> d∈D hol
+
+ˆv(sd).
+
+The 95% CI for the ATLAScore is ± h(H) = 
+
+± zpˆv(H).
+
+F.4 Monte Carlo Validation 
+
+To verify the delta-method approximation, we run 
+
+10 5 Monte Carlo simulations for each evaluated model. In each trial, we draw B(t) ∼ N  B, ˆv(B),
+
+C(t) ∼ N  C, ˆv(C), and S(t) ∼ N  S, ˆv(S) in-dependently and compute H(t). The empirical 95% CI is obtained from the 2.5th and 97.5th per-centiles of the {H(t)} distribution. Across the evaluated models, the ratio of the delta-method 19 ATLAS: All-round Testing of Long-context Abilities across Scales 
+
+CI to the Monte Carlo empirical CI falls in the range [0 .998 , 1.004] , confirming that the first-order approximation introduces negligible error in this regime. 
+
+G ATLAScore Leaderboards 
+
+Tables 10 and 11 report the full category-level AT-LAScore rankings across all 26 evaluated models. 
+
+H ATLAS-Lite: Single-Slice Screening at 128K 
+
+The full ATLAS protocol evaluates every model over eight geometrically spaced length slices from 8K to 1M tokens. While this design provides a detailed degradation curve, it also demands sub-stantial token throughput: approximately 1,711M tokens per model, of which the 1M slice alone ac-counts for roughly 45%. Motivated by prior work on low-cost long-context evaluation (Huang et al., 2025), this appendix investigates whether a single carefully chosen length slice can approximate the full ranking at dramatically lower cost, and char-acterizes the cost–fidelity Pareto frontier across several candidate reduction schemes. 
+
+H.1 Why 128K Is the Natural Single-Slice Choice 
+
+The 128K slice occupies a unique position in the current model landscape: it is the longest context length at which most evaluated models still operate within or near their pretraining window and exhibit broadly stable performance. Beyond 128K, many models experience sharp capability cliffs. For ex-ample, the per-slice ATLAScore of Claude-Opus-4.5 drops from 66.4 at 128K to 54.4 at 256K (an 18% relative decline), and GLM-4.7 drops from 30.1 at 128K to 7.0 at 256K (a 77% decline). These cliff effects make post-128K slices informative for stress testing but unreliable as proxies for general capability ranking, because they conflate genuine long-context weakness with context-window over-flow. Selecting 128K as the sole evaluation point therefore captures the most discriminative perfor-mance regime—where model quality differences are driven by architecture and training rather than by whether a model’s context window physically accommodates the input—while avoiding the noise introduced by cliff effects. 
+
+H.2 Cost–Fidelity Analysis 
+
+Table 12 compares multiple slice-subset schemes by evaluating all 26 models (15 reasoning, 11 non-reasoning) on the full ATLAS benchmark and com-puting the Spearman rank correlation ( ρ) between each reduced scheme’s ranking and the full eight-slice ranking. Token cost is measured as total in-put tokens consumed per model; the fixed cost of single-value subsets (LongBench-v2 and AA-LCR, approximately 145M tokens) is included in all schemes. Two observations stand out. First, the 128K-only scheme achieves the highest efficiency (6.74) among all candidates while retaining high rank correlation ( ρ = 0 .977 ). Second, the 256K-only scheme reaches higher rank fidelity ( ρ = 0 .987 )but costs 40% more and is less attractive for rapid screening because it already reflects post-128K cliff effects for several models. 
+
+H.3 Pareto Frontier 
+
+Among all candidate schemes, five are Pareto-optimal—no other scheme achieves higher ρ at equal or lower cost: 1. 128K only (ATLAS-Lite): 14.5% cost, ρ =0.977 . Highest efficiency. 2. 256K only : 20.2% cost, ρ = 0 .987 . Higher fidelity at a modestly larger cost. 3. 6 slices (drop 512K+1M): 31.7% cost, ρ =0.988 . Slightly higher fidelity before the ultra-long slices. 4. 7 slices (drop 1M): 54.5% cost, ρ = 0 .997 .Near-perfect fidelity without the expensive 1M slice. 5. Full 8 slices : 100% cost, ρ = 1 .0. The refer-ence protocol. The marginal cost of moving from ATLAS-Lite (ρ = 0 .977 ) to the 7-slice variant ( ρ = 0 .997 ) is a 3.8 × increase in token budget for a 0.020 improve-ment in rank correlation. All other schemes are dominated: they achieve lower ρ at equal or higher cost than one of the Pareto-optimal options. 
+
+H.4 Rank Stability Under ATLAS-Lite 
+
+Of the 26 evaluated models, 21 shift by at most 1 rank position under ATLAS-Lite; 2 models shift by exactly 2 positions, and 3 models shift by 4 po-sitions. The largest shifts occur for models whose 20 ATLAS: All-round Testing of Long-context Abilities across Scales 
+
+Table 10: Full ATLAS leaderboard under ATLAScore@8K-128K. Each cell reports score with 95% confidence interval. 
+
+# Model Foundational Application Holistic ATLAScore 
+
+1 Gemini-3.1-Pro-Preview (high) 86.36 ±1.96 74.98 ±2.03 73.37 ±3.09 77.83 ±1.47 
+
+2 Claude-Opus-4.6 (max) 88.96 ±1.70 72.86 ±2.08 71.72 ±3.13 77.10 ±1.50 
+
+3 GPT-5.5 (xhigh) 89.41 ±1.75 65.72 ±1.91 72.49 ±3.11 74.63 ±1.43 
+
+4 GPT-5.2 (xhigh) 88.00 ±1.32 64.26 ±1.70 72.59 ±4.01 73.71 ±1.60 
+
+5 GPT-5.4 (xhigh) 86.03 ±1.95 66.09 ±1.93 70.96 ±3.15 73.44 ±1.46 
+
+6 Gemini-3-Pro-Preview (high) 80.40 ±1.81 68.80 ±1.88 70.69 ±4.35 72.96 ±1.77 
+
+7 Gemini-3-Flash-Preview (high) 76.87 ±1.98 71.73 ±1.83 67.84 ±4.49 71.96 ±1.88 
+
+8 DeepSeek-V4-Pro (max) 82.46 ±2.21 65.30 ±2.19 69.06 ±3.24 71.56 ±1.56 
+
+9 Qwen3.5-397B-A17B (Reasoning) 85.34 ±1.87 64.70 ±1.97 66.40 ±3.30 71.03 ±1.55 
+
+10 Claude-Opus-4.5 (high) 69.14 ±1.66 69.54 ±1.96 71.00 ±4.22 69.88 ±1.62 
+
+11 Qwen3.6-Plus (Reasoning) 84.68 ±1.89 59.98 ±1.99 64.87 ±3.30 68.34 ±1.55 
+
+12 Kimi-K2.6 (Reasoning) 60.31 ±2.44 67.43 ±2.09 66.03 ±3.21 64.44 ±1.52 
+
+13 Kimi-K2.5 (Reasoning) 62.37 ±2.42 65.06 ±2.15 65.65 ±3.30 64.33 ±1.53 
+
+14 GLM-5 (Reasoning) 64.49 ±2.33 63.23 ±2.17 65.29 ±3.30 64.32 ±1.52 
+
+15 GLM-5.1 (Reasoning) 62.58 ±2.43 63.58 ±2.14 65.66 ±3.37 63.91 ±1.54 
+
+16 Qwen3.5-397B-A17B (Non-reasoning) 70.93 ±2.45 59.93 ±1.95 59.67 ±3.45 63.10 ±1.61 
+
+17 Kimi-K2.5 (Non-reasoning) 60.36 ±2.61 62.05 ±2.16 57.92 ±3.35 60.06 ±1.62 
+
+18 GLM-5 (Non-reasoning) 48.52 ±2.56 57.40 ±2.06 44.30 ±3.17 49.50 ±1.67 
+
+19 Kimi-K2-0905-Instruct 43.09 ±1.97 53.90 ±2.08 47.10 ±4.61 47.63 ±1.85 
+
+20 Qwen3-235B-A22B-2507-Instruct 50.17 ±1.94 52.38 ±1.94 39.52 ±4.14 46.64 ±2.07 
+
+21 DeepSeek-V3.1 (Non-reasoning) 50.30 ±1.89 41.46 ±1.96 45.80 ±4.78 45.57 ±1.84 
+
+22 Qwen3-Next-80B-A3B-Instruct 41.59 ±2.07 45.86 ±2.15 46.56 ±4.71 44.56 ±1.78 
+
+23 DeepSeek-V3.2 (Non-reasoning) 51.70 ±2.02 37.53 ±1.96 43.54 ±4.25 43.51 ±1.73 
+
+24 Kimi-Linear-48B-A3B-Instruct 63.47 ±1.98 47.75 ±2.07 29.40 ±3.95 42.43 ±2.81 
+
+25 GLM-4.7 (Non-reasoning) 43.37 ±1.91 45.77 ±2.04 32.93 ±4.15 39.85 ±2.16 
+
+26 Qwen3-30B-A3B-2507-Instruct 32.18 ±2.07 36.58 ±2.08 31.72 ±4.35 33.36 ±1.86 
+
+21 ATLAS: All-round Testing of Long-context Abilities across Scales 
+
+Table 11: Full ATLAS leaderboard under ATLAScore@8K-1M. Each cell reports score with 95% confidence interval. 
+
+# Model Foundational Application Holistic ATLAScore 
+
+1 Claude-Opus-4.6 (max) 77.19 ±2.12 63.99 ±1.99 71.72 ±3.13 70.55 ±1.42 
+
+2 Gemini-3.1-Pro-Preview (high) 66.25 ±2.36 66.41 ±2.01 73.37 ±3.09 68.52 ±1.42 
+
+3 GPT-5.5 (xhigh) 78.64 ±2.22 56.32 ±1.78 72.49 ±3.11 67.77 ±1.36 
+
+4 GPT-5.4 (xhigh) 65.37 ±2.47 55.38 ±1.89 70.96 ±3.15 63.23 ±1.40 
+
+5 Gemini-3-Flash-Preview (high) 61.53 ±1.99 60.50 ±1.71 67.84 ±4.49 63.13 ±1.60 
+
+6 Gemini-3-Pro-Preview (high) 58.43 ±1.94 60.01 ±1.82 70.69 ±4.35 62.60 ±1.51 
+
+7 DeepSeek-V4-Pro (max) 56.62 ±2.64 53.74 ±2.18 69.06 ±3.24 59.11 ±1.52 
+
+8 GPT-5.2 (xhigh) 58.70 ±1.86 48.22 ±1.34 72.59 ±4.01 58.20 ±1.24 
+
+9 Qwen3.6-Plus (Reasoning) 58.59 ±2.30 45.28 ±1.73 64.87 ±3.30 54.98 ±1.34 
+
+10 Qwen3.5-397B-A17B (Reasoning) 55.87 ±2.51 45.13 ±1.44 66.40 ±3.30 54.43 ±1.29 
+
+11 Claude-Opus-4.5 (high) 46.38 ±1.68 45.02 ±1.53 71.00 ±4.22 51.85 ±1.23 
+
+12 Qwen3.5-397B-A17B (Non-reasoning) 50.91 ±2.53 43.72 ±1.39 59.67 ±3.45 50.61 ±1.33 
+
+13 Kimi-K2.6 (Reasoning) 43.31 ±2.43 47.14 ±1.67 66.03 ±3.21 50.47 ±1.42 
+
+14 Kimi-K2.5 (Reasoning) 45.76 ±2.39 37.60 ±1.86 65.65 ±3.30 47.11 ±1.41 
+
+15 GLM-5.1 (Reasoning) 37.79 ±2.29 43.40 ±1.46 65.66 ±3.37 46.35 ±1.39 
+
+16 GLM-5 (Reasoning) 35.29 ±2.25 41.49 ±1.53 65.29 ±3.30 44.28 ±1.41 
+
+17 Kimi-K2.5 (Non-reasoning) 44.30 ±2.47 29.36 ±1.81 57.92 ±3.35 40.60 ±1.45 
+
+18 GLM-5 (Non-reasoning) 31.12 ±2.26 39.01 ±1.35 44.30 ±3.17 37.34 ±1.38 
+
+19 Qwen3-235B-A22B-2507-Instruct 29.53 ±1.56 37.82 ±1.43 39.52 ±4.14 35.04 ±1.37 
+
+20 Kimi-K2-0905-Instruct 27.74 ±1.45 32.00 ±1.72 47.10 ±4.61 33.89 ±1.25 
+
+21 Kimi-Linear-48B-A3B-Instruct 45.51 ±2.02 28.87 ±1.70 29.40 ±3.95 33.10 ±1.86 
+
+22 Qwen3-Next-80B-A3B-Instruct 22.19 ±1.24 26.50 ±1.58 46.56 ±4.71 28.77 ±1.11 
+
+23 DeepSeek-V3.1 (Non-reasoning) 32.78 ±1.59 18.85 ±1.16 45.80 ±4.78 28.47 ±1.15 
+
+24 DeepSeek-V3.2 (Non-reasoning) 33.24 ±1.63 17.98 ±1.19 43.54 ±4.25 27.61 ±1.16 
+
+25 Qwen3-30B-A3B-2507-Instruct 20.39 ±1.41 23.93 ±1.56 31.72 ±4.35 24.52 ±1.23 
+
+26 GLM-4.7 (Non-reasoning) 16.88 ±0.92 9.92 ±0.90 32.93 ±4.15 15.76 ±0.86 
+
+Table 12: Cost–fidelity trade-off for candidate slice-reduction schemes. Relative cost is the fraction of the full eight-slice token budget. ρ denotes Spearman rank correlation against the full ranking. Max |∆r| is the largest absolute rank shift for any single model relative to the full eight-slice ranking. Efficiency is defined as ρ / relative cost. 
+
+Scheme Rel. cost ρ Max |∆r| ≥2 shifts Efficiency Full 8 slices 100.0% 1.000 0 0 1.00 7 slices (drop 1M) 54.5% 0.997 1 0 1.83 3 pts: 8K+128K+1M 60.3% 0.996 2 1 1.65 6 slices (drop 512K+1M) 31.7% 0.988 4 2 3.12 5 slices: 8K–128K 19.9% 0.976 4 7 4.90 
+
+128K only (ATLAS-Lite) 14.5% 0.977 4 5 6.74 
+
+256K only 20.2% 0.987 3 6 4.89 8K + 128K 14.8% 0.969 4 11 6.55 
+
+22 ATLAS: All-round Testing of Long-context Abilities across Scales 
+
+post-128K degradation differs sharply from their 128K performance, including GPT-5.2, Gemini-3-Flash, and Qwen3.5-397B-A17B (Reasoning). This stability is sufficient for first-pass screening, but it also reinforces the main result: a single 128K slice captures much of the full AUC-based rank-ing while still missing the post-128K degradation profile. 
+
+H.5 Limitations and Recommended Usage 
+
+The primary limitation of ATLAS-Lite is that it cannot detect performance cliffs that emerge at 256K, 512K, or 1M. For teams whose deployment scenario involves inputs longer than 128K, the full protocol or the 7-slice variant remains necessary. ATLAS-Lite is best suited for three operational scenarios: (1) rapid screening of newly released models, (2) regression detection during iterative model development, and (3) initial triage to nar-row the candidate set before committing to a full evaluation. In all cases, the full ATLAS proto-col remains the recommended standard for official benchmarking and public reporting. 
+
+I Length Degradation Analysis 
+
+This appendix provides two complementary views of how model performance degrades as context length increases: a decay heatmap that summarizes the degradation ratio between the 128K and 1M reporting scopes, and per-slice length curves that reveal the trajectory of degradation. 
+
+I.1 Capability Decay Heatmap 
+
+We define the capability decay rate for model m
+
+on dimension d as 
+
+decay( m, d ) = AUC @128K  
+
+> d
+
+(m) − AUC @1M  
+
+> d
+
+(m)AUC @128K  
+
+> d
+
+(m) ,
+
+where AUC @128K  
+
+> d
+
+and AUC @1M  
+
+> d
+
+denote the cumu-lative AUC scores up to 128K and 1M, respectively. A decay rate of 0% indicates no degradation; higher values indicate greater loss. Negative values (rare) indicate slight improvement when longer contexts are included. Figure 8 visualizes this quantity across all 26 models, seven length-sliced dimensions, and three aggregate scores, revealing several patterns. 
+
+Overall decay spectrum. ATLAScore decay ranges from 8.5% (Claude-Opus-4.6) to 60.5% (GLM-4.7). As documented in Section 4.3, reasoning-labeled configurations cluster in the low-decay region, while non-reasoning models span the full range. 
+
+Dimension-specific fragility. Retrieval and QA are the most decay-prone dimensions, with mul-tiple models exceeding 70% decay. For instance, GLM-4.7 loses 82.2% on Retrieval and 84.8% on QA. By contrast, Code understanding exhibits uni-formly low decay across nearly all models. This pattern suggests that retrieval-intensive tasks are disproportionately affected by context extension, while code understanding tasks, which rely more on local structure, are relatively insulated. 
+
+Heterogeneous within-model profiles. The heatmap reveals extreme within-model variation that aggregate decay numbers would obscure. GLM-5, for example, shows 80.6% decay on QA but essentially no degradation on ICL ( −0.1% ), a spread exceeding 80 percentage points within a single model. Similarly, Claude-4.5 shows 31.1% decay on Reasoning but 78.7% on QA. This rein-forces the main conclusion that models that ap-pear broadly capable at 128K may have severe dimension-specific blind spots at longer contexts. 
+
+Implications for model development. The de-cay heatmap provides actionable diagnostic infor-mation beyond what aggregate degradation num-bers capture. Model developers can identify which specific capabilities degrade most under context ex-tension and prioritize targeted improvements. The correlation between reasoning-model status and low overall decay is a useful hypothesis genera-tor for future work, but it should be interpreted as a deployed-configuration association rather than evidence for a specific causal mechanism. 
+
+I.2 Length Degradation Curves 
+
+The decay heatmap summarizes degradation as a single ratio between two reporting scopes. The fol-lowing per-slice ATLAScore curves complement that view by revealing the trajectory of degradation from 8K to 1M tokens. Figure 9 plots the per-slice ATLAScore for all 26 models. Several patterns emerge beyond what the two-scope comparison in the main text can capture. 
+
+Cliff effects vs. gradual degradation. Most models exhibit roughly linear degradation on the log-length axis from 8K through 128K, but the post-128K regime bifurcates sharply. A first group— including GPT-5.5, Claude-Opus-4.6, and Gemini-23 ATLAS: All-round Testing of Long-context Abilities across Scales Retrieval Aggregation Reasoning QA ICL Code Memory Foundational Application ATLAScore 
+
+Claude-Opus-4.6 ⚡ 
+
+Gemini-3.1-Pro-Preview ⚡ 
+
+GPT-5.5 ⚡ 
+
+GPT-5.4 ⚡ 
+
+Gemini-3-Flash-Preview ⚡ 
+
+Gemini-3-Pro-Preview ⚡ 
+
+DeepSeek-V4-Pro ⚡ 
+
+GPT-5.2 ⚡ 
+
+Qwen3.6-Plus ⚡ 
+
+Qwen3.5-397B-A17B ⚡ 
+
+Claude-Opus-4.5 ⚡ 
+
+Qwen3.5-397B-A17B 
+
+Kimi-K2.6 ⚡ 
+
+Kimi-K2.5 ⚡ 
+
+GLM-5.1 ⚡ 
+
+GLM-5 ⚡ 
+
+Kimi-K2.5 
+
+GLM-5 
+
+Qwen3-235B-A22B-2507-Instruct 
+
+Kimi-K2-0905-Instruct 
+
+Kimi-Linear-48B-A3B-Instruct 
+
+Qwen3-Next-80B-A3B-Instruct 
+
+DeepSeek-V3.1 
+
+DeepSeek-V3.2 
+
+Qwen3-30B-A3B-2507-Instruct 
+
+GLM-4.7 
+
+8.5% 27.3% 6.6% 24.9% -2.9% 9.4% 25.0% 13.2% 12.2% 8.5% 
+
+41.5% 23.4% 6.7% 21.4% -0.8% 7.7% 23.1% 23.3% 11.4% 12.0% 
+
+13.1% 17.2% 6.7% 19.1% -0.9% 20.5% 32.0% 12.0% 14.3% 9.2% 
+
+34.0% 24.1% 14.9% 25.9% 1.2% 21.5% 25.7% 24.0% 16.2% 13.9% 
+
+23.6% 30.9% 8.0% 21.6% -2.9% 32.9% 21.1% 20.0% 15.7% 12.3% 
+
+37.7% 30.5% 16.5% 22.8% -2.0% 10.6% 27.4% 27.3% 12.8% 14.2% 
+
+20.9% 41.9% 32.5% 28.2% 10.2% 9.2% 28.5% 31.3% 17.7% 17.4% 
+
+46.4% 36.9% 18.7% 59.2% -1.9% 20.1% 29.9% 33.3% 25.0% 21.0% 
+
+45.6% 26.5% 18.8% 48.4% 6.7% 15.3% 39.6% 30.8% 24.5% 19.6% 
+
+51.5% 24.5% 25.5% 69.2% -1.4% 23.1% 43.0% 34.5% 30.2% 23.4% 
+
+44.7% 29.0% 31.1% 78.7% 5.4% 27.8% 42.7% 32.9% 35.3% 25.8% 
+
+35.7% 26.4% 24.1% 71.2% -1.8% 21.2% 31.7% 28.2% 27.1% 19.8% 
+
+41.7% 17.9% 29.7% 70.0% 2.1% 27.9% 32.3% 28.2% 30.1% 21.7% 
+
+38.0% 20.2% 26.1% 71.6% 18.9% 47.2% 41.0% 26.6% 42.2% 26.8% 
+
+54.7% 19.0% 47.4% 79.5% -1.5% 27.1% 37.8% 39.6% 31.7% 27.5% 
+
+52.5% 25.9% 54.2% 79.0% 0.8% 25.0% 49.0% 45.3% 34.4% 31.2% 
+
+41.0% 18.4% 24.0% 67.5% 61.5% 33.6% 35.9% 26.6% 52.7% 32.4% 
+
+34.7% 17.8% 50.3% 80.6% -0.1% 27.6% 49.7% 35.9% 32.0% 24.6% 
+
+23.8% 28.1% 54.3% 77.8% 7.4% 17.5% 33.9% 41.1% 27.8% 24.9% 
+
+27.0% 31.8% 41.1% 69.3% 28.6% 34.5% 36.4% 35.6% 40.6% 28.9% 
+
+15.5% 10.1% 44.0% 63.5% 33.3% 23.5% 42.3% 28.3% 39.5% 22.0% 
+
+24.2% 26.9% 73.4% 73.6% 41.4% 16.7% 43.2% 46.6% 42.2% 35.4% 
+
+25.2% 25.7% 43.4% 81.5% 69.6% 25.7% 31.4% 34.8% 54.5% 37.5% 
+
+31.3% 24.0% 45.5% 81.8% 56.5% 25.3% 35.4% 35.7% 52.1% 36.6% 
+
+19.0% 25.2% 51.3% 75.2% 17.5% 16.3% 22.0% 36.6% 34.6% 26.5% 
+
+82.2% 28.1% 77.8% 84.8% 76.4% 71.4% 85.0% 61.1% 78.3% 60.5% 
+
+0% 
+
+20% 
+
+40% 
+
+60% 
+
+80% 
+
+> Decay Rate (%)
+
+⚡ = Reasoning Model 
+
+Figure 8: Full capability decay heatmap across all 26 evaluated models, ordered by ATLAScore@8K-1M. Blue cells indicate low decay and red cells indicate severe degradation. This is the complete version of the representative-model view shown in Figure 4. 
+
+24 ATLAS: All-round Testing of Long-context Abilities across Scales 8K 16K 32K 64K 128K 256K 512K 1M  
+
+> Context Length
+> 0
+> 20
+> 40
+> 60
+> 80
+> 100
+> ATLAScore
+> 128K
+> Models (⚡ = reasoning model)
+> Claude-Opus-4.5 ⚡
+> Claude-Opus-4.6 ⚡
+> DeepSeek-V3.1
+> DeepSeek-V3.2
+> DeepSeek-V4-Pro ⚡
+> GLM-4.7
+> GLM-5
+> GLM-5 ⚡
+> GLM-5.1 ⚡
+> GPT-5.2 ⚡
+> GPT-5.4 ⚡
+> GPT-5.5 ⚡
+> Gemini-3-Flash-Preview ⚡
+> Gemini-3-Pro-Preview ⚡
+> Gemini-3.1-Pro-Preview ⚡
+> Kimi-K2-0905-Instruct
+> Kimi-K2.5
+> Kimi-K2.5 ⚡
+> Kimi-K2.6 ⚡
+> Kimi-Linear-48B-A3B-Instruct
+> Qwen3-235B-A22B-2507-Instruct
+> Qwen3-30B-A3B-2507-Instruct
+> Qwen3-Next-80B-A3B-Instruct
+> Qwen3.5-397B-A17B
+> Qwen3.5-397B-A17B ⚡
+> Qwen3.6-Plus ⚡
+
+Figure 9: Per-slice ATLAScore across all 26 evaluated models from 8K to 1M tokens. Solid lines denote reasoning models; dashed lines denote non-reasoning models. The vertical dotted line marks the 128K boundary that separates the two reporting scopes. 
+
+3-Flash-Preview—continues to degrade gradually, losing only 5–15 points between 128K and 1M. A second group experiences abrupt cliffs: GLM-4.7 drops from 30.1 at 128K to 5.8 at 1M, including a fall to 7.0 at 256K, and Claude-Opus-4.5 loses 12.0 points between 128K and 256K alone. These cliff effects are invisible in a two-scope summary but are immediately apparent in the length curve. 
+
+Reasoning vs. non-reasoning trajectories. Rea-soning models (solid lines) start higher on average and remain higher at every length slice. Their rel-ative degradation is milder, even when absolute 128K-to-1M drops can be similar to those of non-reasoning models. Non-reasoning models exhibit lower starting points and the widest spread between 256K and 1M. This visual pattern corroborates the statistical observation in the decay heatmap above that reasoning-labeled deployed configurations ex-hibit systematically lower decay rates. 
+
+J Rank Migration from 128K to 1M 
+
+The main text reports that 7 of 26 models shift by two or more rank positions when the report-ing scope extends from ATLAScore@8K-128K to ATLAScore@8K-1M. This appendix visualizes the full rank migration pattern. Figure 10 presents a Sankey-style view of rank migration between the two reporting scopes. The top tier is relatively stable: the same three mod-els remain in the top three, but Gemini-3.1-Pro-Preview leads at 128K, Claude-Opus-4.6 leads at 1M, and GPT-5.5 remains third in both scopes. The middle tier is where the largest disruptions occur. GPT-5.2 drops from rank 4 to rank 8, while Gemini-3-Flash-Preview rises from rank 7 to rank 5 and Gemini-3-Pro-Preview remains unchanged at rank 6. In the lower tier, Kimi-Linear-48B-A3B-Instruct rises from rank 24 to rank 21, while DeepSeek-V3.1 drops from rank 21 to rank 23. Because every model has a lower absolute ATLAScore at 1M than at 128K, these flows should be read as relative robustness differences rather than absolute perfor-mance gains. 
+
+K Capability Profile Case Studies 
+
+The layer discrepancy in Section 4.4 is best under-stood at the dimension level, where it becomes a practical model-selection warning. Figure 11 de-composes the most rank-discrepant models into per-dimension scores and ranks, showing that different models reach similar aggregate scores through very different capability profiles. Kimi-K2.6 is not a strong foundational reader by ATLAS standards: its Retrieval score is only 35.58 at 128K. Yet it performs well on length-sliced appli-cation tasks because it is strong on ICL (95.23) and 25 ATLAS: All-round Testing of Long-context Abilities across Scales Rank (1 = best) 
+
+8K-128K 8K-1M 
+
+77.83 
+
+68.52 77.10 
+
+70.55 
+
+74.64 67.77 
+
+73.71 
+
+58.20 
+
+73.44 
+
+63.23 
+
+72.96 62.60 
+
+71.96 
+
+63.13 
+
+71.56 
+
+59.11 
+
+71.03 
+
+54.43 69.88 
+
+51.85 68.34 
+
+54.98 
+
+64.44 
+
+50.47 64.33 
+
+47.11 64.32 
+
+44.28 
+
+63.92 46.35 
+
+63.10 
+
+50.61 
+
+60.06 40.59 
+
+49.50 37.34 
+
+47.63 
+
+33.89 46.63 
+
+35.04 
+
+45.56 
+
+28.46 
+
+44.56 28.77 
+
+43.51 
+
+27.61 42.43 
+
+33.11 
+
+39.86 
+
+15.76 33.36 
+
+24.52 
+
+Improves at 1M Drops at 1M Unchanged rank ⚡ = Reasoning Model 
+
+#1 Gemini-3.1-Pro-Preview ⚡ 
+
+Gemini-3.1-Pro-Preview ⚡ #2 #2 Claude-Opus-4.6 ⚡ 
+
+Claude-Opus-4.6 ⚡ #1 
+
+#3 GPT-5.5 ⚡ GPT-5.5 ⚡ #3 
+
+#4 GPT-5.2 ⚡ 
+
+GPT-5.2 ⚡ #8 
+
+#5 GPT-5.4 ⚡ 
+
+GPT-5.4 ⚡ #4 
+
+#6 Gemini-3-Pro-Preview ⚡ Gemini-3-Pro-Preview ⚡ #6 
+
+#7 Gemini-3-Flash-Preview ⚡ 
+
+Gemini-3-Flash-Preview ⚡ #5 
+
+#8 DeepSeek-V4-Pro ⚡ 
+
+DeepSeek-V4-Pro ⚡ #7 
+
+#9 Qwen3.5-397B-A17B ⚡ 
+
+Qwen3.5-397B-A17B ⚡ #10 #10 Claude-Opus-4.5 ⚡ 
+
+Claude-Opus-4.5 ⚡ #11 #11 Qwen3.6-Plus ⚡ 
+
+Qwen3.6-Plus ⚡ #9 
+
+#12 Kimi-K2.6 ⚡ 
+
+Kimi-K2.6 ⚡ #13 #13 Kimi-K2.5 ⚡ 
+
+Kimi-K2.5 ⚡ #14 #14 GLM-5 ⚡ 
+
+GLM-5 ⚡ #16 
+
+#15 GLM-5.1 ⚡ GLM-5.1 ⚡ #15 
+
+#16 Qwen3.5-397B-A17B 
+
+Qwen3.5-397B-A17B #12 
+
+#17 Kimi-K2.5 Kimi-K2.5 #17 
+
+#18 GLM-5 GLM-5 #18 
+
+#19 Kimi-K2-0905-Instruct 
+
+Kimi-K2-0905-Instruct #20 #20 Qwen3-235B-A22B-2507-Instruct 
+
+Qwen3-235B-A22B-2507-Instruct #19 
+
+#21 DeepSeek-V3.1 
+
+DeepSeek-V3.1 #23 
+
+#22 Qwen3-Next-80B-A3B-Instruct Qwen3-Next-80B-A3B-Instruct #22 
+
+#23 DeepSeek-V3.2 
+
+DeepSeek-V3.2 #24 #24 Kimi-Linear-48B-A3B-Instruct 
+
+Kimi-Linear-48B-A3B-Instruct #21 
+
+#25 GLM-4.7 
+
+GLM-4.7 #26 #26 Qwen3-30B-A3B-2507-Instruct 
+
+Qwen3-30B-A3B-2507-Instruct #25 
+
+-4 
+
++4 
+
++3 
+
+Figure 10: Sankey-style rank-flow diagram showing how all 26 models migrate from ATLAScore@8K-128K (left) to ATLAScore@8K-1M (right). Each row is a rank, node labels report the corresponding ATLAScore, and ribbons connect the same model across the two scopes. Green ribbons indicate rank improvements at 1M, red ribbons indicate rank drops, and gray ribbons indicate unchanged ranks. Signed annotations mark larger shifts, with 
+
+∆r = r128K − r1M , so positive values indicate improvement at 1M. 
+
+26 ATLAS: All-round Testing of Long-context Abilities across Scales Retrieval Aggregation Reasoning QA ICL Code Memory  
+
+> Kimi-K2.6 ⚡
+> GPT-5.2 ⚡
+> Qwen3.6-Plus ⚡
+> Claude-Opus-4.5 ⚡
+> GPT-5.5 ⚡
+> Gemini-3-Flash-Preview ⚡
+> 36
+> #18
+> 59
+> #14
+> 86
+> #17
+> 68
+> #9
+> 95
+> #8
+> 66
+> #4
+> 41
+> #15
+> 88
+> #5
+> 77
+> #3
+> 98
+> #2
+> 75
+> #4
+> 96
+> #5
+> 41
+> #25
+> 45
+> #8
+> 96
+> #1
+> 65
+> #11
+> 94
+> #8
+> 61
+> #18
+> 95
+> #9
+> 42
+> #22
+> 41
+> #14
+> 39
+> #16
+> 71
+> #9
+> 98
+> #3
+> 68
+> #10
+> 94
+> #13
+> 66
+> #3
+> 50
+> #5
+> 90
+> #4
+> 82
+> #1
+> 97
+> #4
+> 71
+> #8
+> 98
+> #1
+> 45
+> #20
+> 50
+> #7
+> 71
+> #10
+> 72
+> #8
+> 88
+> #15
+> 78
+> #1
+> 96
+> #5
+> 60
+> #6
+> 53
+> #4
+> Foundational Application
+> 0
+> 20
+> 40
+> 60
+> 80
+> 100
+> AUC Score
+
+Figure 11: Per-dimension score and rank breakdown for the six models with the largest foundational–application rank discrepancies at 128K. The dashed vertical line separates foundational components from length-sliced application components. Each cell shows the AUC score and the component rank. 
+
+Code (65.57). GPT-5.2 shows the reverse pattern: it is near the top on all three foundational dimen-sions at 128K, but its Code score is only 41.41 and its Memory score is 44.65, pulling down the length-sliced application aggregate. Qwen3.6-Plus is similarly foundational-heavy: it ranks first on Retrieval but only 22nd on Code and 18th on QA. These cases would be hard to diagnose from either a single task or a single aggregate leaderboard. 
+
+L Capability Radar Charts 
+
+The leaderboard tables (Appendix G) and case-study heatmap (Appendix K) provide numerical views of per-dimension performance. This ap-pendix supplements those with radar charts that visualize the full capability profile of all 26 models at both reporting scopes, making it easier to identify characteristic shapes—balanced profiles, single-dimension spikes, and systematic weaknesses—at a glance. Several observations emerge from comparing the two radar charts. 
+
+Profile diversity increases at 1M. At 128K (Fig-ure 12), frontier models form roughly similar poly-gons with high scores on most axes, differing mainly in Code and Memory. At 1M (Figure 13), the profiles diverge more sharply: Claude-Opus-4.6 and Gemini-3.1-Pro-Preview retain the largest profiles, while GPT-5.2’s polygon develops a deep indentation on the Retrieval and QA axes. This vi-sual divergence corresponds to the rank reshuffling documented in Section 4. 
+
+Dimension-specific collapse is visually salient. 
+
+The radar format makes it immediately apparent when a model’s profile is dominated by a single weakness. GLM-4.7, for instance, contracts to a thin sliver at 1M, with nearly all axes near zero except modest residual scores on Aggregation and Code. Models like GLM-5.1 show a different asym-metry: high ICL and holistic scores coexist with weak Retrieval and QA, forming a lopsided poly-gon that would be difficult to characterize with a single aggregate score. 
+
+Practical use. Radar charts are most useful for pairwise or small-group model comparison rather than for reading exact scores. A practitioner choos-ing between Claude-Opus-4.6 and Gemini-3.1-Pro-Preview at 1M can see at a glance that Claude-Opus-4.6 has a slight edge on Retrieval and Rea-soning while Gemini-3.1-Pro-Preview is stronger on QA and LongBench-v2. Such trade-offs are difficult to extract from leaderboard tables but are immediately visible in the radar overlay. 27 ATLAS: All-round Testing of Long-context Abilities across Scales 20 
+
+40 
+
+60 
+
+80 
+
+100 
+
+MRCR-8 needle 
+
+OOLong-Synth 
+
+GraphWalks 
+
+LOFT-Text Retrieval 
+
+Helmet-ICL 
+
+LongCodeBench 
+
+AMemBench-ACU 
+
+AA-LCR 
+
+LongBench-v2 
+
+Models (⚡ = reasoning model) 
+
+> Claude-Opus-4.5 ⚡
+> Claude-Opus-4.6 ⚡
+> DeepSeek-V3.1
+> DeepSeek-V3.2
+> DeepSeek-V4-Pro ⚡
+> GLM-4.7
+> GLM-5
+> GLM-5 ⚡
+> GLM-5.1 ⚡
+> GPT-5.2 ⚡
+> GPT-5.4 ⚡
+> GPT-5.5 ⚡
+> Gemini-3-Flash-Preview ⚡
+> Gemini-3-Pro-Preview ⚡
+> Gemini-3.1-Pro-Preview ⚡
+> Kimi-K2-0905-Instruct
+> Kimi-K2.5
+> Kimi-K2.5 ⚡
+> Kimi-K2.6 ⚡
+> Kimi-Linear-48B-A3B-Instruct
+> Qwen3-235B-A22B-2507-Instruct
+> Qwen3-30B-A3B-2507-Instruct
+> Qwen3-Next-80B-A3B-Instruct
+> Qwen3.5-397B-A17B
+> Qwen3.5-397B-A17B ⚡
+> Qwen3.6-Plus ⚡
+
+Figure 12: Capability radar chart at the 128K reporting scope for all 26 evaluated models. Each axis represents one of the nine ATLAS components (seven length-sliced dimensions plus two holistic assessment benchmarks). Reasoning models are shown with solid lines; non-reasoning models with dashed lines. Some models form large, balanced polygons (e.g., Gemini-3.1-Pro-Preview and Claude-Opus-4.6), while others show pronounced spikes or dents on specific axes (e.g., Kimi-K2.6 with weaker Retrieval but strong ICL and Code). 
+
+28 ATLAS: All-round Testing of Long-context Abilities across Scales 20 
+
+40 
+
+60 
+
+80 
+
+100 
+
+MRCR-8 needle 
+
+OOLong-Synth 
+
+GraphWalks 
+
+LOFT-Text Retrieval 
+
+Helmet-ICL 
+
+LongCodeBench 
+
+AMemBench-ACU 
+
+AA-LCR 
+
+LongBench-v2 
+
+Models (⚡ = reasoning model) 
+
+> Claude-Opus-4.5 ⚡
+> Claude-Opus-4.6 ⚡
+> DeepSeek-V3.1
+> DeepSeek-V3.2
+> DeepSeek-V4-Pro ⚡
+> GLM-4.7
+> GLM-5
+> GLM-5 ⚡
+> GLM-5.1 ⚡
+> GPT-5.2 ⚡
+> GPT-5.4 ⚡
+> GPT-5.5 ⚡
+> Gemini-3-Flash-Preview ⚡
+> Gemini-3-Pro-Preview ⚡
+> Gemini-3.1-Pro-Preview ⚡
+> Kimi-K2-0905-Instruct
+> Kimi-K2.5
+> Kimi-K2.5 ⚡
+> Kimi-K2.6 ⚡
+> Kimi-Linear-48B-A3B-Instruct
+> Qwen3-235B-A22B-2507-Instruct
+> Qwen3-30B-A3B-2507-Instruct
+> Qwen3-Next-80B-A3B-Instruct
+> Qwen3.5-397B-A17B
+> Qwen3.5-397B-A17B ⚡
+> Qwen3.6-Plus ⚡
+
+Figure 13: Capability radar chart at the 1M reporting scope. Compared to the 128K chart (Figure 12), the overall polygons contract substantially, and the contraction is non-uniform across axes: Retrieval and QA axes shrink the most, while ICL and Code axes retain more of their 128K extent. The shape distortion between the two figures directly reflects the dimension-specific decay analyzed in Appendix I. 
+
+29

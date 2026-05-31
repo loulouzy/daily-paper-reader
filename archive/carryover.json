@@ -1,128 +1,126 @@
 {
-  "generated_at": "2026-05-30T20:08:58.345493+00:00",
-  "updated_date": "20260530",
+  "generated_at": "2026-05-31T20:27:52.444818+00:00",
+  "updated_date": "20260531",
   "carryover_days": 9,
   "tag_states": {
     "llm-vlm": {
-      "updated_date": "20260530",
+      "updated_date": "20260531",
       "carryover_days": 9,
       "items": [
         {
-          "id": "2605.26380v1",
+          "id": "2605.30348v1",
           "source": "arxiv",
-          "title": "VisualNeedle: Benchmarking Active Visual Search in Information-Dense Scenes",
-          "abstract": "Frontier multimodal large language models (MLLMs) have been reported to achieve over 90% accuracy on fine-grained perception benchmarks. However, such scores do not necessarily imply faithful use of visual evidence. Prior studies have identified three shortcuts that inflate benchmark performance. First, linguistic priors and lexical cues in questions often enable models to infer plausible answers without seeing the image. Second, coarse global semantics from the visual encoder can bypass fine-grained local details. Third, in some ``think-with-images'' benchmarks, corrupting the intermediate images returned by visual tools barely affects the final answer. These findings suggest that higher input resolution or larger question pools alone do not elicit genuine active visual search. To address this, we introduce VisualNeedle, a challenging, information-dense, and fine-grained benchmark for scenes where critical evidence is spatially constrained to minute regions and not discernible at a glance. We further propose a counterfactual crop-black setting, which replaces crops returned by tools with black images of the same size, to test whether tool-enabled performance truly relies on intermediate visual evidence. We evaluate 9 promninent MLLMs across three settings: no-tool, standard tool-enabled, and crop-black. No-tool accuracy stays below 20\\%, and the best tool-enabled model reaches only 56.01\\%, still trailing the 63.00% human majority-vote accuracy. These results reveal persistent limitations in fine-grained visual search, while the crop-black ablation confirms that success on VisualNeedle hinges on genuine intermediate visual evidence.",
+          "title": "LLMSurgeon: Diagnosing Data Mixture of Large Language Models",
+          "abstract": "The pretraining data mixture of Large Language Models (LLMs) constitutes their \"digital DNA\", shaping model behaviors, capabilities, and failure modes. Yet this composition is rarely disclosed, making post-hoc auditing of data combination or provenance difficult. In this work, we formalize $\\textbf{Data Mixture Surgery (DMS)}$: given only generated text from a target LLM, estimate the domain-level distribution of its pretraining corpus under a predefined taxonomy. We propose $\\textbf{LLMSurgeon}$, a strong framework that casts DMS as an inverse problem under the label-shift assumption. Rather than directly aggregating classifier outputs, LLMSurgeon estimates a calibrated $\\textit{soft}$ confusion matrix and solves a constrained inverse problem to correct systematic domain confusion and recover the latent mixture prior. To evaluate, we introduce $\\textbf{LLMScan}$, a recipe-verifiable evaluation suite built from open-source LLMs with transparent pretraining mixtures. Across LLMScan, LLMSurgeon recovers domain mixtures with high fidelity under fixed protocols. Our work presents a practical, post-hoc approach for auditing the digital DNA of foundation models without access to their training data.",
           "authors": [
-            "Jingru Chen",
-            "Yiming Liu",
-            "Mingtao Chen",
-            "Sijie Chen",
-            "Richeng Xuan",
-            "Liang Yang",
-            "Zhichao Hu",
-            "Fanyang Lu"
+            "Yaxin Luo",
+            "Jiacheng Cui",
+            "Xiaohan Zhao",
+            "Xinyi Shang",
+            "Jiacheng Liu",
+            "Xinyue Bi",
+            "Zhaoyi Li",
+            "Zhiqiang Shen"
           ],
-          "primary_category": "cs.CV",
+          "primary_category": "cs.CL",
           "categories": [
-            "cs.CV",
-            "cs.AI"
-          ],
-          "published": "2026-05-25T23:01:05+00:00",
-          "link": "https://arxiv.org/pdf/2605.26380v1",
-          "tags": [
-            "keyword:llm-vlm",
-            "query:llm-vlm"
-          ],
-          "llm_score": 8.0,
-          "llm_evidence_en": "Benchmark revealing MLLM shortcuts in visual search",
-          "llm_evidence_cn": "揭示多模态大语言模型视觉搜索捷径的基准",
-          "llm_evidence": "揭示多模态大语言模型视觉搜索捷径的基准",
-          "canonical_evidence": "揭示多模态大语言模型视觉搜索捷径的基准",
-          "llm_tldr_en": "VisualNeedle benchmarks active visual search in MLLMs, revealing reliance on shortcuts rather than faithful visual evidence.",
-          "llm_tldr_cn": "该论文发现前沿多模态大语言模型在细粒度感知基准上高分并不等同于真实使用视觉证据，并识别了三种数据捷径。为严格评估，提出了VisualNeedle基准，要求模型在信息密集场景中主动搜索目标。实验表明当前MLLM在该基准上表现不佳，揭示了模型依赖语言先验而非视觉输入的倾向。",
-          "llm_tldr": "该论文发现前沿多模态大语言模型在细粒度感知基准上高分并不等同于真实使用视觉证据，并识别了三种数据捷径。为严格评估，提出了VisualNeedle基准，要求模型在信息密集场景中主动搜索目标。实验表明当前MLLM在该基准上表现不佳，揭示了模型依赖语言先验而非视觉输入的倾向。",
-          "llm_tags": [
-            "query:llm-vlm"
-          ],
-          "matched_query_tag": "query:llm-vlm",
-          "matched_query_text": "multimodal large language model paper",
-          "matched_requirement_id": "req-3",
-          "selection_source": "carryover_cache",
-          "paper_id": "2605.26380v1",
-          "carry_days": 1
-        },
-        {
-          "id": "2605.26660v1",
-          "source": "arxiv",
-          "title": "WINDQuant: Weight-Informed Neural Decision-Making for Global Mixed-Precision LLM Quantization",
-          "abstract": "Quantization is an effective approach to reduce the memory footprint and inference cost of large language models (LLMs), yet maintaining performance in the ultra-low-bit regime remains challenging. Existing post-training methods often suffer from severe accuracy degradation, while quantization-aware training requires costly retraining and additional resources. Moreover, most mixed-precision strategies rely on coarse-grained or heuristic sensitivity analysis that overlooks fine-grained variations within weight matrices. We propose WINDQuant, a reinforcement-learning-based allocation controller for ultra-low-bit LLM quantization. Rather than introducing another low-level quantization operator, WINDQuant learns how to assign bit-widths and quantization treatments to fine-grained column chunks under a global storage budget. By operating at the column-chunk level, WINDQuant enables flexible and fine-grained precision assignment within layers under a global target bit-width. The implementation combines PPO with activation-aware calibration, lightweight per-unit quantizer fitting, and explicit effective-bit accounting of the learned mixed-precision plan. Experiments on LLaMA models demonstrate that WINDQuant achieves competitive performance in ultra-low-bit settings while reducing optimization overhead relative to retraining-based approaches, highlighting reinforcement learning as a practical controller for adaptive mixed-precision quantization.",
-          "authors": [
-            "Phong Nam Huu Nguyen",
-            "Khoi M. Le",
-            "Cong-Duy T Nguyen",
-            "Anh Tuan Luu",
-            "Thong Thanh Nguyen",
-            "Tho Quan"
-          ],
-          "primary_category": "cs.LG",
-          "categories": [
+            "cs.CL",
+            "cs.AI",
             "cs.LG"
           ],
-          "published": "2026-05-26T07:46:13+00:00",
-          "link": "https://arxiv.org/pdf/2605.26660v1",
+          "published": "2026-05-28T17:59:53+00:00",
+          "link": "https://arxiv.org/pdf/2605.30348v1",
           "tags": [
             "keyword:llm-vlm",
             "query:llm-vlm"
           ],
           "llm_score": 8.0,
-          "llm_evidence_en": "RL-based mixed-precision quantization for LLMs",
-          "llm_evidence_cn": "基于强化学习的LLM混合精度量化",
-          "llm_evidence": "基于强化学习的LLM混合精度量化",
-          "canonical_evidence": "基于强化学习的LLM混合精度量化",
-          "llm_tldr_en": "Uses reinforcement learning to assign bit-widths at ultra-low precision for LLM quantization, outperforming heuristic sensitivity analysis.",
-          "llm_tldr_cn": "该论文针对大语言模型超低位宽量化中性能下降的问题，提出了WINDQuant，一种基于强化学习的位宽分配控制器。通过学习自动分配混合精度，避免了传统启发式方法的粗粒度缺陷，在极低位宽下保持了模型性能。",
-          "llm_tldr": "该论文针对大语言模型超低位宽量化中性能下降的问题，提出了WINDQuant，一种基于强化学习的位宽分配控制器。通过学习自动分配混合精度，避免了传统启发式方法的粗粒度缺陷，在极低位宽下保持了模型性能。",
+          "llm_evidence_en": "LLM data mixture diagnosis from lab",
+          "llm_evidence_cn": "来自实验室的大语言模型数据混合诊断",
+          "llm_evidence": "来自实验室的大语言模型数据混合诊断",
+          "canonical_evidence": "来自实验室的大语言模型数据混合诊断",
+          "llm_tldr_en": "Proposes LLMSurgeon to estimate pretraining data mixture from generated text, using a calibrated confusion matrix and constrained inverse problem, enabling post-hoc auditing of LLMs.",
+          "llm_tldr_cn": "该工作针对大语言模型预训练数据混合难以审计的问题，提出了一种名为LLMSurgeon的框架。该框架将预训练数据分布估计建模为一个逆问题，通过校准软混淆矩阵并求解约束优化，仅从模型生成文本中推断其训练数据的领域分布。实验表明该方法能够有效揭示模型的数据混合组成。",
+          "llm_tldr": "该工作针对大语言模型预训练数据混合难以审计的问题，提出了一种名为LLMSurgeon的框架。该框架将预训练数据分布估计建模为一个逆问题，通过校准软混淆矩阵并求解约束优化，仅从模型生成文本中推断其训练数据的领域分布。实验表明该方法能够有效揭示模型的数据混合组成。",
           "llm_tags": [
             "query:llm-vlm"
           ],
           "matched_query_tag": "query:llm-vlm",
-          "matched_query_text": "reinforcement learning for large language model",
-          "matched_requirement_id": "req-4",
+          "matched_query_text": "large language model research paper from laboratory",
+          "matched_requirement_id": "req-1",
           "selection_source": "carryover_cache",
-          "paper_id": "2605.26660v1",
-          "carry_days": 4
+          "paper_id": "2605.30348v1",
+          "carry_days": 1
         },
         {
-          "id": "2605.29861v1",
+          "id": "2605.28170v1",
           "source": "arxiv",
-          "title": "Towards Verifiable Multimodal Deep Research: A Multi-Agent Harness for Interleaved Report Generation",
-          "abstract": "Large Language Models (LLMs) have advanced autonomous agents from deep search, which retrieves concise factual answers, to deep research, which synthesizes scattered evidence into long-form reports. However, verifiable multimodal deep research remains challenging due to open-ended synthesis without deterministic ground truth and the need to interleave textual arguments with visual evidence. We propose \\textsc{Ptah}, a multi-agent harness for interleaved report generation. \\textsc{Ptah} orchestrates the lifecycle from user query to rendered web report through planning, research, and writing stages, where specialized agents construct visual-aware plans, collect claim-grounded evidence, maintain source-aligned images in a \\textit{Visual Working Memory}, and compose reports through declarative multimodal tool use. A verifier agent serves as the harness's acceptance function, enforcing factual grounding, citation fidelity, and cross-modal consistency throughout the workflow. We further introduce \\textsc{Ptah}Eval, an evaluation protocol that augments existing benchmarks with image-level and presentation-level assessments. Experiments on deep research benchmarks show that \\textsc{Ptah} produces more reliable, visually informative, and usable human-facing multimodal reports than strong baselines.",
+          "title": "Localizing Input Uncertainty Quantification for Large Language Models via Shapley Values",
+          "abstract": "As large language models (LLMs) are increasingly integrated into high-stakes decision-making, the ability to reliably quantify uncertainty has become a critical requirement for safety and trust. However, current uncertainty quantification methods primarily operate at the output level, often failing to distinguish whether uncertainty arises from the model's lack of knowledge or from ambiguity in the user's input. While input-centric uncertainty quantification has recently emerged as a promising direction, it remains relatively underexplored and typically relies on coarse, input-level information. Consequently, users are provided with scalar uncertainty scores that offer little actionable guidance on which parts of the input should be clarified to improve reliability. To address this limitation, we propose Shapley-based input uncertainty Quantification (ShaQ), a framework for span-level attribution of input-induced uncertainty. Our approach models ambiguous spans in the input as players in a cooperative game and quantifies their contributions using Shapley values, defined via the weighted average of marginal reductions in conditional entropy obtained by clarifying each span coalition. Unlike existing input-level approaches, our formulation captures complex interactions among spans and provides a principled decomposition in which individual attributions sum exactly to the total input-induced uncertainty. We evaluate ShaQ on the AmbigQA and AmbiEnt benchmarks, where it achieves state-of-the-art performance in ambiguity detection. We further demonstrate its utility on MediTOD, showing that ShaQ can localize under-specified clinical utterances and facilitate human-AI collaboration in high-stakes settings. Overall, ShaQ improves uncertainty estimation and provides actionable insights for targeted input clarification.",
           "authors": [
-            "Chenghao Zhang",
-            "Guanting Dong",
-            "Yufan Liu",
-            "Tong Zhao",
-            "Zhicheng Dou"
+            "Seongjun Lee",
+            "Suwan Yoon",
+            "Changhee Lee"
           ],
-          "primary_category": "cs.CL",
+          "primary_category": "cs.AI",
           "categories": [
-            "cs.CL",
             "cs.AI"
           ],
-          "published": "2026-05-28T12:40:34+00:00",
-          "link": "https://arxiv.org/pdf/2605.29861v1",
+          "published": "2026-05-27T08:53:16+00:00",
+          "link": "https://arxiv.org/pdf/2605.28170v1",
           "tags": [
             "keyword:llm-vlm",
             "query:llm-vlm"
           ],
           "llm_score": 8.0,
-          "llm_evidence_en": "Multi-agent harness for multimodal deep research report generation using LLMs",
-          "llm_evidence_cn": "使用LLM的多智能体框架生成多模态深度研究报告",
-          "llm_evidence": "使用LLM的多智能体框架生成多模态深度研究报告",
-          "canonical_evidence": "使用LLM的多智能体框架生成多模态深度研究报告",
-          "llm_tldr_en": "Proposes Ptah, a multi-agent system for verifiable multimodal report generation with planning, research, and writing stages interleaving text and images.",
-          "llm_tldr_cn": "多模态深度研究面临开放合成无确定真值和图文交织的困难。本文提出Ptah多智能体框架，通过规划、研究和写作三个阶段协同工作，生成包含图文证据的可验证报告。智能体构建视觉感知计划、收集基于主张的证据，并维护源对齐图像。实验证明框架在报告准确性和可验证性上显著优于单模型方法。",
-          "llm_tldr": "多模态深度研究面临开放合成无确定真值和图文交织的困难。本文提出Ptah多智能体框架，通过规划、研究和写作三个阶段协同工作，生成包含图文证据的可验证报告。智能体构建视觉感知计划、收集基于主张的证据，并维护源对齐图像。实验证明框架在报告准确性和可验证性上显著优于单模型方法。",
+          "llm_evidence_en": "LLM uncertainty quantification method from lab",
+          "llm_evidence_cn": "来自实验室的大语言模型不确定性量化方法",
+          "llm_evidence": "来自实验室的大语言模型不确定性量化方法",
+          "canonical_evidence": "来自实验室的大语言模型不确定性量化方法",
+          "llm_tldr_en": "Proposes input-level uncertainty quantification for LLMs using Shapley values, localizing evidence sources to help users interpret model confidence.",
+          "llm_tldr_cn": "本研究针对大语言模型输出级不确定性量化无法区分知识缺失与输入歧义的问题，提出基于Shapley值的输入级不确定性量化方法。该方法能够定位输入中引发不确定性的具体部分，提供可解释的不确定性估计。实验表明该方法较传统方法更具可解释性和实用性。",
+          "llm_tldr": "本研究针对大语言模型输出级不确定性量化无法区分知识缺失与输入歧义的问题，提出基于Shapley值的输入级不确定性量化方法。该方法能够定位输入中引发不确定性的具体部分，提供可解释的不确定性估计。实验表明该方法较传统方法更具可解释性和实用性。",
+          "llm_tags": [
+            "query:llm-vlm"
+          ],
+          "matched_query_tag": "query:llm-vlm",
+          "matched_query_text": "large language model research paper from laboratory",
+          "matched_requirement_id": "req-1",
+          "selection_source": "carryover_cache",
+          "paper_id": "2605.28170v1",
+          "carry_days": 1
+        },
+        {
+          "id": "2605.28456v1",
+          "source": "arxiv",
+          "title": "Diffusion Large Language Models for Visual Speech Recognition",
+          "abstract": "Existing Visual Speech Recognition (VSR) systems commonly rely on left-to-right autoregressive decoding, which can force premature decisions on visually ambiguous tokens before sufficient context is available. We propose DLLM-VSR, to the best of our knowledge, the first Diffusion Large Language Model (DLLM)-based VSR framework, formulating transcription as iterative masked denoising with flexible-order decoding. With confidence-based unmasking, DLLM-VSR commits high-confidence positions early and uses the committed tokens as bidirectional context to refine ambiguous ones. To adapt DLLMs to VSR, we introduce a two-stage masked-denoising training strategy that separates visual-to-text content alignment from length modeling. We further observe a performance gap with oracle-length decoding, which assumes access to the true transcript length, indicating that reducing target-length uncertainty can improve DLLM-based VSR. To reduce this gap, we develop length-guided candidate decoding, which uses video duration to construct plausible transcript-length hypotheses, decodes under multiple hypotheses, and reranks candidates using length plausibility and decoding confidence. The proposed method achieves a state-of-the-art WER of 19.5\\% on LRS3 using only its labeled training data.",
+          "authors": [
+            "Jeong Hun Yeo",
+            "Chae Won Kim",
+            "Hyeongseop Rha",
+            "Yong Man Ro"
+          ],
+          "primary_category": "cs.AI",
+          "categories": [
+            "cs.AI",
+            "cs.CV",
+            "eess.AS"
+          ],
+          "published": "2026-05-27T13:22:08+00:00",
+          "link": "https://arxiv.org/pdf/2605.28456v1",
+          "tags": [
+            "keyword:llm-vlm",
+            "query:llm-vlm"
+          ],
+          "llm_score": 8.0,
+          "llm_evidence_en": "diffusion large language model for visual speech recognition",
+          "llm_evidence_cn": "扩散大语言模型用于视觉语音识别",
+          "llm_evidence": "扩散大语言模型用于视觉语音识别",
+          "canonical_evidence": "扩散大语言模型用于视觉语音识别",
+          "llm_tldr_en": "Proposes DLLM-VSR, the first Diffusion Large Language Model-based visual speech recognition framework, formulating transcription as iterative masked denoising with flexible-order decoding.",
+          "llm_tldr_cn": "现有视觉语音识别系统采用从左到右的自回归解码，易受视觉歧义影响。本文提出首个基于扩散大语言模型（DLLM）的视觉语音识别框架DLLM-VSR，将转录视为迭代掩码去噪过程，支持灵活顺序解码，并通过两阶段训练策略分离视觉-文本对齐与长度建模。",
+          "llm_tldr": "现有视觉语音识别系统采用从左到右的自回归解码，易受视觉歧义影响。本文提出首个基于扩散大语言模型（DLLM）的视觉语音识别框架DLLM-VSR，将转录视为迭代掩码去噪过程，支持灵活顺序解码，并通过两阶段训练策略分离视觉-文本对齐与长度建模。",
           "llm_tags": [
             "query:llm-vlm"
           ],
@@ -130,160 +128,45 @@
           "matched_query_text": "multimodal large language model paper",
           "matched_requirement_id": "req-3",
           "selection_source": "carryover_cache",
-          "paper_id": "2605.29861v1",
+          "paper_id": "2605.28456v1",
           "carry_days": 1
         },
         {
-          "id": "2605.27315v1",
+          "id": "2605.30018v1",
           "source": "arxiv",
-          "title": "Real Images, Worse Judgments: Evaluating Vision-Language Models on Concreteness and Imagery",
-          "abstract": "Visual inputs are often assumed to improve language understanding in multimodal models. We examine this assumption by asking whether vision-language models (VLMs) can distinguish useful visual evidence from incidental image context in lexical judgments. We use human concreteness and imagery ratings because they span words with varying expected visual relevance, from abstract and low-imagery words to concrete and high-imagery words. We find that real-image contexts do not yield consistent gains and often hurt alignment with human ratings, most sharply when visual evidence is least relevant. Through probing and canonical correlation analysis, complemented by an attribution case study, we find that real-image contexts are associated with representational shifts and greater sensitivity to spurious visual cues, coinciding with weaker recoverability of the targeted lexical properties. We further show that instructing models to focus solely on textual content at inference time can reduce this degradation, with the clearest gains on these vulnerable subsets. Our findings suggest that current instruction-tuned VLMs need better calibration of when visual context should inform lexical judgments.",
+          "title": "Latent Performance Profiling of Large Language Models",
+          "abstract": "Large language models (LLMs) frequently achieve impressive scores on standardized benchmarks, yet accuracy alone offers a limited view of their capabilities. Evaluating open-source LLMs through leaderboards faces persistent issues like data contamination, narrow task scope, and weak alignment with real-world reliability. Benchmark-based evaluations such as MMLU PRO, BBH, or IFEval primarily capture \\textit{what} a model outputs on fixed test sets, not \\textit{how} it processes information, calibrates uncertainty, or structures internal knowledge. In this article, we advocate for a shift from benchmark-centric evaluation toward a complementary, \\textit{state-centered intrinsic assessment} of LLMs. To this end, we introduce \\textbf{Latent Performance Profiling (LPP)} -- a framework that derives task-agnostic diagnostics from hidden activations and output distributions. LPP defines a set of scalar metrics on a model's latent representations and dynamics, revealing scale-independent traits that enable interpretable comparisons and uncover hidden vulnerabilities. Unlike static accuracy scores, LPP provides stable, architecture-sensitive signatures across models of similar size. With extensive empirical analyses across eight LLMs, spanning a size range of 0.5B-14B, we demonstrate that models with similar benchmark scores can exhibit contrasting latent profiles, such as differences in entropy or adaptability. Guided by these insights, we design synthetic probes for uncertainty and symbolic reasoning that align with intrinsic metrics while decoupling from leaderboard bias. We recommend that reporting LPP alongside benchmarks provides a deeper, interpretable understanding of model behavior, enabling more reliable model selection, safety assessment, and evaluation beyond surface-level accuracy.",
           "authors": [
-            "Yifan Jiang",
-            "Ruoxi Ning",
-            "Sheng Yao",
-            "Freda Shi"
-          ],
-          "primary_category": "cs.CL",
-          "categories": [
-            "cs.CL"
-          ],
-          "published": "2026-05-26T17:24:59+00:00",
-          "link": "https://arxiv.org/pdf/2605.27315v1",
-          "tags": [
-            "keyword:llm-vlm",
-            "query:llm-vlm"
-          ],
-          "llm_score": 8.0,
-          "llm_evidence_en": "evaluating vision-language models",
-          "llm_evidence_cn": "评估视觉语言模型",
-          "llm_evidence": "评估视觉语言模型",
-          "canonical_evidence": "评估视觉语言模型",
-          "llm_tldr_en": "This paper evaluates whether VLMs can distinguish useful vs. incidental visual evidence in lexical judgments, finding real images often hurt performance.",
-          "llm_tldr_cn": "针对视觉输入通常改善语言理解的假设，本文系统评估视觉语言模型在词汇判断中区分有用和无关视觉证据的能力，发现真实图像上下文不仅不带来一致提升，反而在视觉相关性最低时严重损害与人类评分的对齐，通过探针分析和典型相关分析揭示了问题根源。",
-          "llm_tldr": "针对视觉输入通常改善语言理解的假设，本文系统评估视觉语言模型在词汇判断中区分有用和无关视觉证据的能力，发现真实图像上下文不仅不带来一致提升，反而在视觉相关性最低时严重损害与人类评分的对齐，通过探针分析和典型相关分析揭示了问题根源。",
-          "llm_tags": [
-            "query:llm-vlm"
-          ],
-          "matched_query_tag": "query:llm-vlm",
-          "matched_query_text": "vision language model paper",
-          "matched_requirement_id": "req-2",
-          "selection_source": "carryover_cache",
-          "paper_id": "2605.27315v1",
-          "carry_days": 2
-        },
-        {
-          "id": "2605.29956v1",
-          "source": "arxiv",
-          "title": "Uncertainty Quantification for Multimodal Retrieval Augmented Generation",
-          "abstract": "Retrieval Augmented Generation (RAG) improves the question answering capabilities of Large Language Models (LLMs) by incorporating external knowledge and has recently been extended to multimodal settings through Vision-Language Models (VLMs) that integrate visual and textual information. Despite these advances, generated answers can still be incorrect or misleading. Uncertainty Quantification (UQ) methods aim to estimate the reliability of model outputs, but most existing approaches are designed for text-only models and perform poorly in multimodal RAG scenarios. A key challenge is capturing uncertainty arising from multiple stages of the pipeline, including retrieval, visual understanding, and generation. In this work, we show that modeling uncertainty using multimodal and retrieval-aware probability signals improves estimation in multimodal RAG systems. We introduce LeMUQ, a Learnable Multimodal UQ method that analyzes token probabilities under input modifications, such as removing modalities or retrieved context. By encoding these signals as probability tokens and processing them with a finetuned model, our approach captures interactions between modalities and retrieval. Experiments across datasets, retrievers, and VLMs show consistent improvements over baseline and finetuned UQ methods. Our proposed LeMUQ increases the AUROC metric by 3.8% on average. Additionally, our method shows strong generalization performance across different retrieval setups and datasets with mixed results when transferring across different VLMs. Our findings highlight the importance of modeling multimodal uncertainty and provide a step toward more reliable and safer multimodal RAG systems. Code is available on GitHub.",
-          "authors": [
-            "Simon Binz",
-            "Heydar Soudani",
-            "Faegheh Hasibi"
-          ],
-          "primary_category": "cs.IR",
-          "categories": [
-            "cs.IR"
-          ],
-          "published": "2026-05-28T14:00:32+00:00",
-          "link": "https://arxiv.org/pdf/2605.29956v1",
-          "tags": [
-            "keyword:llm-vlm",
-            "query:llm-vlm"
-          ],
-          "llm_score": 8.0,
-          "llm_evidence_en": "uncertainty quantification for multimodal LLM in RAG",
-          "llm_evidence_cn": "多模态LLM在检索增强生成中的不确定性量化",
-          "llm_evidence": "多模态LLM在检索增强生成中的不确定性量化",
-          "canonical_evidence": "多模态LLM在检索增强生成中的不确定性量化",
-          "llm_tldr_en": "A UQ method for multimodal RAG that models uncertainty from retrieval, vision understanding, and generation stages.",
-          "llm_tldr_cn": "现有不确定性量化方法在文本模型中表现良好，但在多模态RAG中效果不佳。本文提出一种专门针对多模态RAG管道的不确定性量化方法，分别建模检索、视觉理解和生成阶段的不确定性，显著提升了可靠性估计的准确性。",
-          "llm_tldr": "现有不确定性量化方法在文本模型中表现良好，但在多模态RAG中效果不佳。本文提出一种专门针对多模态RAG管道的不确定性量化方法，分别建模检索、视觉理解和生成阶段的不确定性，显著提升了可靠性估计的准确性。",
-          "llm_tags": [
-            "query:llm-vlm"
-          ],
-          "matched_query_tag": "query:llm-vlm",
-          "matched_query_text": "multimodal large language model paper",
-          "matched_requirement_id": "req-3",
-          "selection_source": "carryover_cache",
-          "paper_id": "2605.29956v1",
-          "carry_days": 1
-        },
-        {
-          "id": "2605.28573v1",
-          "source": "arxiv",
-          "title": "Efficient Pre-Training of LLMs through Truncated SVD Layers",
-          "abstract": "The massive scaling of Large Language Models (LLMs) has made pretraining increasingly cost-prohibitive. While low-rank representation and orthonormal weight matrices could in principle reduce parameter counts and computational overhead, most existing methods rely on static rank selection and do not enforce weight orthonormality due to high computational cost. This paper introduces TSVD, a framework that maintains low rank and strict orthonormality throughout the training process. It utilizes a spectral energy-based heuristic for adaptive rank selection, and a caching mechanisms to maintain orthonormality. Theoretical analysis justifies the advantage of the approach in pretraining dynamics and experiments across various model scales demonstrate that it is effective empirically. TSVD matches or exceeds the performance of full-parameter baselines while significantly reducing compute requirements. The approach thus offers a well-founded, practical, and scalable path toward efficient high-performance LLM pretraining.",
-          "authors": [
-            "Kaivan Kamali",
-            "Kajetan Schweighofer",
-            "Hormoz Shahrzad",
-            "Olivier Francon",
-            "Babak Hodjat",
-            "Risto Miikkulainen"
-          ],
-          "primary_category": "cs.LG",
-          "categories": [
-            "cs.LG",
-            "cs.AI"
-          ],
-          "published": "2026-05-27T14:57:49+00:00",
-          "link": "https://arxiv.org/pdf/2605.28573v1",
-          "tags": [
-            "keyword:llm-vlm",
-            "query:llm-vlm"
-          ],
-          "llm_score": 8.0,
-          "llm_evidence_en": "Large language model pre-training efficiency improvement",
-          "llm_evidence_cn": "大语言模型预训练效率提升研究",
-          "llm_evidence": "大语言模型预训练效率提升研究",
-          "canonical_evidence": "大语言模型预训练效率提升研究",
-          "llm_tldr_en": "Introduces TSVD framework for efficient LLM pre-training using truncated SVD layers with adaptive rank selection and orthonormality",
-          "llm_tldr_cn": "大语言模型预训练成本随规模增长而急剧上升，现有低秩方法大多采用静态秩选择且未能执行权重正交归一。本文提出TSVD框架，利用基于谱能量的启发式自适应秩选择，并引入缓存机制维持正交性。理论分析证明了其在预训练动力学中的优势，多尺度实验表明该框架能显著降低参数和计算开销而不损失性能。",
-          "llm_tldr": "大语言模型预训练成本随规模增长而急剧上升，现有低秩方法大多采用静态秩选择且未能执行权重正交归一。本文提出TSVD框架，利用基于谱能量的启发式自适应秩选择，并引入缓存机制维持正交性。理论分析证明了其在预训练动力学中的优势，多尺度实验表明该框架能显著降低参数和计算开销而不损失性能。",
-          "llm_tags": [
-            "query:llm-vlm"
-          ],
-          "matched_query_tag": "query:llm-vlm",
-          "matched_query_text": "large language model research paper from laboratory",
-          "matched_requirement_id": "req-1",
-          "selection_source": "carryover_cache",
-          "paper_id": "2605.28573v1",
-          "carry_days": 1
-        },
-        {
-          "id": "2605.27268v1",
-          "source": "arxiv",
-          "title": "Lost in Sampling: Assessing Lexical Reachability in LLMs via the Word Coverage Score (WCS)",
-          "abstract": "Modern Large Language Models (LLMs) are often criticized for producing repetitive and homogeneous text, despite possessing vast latent vocabularies. While previous research has focused on model knowledge and training data, we investigate the role of decoding mechanics in suppressing linguistic diversity. We introduce the Word Coverage Score (WCS), a metric that quantifies the extent to which contextually appropriate human vocabulary is mathematically pruned by standard sampling filters (e.g., Top-$p$, Top-$k$, and Min-$p$). Rather than assessing static knowledge, the WCS measures the lexical survival rate of low-frequency, high-information human words as a function of sampling parameters. By auditing open-weight models on human-authored corpus fragments, we identify which logical lexical choices are rendered unreachable by the decoder, even when they reside within the probability space. Our results provide quantitative evidence that industry-standard sampling defaults act as unintended censorship mechanisms, smoothing the unique textures of human expression into a homogenized discourse. The WCS offers a rigorous framework for optimizing the trade-off between text coherence and lexical richness, providing a diagnostic tool for preserving the diversity of human language in generative models.",
-          "authors": [
-            "Samer Awad",
-            "Javier Conde",
-            "Carlos Arriaga",
-            "Tairan Fu",
-            "Javier Coronado-Blázquez",
-            "Pedro Reviriego"
+            "Tanmoy Chakraborty",
+            "Ayan Sengupta",
+            "Suparna Bhattacharya",
+            "Partha Pratim Chakrabarti",
+            "Amlan Chakrabarti",
+            "Supratik Chakraborty",
+            "Partha Pratim Das",
+            "Lipika Dey",
+            "Richa Singh",
+            "Mayank Vatsa"
           ],
           "primary_category": "cs.CL",
           "categories": [
             "cs.CL",
-            "cs.AI"
+            "cs.LG"
           ],
-          "published": "2026-05-26T16:44:25+00:00",
-          "link": "https://arxiv.org/pdf/2605.27268v1",
+          "published": "2026-05-28T14:41:26+00:00",
+          "link": "https://arxiv.org/pdf/2605.30018v1",
           "tags": [
             "keyword:llm-vlm",
             "query:llm-vlm"
           ],
           "llm_score": 8.0,
-          "llm_evidence_en": "LLM lexical diversity metric from academic lab",
-          "llm_evidence_cn": "来自学术实验室的大语言模型词汇多样性评估方法",
-          "llm_evidence": "来自学术实验室的大语言模型词汇多样性评估方法",
-          "canonical_evidence": "来自学术实验室的大语言模型词汇多样性评估方法",
-          "llm_tldr_en": "Proposes Word Coverage Score (WCS) to measure how sampling filters prune low-frequency words, revealing decoding-induced homogeneity in LLMs.",
-          "llm_tldr_cn": "针对大语言模型生成文本重复性强的问题，本文从解码机制入手，提出单词覆盖率评分（WCS）来量化标准采样滤波器（如Top-p、Top-k）对词汇多样性的抑制程度。通过在开源模型上的实验表明，WCS能揭示采样参数对低频率高信息词汇存活率的影响。该工作为理解和改善LLM输出多样性提供了新的分析工具。",
-          "llm_tldr": "针对大语言模型生成文本重复性强的问题，本文从解码机制入手，提出单词覆盖率评分（WCS）来量化标准采样滤波器（如Top-p、Top-k）对词汇多样性的抑制程度。通过在开源模型上的实验表明，WCS能揭示采样参数对低频率高信息词汇存活率的影响。该工作为理解和改善LLM输出多样性提供了新的分析工具。",
+          "llm_evidence_en": "LLM evaluation method from research lab",
+          "llm_evidence_cn": "来自实验室的大语言模型评估方法",
+          "llm_evidence": "来自实验室的大语言模型评估方法",
+          "canonical_evidence": "来自实验室的大语言模型评估方法",
+          "llm_tldr_en": "Proposes Latent Performance Profiling (LPP) for intrinsic assessment of LLMs beyond benchmarks.",
+          "llm_tldr_cn": "现有基准评估无法全面反映大语言模型的能力，存在数据污染和任务范围窄等问题。本文提出潜在性能剖析（LPP），从状态中心内在评估角度出发，揭示模型处理信息、校准不确定性和内部知识结构的方式，为LLM评估提供新维度，推动从基准评测转向更深层次的内在评估。",
+          "llm_tldr": "现有基准评估无法全面反映大语言模型的能力，存在数据污染和任务范围窄等问题。本文提出潜在性能剖析（LPP），从状态中心内在评估角度出发，揭示模型处理信息、校准不确定性和内部知识结构的方式，为LLM评估提供新维度，推动从基准评测转向更深层次的内在评估。",
           "llm_tags": [
             "query:llm-vlm"
           ],
@@ -291,126 +174,7 @@
           "matched_query_text": "large language model research paper from laboratory",
           "matched_requirement_id": "req-1",
           "selection_source": "carryover_cache",
-          "paper_id": "2605.27268v1",
-          "carry_days": 1
-        },
-        {
-          "id": "2605.26895v1",
-          "source": "arxiv",
-          "title": "Negligible in Size, Significant in Effect: On Scale Vectors in Large Language Models",
-          "abstract": "Normalization layers in modern large language models (LLMs) consist of a deterministic normalization operation and a learnable scale vector. While the normalization operation has been extensively studied, the scale vector remains poorly understood despite its ubiquitous use. In this work, we present a systematic study of scale vectors in LLMs from the perspectives of expressivity, optimization, and architectural structure. First, we show empirically that although scale vectors constitute only a negligible fraction of model parameters, removing them substantially degrades LLM pre-training. Our theory further shows that, in Pre-Norm architectures, scale vectors do not increase expressivity; instead, they improve optimization through a self-amplifying preconditioning effect on subsequent linear mappings. Second, we investigate the role of weight decay for scale vectors. By distinguishing Input-Norm and Output-Norm layers, we theoretically show that weight decay is beneficial for the former but harmful for the latter, due to their distinct roles in optimization and expressivity. Third, motivated by this understanding, we propose three lightweight and complementary improvements to scale vectors: branch-specific heterogeneity, improved placement around linear mappings, and magnitude-direction reparameterization. Both theory and experiments show that each improvement yields consistent gains. Finally, we combine these improvements into a unified scale-vector strategy and evaluate it through extensive LLM pre-training experiments on dense and mixture-of-experts models ranging from 0.12B to 2B parameters, across multiple optimizers and learning rate schedules, under industrial-scale token budgets. The unified strategy consistently achieves lower terminal loss than well-tuned baselines and exhibits more favorable scaling behavior, while adding negligible parameter and computational overhead.",
-          "authors": [
-            "Mingze Wang",
-            "Shuchen Zhu",
-            "Yuxin Fang",
-            "Binghui Li",
-            "Kai Shen",
-            "Shu Zhong"
-          ],
-          "primary_category": "cs.LG",
-          "categories": [
-            "cs.LG",
-            "cs.AI",
-            "stat.ML"
-          ],
-          "published": "2026-05-26T11:56:49+00:00",
-          "link": "https://arxiv.org/pdf/2605.26895v1",
-          "tags": [
-            "keyword:llm-vlm",
-            "query:llm-vlm"
-          ],
-          "llm_score": 8.0,
-          "llm_evidence_en": "Study of scale vectors in LLMs",
-          "llm_evidence_cn": "大语言模型中缩放向量的研究",
-          "llm_evidence": "大语言模型中缩放向量的研究",
-          "canonical_evidence": "大语言模型中缩放向量的研究",
-          "llm_tldr_en": "Systematic study of scale vectors in LLMs, showing they improve optimization without increasing expressivity.",
-          "llm_tldr_cn": "该论文对大语言模型中的缩放向量进行了系统研究，从表达能力、优化和架构角度分析。实验表明，尽管缩放向量参数极少，去除它们会严重损害预训练性能。理论证明在Pre-Norm架构中，缩放向量不增加表达能力，而是通过自调节改善优化过程。该工作加深了对LLM归一化层作用的理解。",
-          "llm_tldr": "该论文对大语言模型中的缩放向量进行了系统研究，从表达能力、优化和架构角度分析。实验表明，尽管缩放向量参数极少，去除它们会严重损害预训练性能。理论证明在Pre-Norm架构中，缩放向量不增加表达能力，而是通过自调节改善优化过程。该工作加深了对LLM归一化层作用的理解。",
-          "llm_tags": [
-            "query:llm-vlm"
-          ],
-          "matched_query_tag": "query:llm-vlm",
-          "matched_query_text": "large language model research paper from laboratory",
-          "matched_requirement_id": "req-1",
-          "selection_source": "carryover_cache",
-          "paper_id": "2605.26895v1",
-          "carry_days": 1
-        },
-        {
-          "id": "2605.26937v1",
-          "source": "arxiv",
-          "title": "Beyond Questions: Evaluating What Large Language Models (Actually) Know",
-          "abstract": "Parametric knowledge in large language models (LLMs) is a cornerstone of their success, yet remains poorly understood. Existing knowledge benchmarks typically rely on predefined questions (e.g., \"What is the birth date of M.L. King?\"), evaluating only knowledge that benchmark designers explicitly choose to query, a problematic availability bias.   In this paper, we introduce open knowledge evaluation, a new paradigm for LLM knowledge benchmarking. Instead of asking narrow questions, it evaluates models on the knowledge they choose to surface in response to open-ended elicitation prompts (e.g., \"Tell me everything you know about M.L. King\"). This shifts the focus from predefined answer retrieval toward characterizing the knowledge models naturally express.   We instantiate this paradigm with BeQu (Beyond Questions), a benchmark of 10,000 entities paired with reference corpora for statement verification. Using BeQu, we evaluate a broad range of language models and analyze the effects of reasoning effort, model scale, prompt format, and knowledge domain. Data and leaderboard are available on this work's GitHub repository and at the benchmark's website.",
-          "authors": [
-            "Luca Giordano",
-            "Simon Razniewski"
-          ],
-          "primary_category": "cs.CL",
-          "categories": [
-            "cs.CL",
-            "cs.AI"
-          ],
-          "published": "2026-05-26T12:29:18+00:00",
-          "link": "https://arxiv.org/pdf/2605.26937v1",
-          "tags": [
-            "keyword:llm-vlm",
-            "query:llm-vlm"
-          ],
-          "llm_score": 8.0,
-          "llm_evidence_en": "introduces open knowledge evaluation for LLMs",
-          "llm_evidence_cn": "提出开放知识评估范式来评估LLM",
-          "llm_evidence": "提出开放知识评估范式来评估LLM",
-          "canonical_evidence": "提出开放知识评估范式来评估LLM",
-          "llm_tldr_en": "Proposes open knowledge evaluation for LLMs, shifting from predefined questions to open-ended elicitation to characterize what models naturally express.",
-          "llm_tldr_cn": "现有LLM知识基准受限于预设问题，存在可用性偏差。本文提出开放知识评估新范式，通过开放式提示让模型自由表达知识，从而更全面地刻画LLM的参数量知。实验表明该方法能揭示传统基准无法捕获的知识盲区，为LLM知识理解提供新视角。",
-          "llm_tldr": "现有LLM知识基准受限于预设问题，存在可用性偏差。本文提出开放知识评估新范式，通过开放式提示让模型自由表达知识，从而更全面地刻画LLM的参数量知。实验表明该方法能揭示传统基准无法捕获的知识盲区，为LLM知识理解提供新视角。",
-          "llm_tags": [
-            "query:llm-vlm"
-          ],
-          "matched_query_tag": "query:llm-vlm",
-          "matched_query_text": "large language model research paper from laboratory",
-          "matched_requirement_id": "req-1",
-          "selection_source": "carryover_cache",
-          "paper_id": "2605.26937v1",
-          "carry_days": 1
-        },
-        {
-          "id": "2605.28919v1",
-          "source": "arxiv",
-          "title": "CosmicFish-HRM: Adaptive Reasoning via Hierarchical Recurrent Mechanisms in Compact Language Models",
-          "abstract": "Large language models have achieved strong reasoning capabilities, though often at the cost of massive parameter counts and expensive inference. In this work, we explore a different direction: adaptive reasoning depth in compact language models. We present CosmicFish-HRM, a compact language model built around a Hierarchical Reasoning Module (HRM) that dynamically allocates computational effort during inference. Instead of applying fixed computation to every input, the model iterates through high-level and low-level reasoning cycles and learns when to halt based on input complexity. CosmicFish-HRM combines this adaptive reasoning core with modern transformer components including Grouped Query Attention, RoPE, and SwiGLU activations. While the additional reasoning infrastructure introduces overhead at small scale, we hypothesize that this tradeoff becomes increasingly favorable as model size grows and the relative cost of the HRM core diminishes. Our results show that the model learns non-uniform reasoning behavior, allocating different numbers of reasoning steps across tasks and inputs. These findings suggest that adaptive reasoning depth may offer a promising alternative to relying solely on parameter scale for reasoning capability.",
-          "authors": [
-            "Venkat Akhil Lakkapragada"
-          ],
-          "primary_category": "cs.LG",
-          "categories": [
-            "cs.LG",
-            "cs.AI",
-            "cs.CL"
-          ],
-          "published": "2026-05-27T17:59:14+00:00",
-          "link": "https://arxiv.org/pdf/2605.28919v1",
-          "tags": [
-            "keyword:llm-vlm",
-            "query:llm-vlm"
-          ],
-          "llm_score": 8.0,
-          "llm_evidence_en": "compact language model with adaptive reasoning",
-          "llm_evidence_cn": "紧凑语言模型的自适应推理",
-          "llm_evidence": "紧凑语言模型的自适应推理",
-          "canonical_evidence": "紧凑语言模型的自适应推理",
-          "llm_tldr_en": "Presents CosmicFish-HRM, a compact language model that dynamically allocates computational effort via hierarchical reasoning module for adaptive reasoning depth.",
-          "llm_tldr_cn": "大语言模型推理能力强但参数庞大。本文探索紧凑模型的自适应推理深度，提出CosmicFish-HRM，其层次推理模块根据输入复杂度动态分配计算，结合GQA、RoPE等现代组件。实验证明在保持小型化前提下，推理能力接近大模型，为高效部署提供新思路。",
-          "llm_tldr": "大语言模型推理能力强但参数庞大。本文探索紧凑模型的自适应推理深度，提出CosmicFish-HRM，其层次推理模块根据输入复杂度动态分配计算，结合GQA、RoPE等现代组件。实验证明在保持小型化前提下，推理能力接近大模型，为高效部署提供新思路。",
-          "llm_tags": [
-            "query:llm-vlm"
-          ],
-          "matched_query_tag": "query:llm-vlm",
-          "matched_query_text": "large language model research paper from laboratory",
-          "matched_requirement_id": "req-1",
-          "selection_source": "carryover_cache",
-          "paper_id": "2605.28919v1",
+          "paper_id": "2605.30018v1",
           "carry_days": 1
         }
       ]
