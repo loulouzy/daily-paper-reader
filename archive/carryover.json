@@ -1,180 +1,91 @@
 {
-  "generated_at": "2026-05-31T20:27:52.444818+00:00",
-  "updated_date": "20260531",
+  "generated_at": "2026-06-01T22:53:54.989972+00:00",
+  "updated_date": "20260601",
   "carryover_days": 9,
   "tag_states": {
     "llm-vlm": {
-      "updated_date": "20260531",
+      "updated_date": "20260601",
       "carryover_days": 9,
       "items": [
         {
-          "id": "2605.30348v1",
+          "id": "2605.31509v1",
           "source": "arxiv",
-          "title": "LLMSurgeon: Diagnosing Data Mixture of Large Language Models",
-          "abstract": "The pretraining data mixture of Large Language Models (LLMs) constitutes their \"digital DNA\", shaping model behaviors, capabilities, and failure modes. Yet this composition is rarely disclosed, making post-hoc auditing of data combination or provenance difficult. In this work, we formalize $\\textbf{Data Mixture Surgery (DMS)}$: given only generated text from a target LLM, estimate the domain-level distribution of its pretraining corpus under a predefined taxonomy. We propose $\\textbf{LLMSurgeon}$, a strong framework that casts DMS as an inverse problem under the label-shift assumption. Rather than directly aggregating classifier outputs, LLMSurgeon estimates a calibrated $\\textit{soft}$ confusion matrix and solves a constrained inverse problem to correct systematic domain confusion and recover the latent mixture prior. To evaluate, we introduce $\\textbf{LLMScan}$, a recipe-verifiable evaluation suite built from open-source LLMs with transparent pretraining mixtures. Across LLMScan, LLMSurgeon recovers domain mixtures with high fidelity under fixed protocols. Our work presents a practical, post-hoc approach for auditing the digital DNA of foundation models without access to their training data.",
+          "title": "Skill Reuse as Compression in Agentic RL",
+          "abstract": "Large language model agents trained with reinforcement learning (RL) often learn brittle, task-specific shortcuts. We hypothesize that agents generalize better when their successful trajectories are structurally compressible, decomposed into a small set of reusable abstract patterns. To formalize this, we introduce ReuseRL, which grounds agentic RL in the Minimum Description Length (MDL) principle. ReuseRL extracts a shared skill dictionary from successful trajectories and augments the RL objective with a segmentation cost, explicitly penalizing idiosyncratic behaviors that encode poorly. We prove a PAC-Bayes generalization bound for this compression penalty. Across ALFWorld, TextWorld-Cooking, and Countdown-Stepwise, ReuseRL improves in- and out-of-distribution success over vanilla GRPO and strong round-length baselines.",
           "authors": [
-            "Yaxin Luo",
-            "Jiacheng Cui",
-            "Xiaohan Zhao",
-            "Xinyi Shang",
-            "Jiacheng Liu",
-            "Xinyue Bi",
-            "Zhaoyi Li",
-            "Zhiqiang Shen"
+            "Zhikun Xu",
+            "Yu Feng",
+            "Jacob Dineen",
+            "Taiwei Shi",
+            "Jieyu Zhao",
+            "Ben Zhou"
           ],
-          "primary_category": "cs.CL",
+          "primary_category": "cs.LG",
           "categories": [
-            "cs.CL",
-            "cs.AI",
-            "cs.LG"
-          ],
-          "published": "2026-05-28T17:59:53+00:00",
-          "link": "https://arxiv.org/pdf/2605.30348v1",
-          "tags": [
-            "keyword:llm-vlm",
-            "query:llm-vlm"
-          ],
-          "llm_score": 8.0,
-          "llm_evidence_en": "LLM data mixture diagnosis from lab",
-          "llm_evidence_cn": "来自实验室的大语言模型数据混合诊断",
-          "llm_evidence": "来自实验室的大语言模型数据混合诊断",
-          "canonical_evidence": "来自实验室的大语言模型数据混合诊断",
-          "llm_tldr_en": "Proposes LLMSurgeon to estimate pretraining data mixture from generated text, using a calibrated confusion matrix and constrained inverse problem, enabling post-hoc auditing of LLMs.",
-          "llm_tldr_cn": "该工作针对大语言模型预训练数据混合难以审计的问题，提出了一种名为LLMSurgeon的框架。该框架将预训练数据分布估计建模为一个逆问题，通过校准软混淆矩阵并求解约束优化，仅从模型生成文本中推断其训练数据的领域分布。实验表明该方法能够有效揭示模型的数据混合组成。",
-          "llm_tldr": "该工作针对大语言模型预训练数据混合难以审计的问题，提出了一种名为LLMSurgeon的框架。该框架将预训练数据分布估计建模为一个逆问题，通过校准软混淆矩阵并求解约束优化，仅从模型生成文本中推断其训练数据的领域分布。实验表明该方法能够有效揭示模型的数据混合组成。",
-          "llm_tags": [
-            "query:llm-vlm"
-          ],
-          "matched_query_tag": "query:llm-vlm",
-          "matched_query_text": "large language model research paper from laboratory",
-          "matched_requirement_id": "req-1",
-          "selection_source": "carryover_cache",
-          "paper_id": "2605.30348v1",
-          "carry_days": 1
-        },
-        {
-          "id": "2605.28170v1",
-          "source": "arxiv",
-          "title": "Localizing Input Uncertainty Quantification for Large Language Models via Shapley Values",
-          "abstract": "As large language models (LLMs) are increasingly integrated into high-stakes decision-making, the ability to reliably quantify uncertainty has become a critical requirement for safety and trust. However, current uncertainty quantification methods primarily operate at the output level, often failing to distinguish whether uncertainty arises from the model's lack of knowledge or from ambiguity in the user's input. While input-centric uncertainty quantification has recently emerged as a promising direction, it remains relatively underexplored and typically relies on coarse, input-level information. Consequently, users are provided with scalar uncertainty scores that offer little actionable guidance on which parts of the input should be clarified to improve reliability. To address this limitation, we propose Shapley-based input uncertainty Quantification (ShaQ), a framework for span-level attribution of input-induced uncertainty. Our approach models ambiguous spans in the input as players in a cooperative game and quantifies their contributions using Shapley values, defined via the weighted average of marginal reductions in conditional entropy obtained by clarifying each span coalition. Unlike existing input-level approaches, our formulation captures complex interactions among spans and provides a principled decomposition in which individual attributions sum exactly to the total input-induced uncertainty. We evaluate ShaQ on the AmbigQA and AmbiEnt benchmarks, where it achieves state-of-the-art performance in ambiguity detection. We further demonstrate its utility on MediTOD, showing that ShaQ can localize under-specified clinical utterances and facilitate human-AI collaboration in high-stakes settings. Overall, ShaQ improves uncertainty estimation and provides actionable insights for targeted input clarification.",
-          "authors": [
-            "Seongjun Lee",
-            "Suwan Yoon",
-            "Changhee Lee"
-          ],
-          "primary_category": "cs.AI",
-          "categories": [
+            "cs.LG",
             "cs.AI"
           ],
-          "published": "2026-05-27T08:53:16+00:00",
-          "link": "https://arxiv.org/pdf/2605.28170v1",
+          "published": "2026-05-29T16:28:34+00:00",
+          "link": "https://arxiv.org/pdf/2605.31509v1",
           "tags": [
             "keyword:llm-vlm",
             "query:llm-vlm"
           ],
           "llm_score": 8.0,
-          "llm_evidence_en": "LLM uncertainty quantification method from lab",
-          "llm_evidence_cn": "来自实验室的大语言模型不确定性量化方法",
-          "llm_evidence": "来自实验室的大语言模型不确定性量化方法",
-          "canonical_evidence": "来自实验室的大语言模型不确定性量化方法",
-          "llm_tldr_en": "Proposes input-level uncertainty quantification for LLMs using Shapley values, localizing evidence sources to help users interpret model confidence.",
-          "llm_tldr_cn": "本研究针对大语言模型输出级不确定性量化无法区分知识缺失与输入歧义的问题，提出基于Shapley值的输入级不确定性量化方法。该方法能够定位输入中引发不确定性的具体部分，提供可解释的不确定性估计。实验表明该方法较传统方法更具可解释性和实用性。",
-          "llm_tldr": "本研究针对大语言模型输出级不确定性量化无法区分知识缺失与输入歧义的问题，提出基于Shapley值的输入级不确定性量化方法。该方法能够定位输入中引发不确定性的具体部分，提供可解释的不确定性估计。实验表明该方法较传统方法更具可解释性和实用性。",
+          "llm_evidence_en": "RL skill reuse for LLM agents",
+          "llm_evidence_cn": "面向大语言模型智能体的强化学习技能复用",
+          "llm_evidence": "面向大语言模型智能体的强化学习技能复用",
+          "canonical_evidence": "面向大语言模型智能体的强化学习技能复用",
+          "llm_tldr_en": "Introduces ReuseRL which grounds agentic RL in MDL principle, extracting reusable skills from successful trajectories to improve generalization.",
+          "llm_tldr_cn": "本文针对大语言模型（LLM）智能体强化学习中学到的策略通常脆弱且任务特定的问题，提出了ReuseRL方法。该方法基于最小描述长度（MDL）原则，从成功轨迹中提取可复用的技能字典，并在RL目标中加入分割成本以惩罚编码低效的行为。在ALFWorld等三个基准上实验表明，ReuseRL在分布内和分布外场景下的成功率均超过基线方法，并且有PAC-Bayes泛化界保证。",
+          "llm_tldr": "本文针对大语言模型（LLM）智能体强化学习中学到的策略通常脆弱且任务特定的问题，提出了ReuseRL方法。该方法基于最小描述长度（MDL）原则，从成功轨迹中提取可复用的技能字典，并在RL目标中加入分割成本以惩罚编码低效的行为。在ALFWorld等三个基准上实验表明，ReuseRL在分布内和分布外场景下的成功率均超过基线方法，并且有PAC-Bayes泛化界保证。",
           "llm_tags": [
             "query:llm-vlm"
           ],
           "matched_query_tag": "query:llm-vlm",
-          "matched_query_text": "large language model research paper from laboratory",
-          "matched_requirement_id": "req-1",
+          "matched_query_text": "reinforcement learning for large language model",
+          "matched_requirement_id": "req-4",
           "selection_source": "carryover_cache",
-          "paper_id": "2605.28170v1",
+          "paper_id": "2605.31509v1",
           "carry_days": 1
         },
         {
-          "id": "2605.28456v1",
+          "id": "2605.30795v1",
           "source": "arxiv",
-          "title": "Diffusion Large Language Models for Visual Speech Recognition",
-          "abstract": "Existing Visual Speech Recognition (VSR) systems commonly rely on left-to-right autoregressive decoding, which can force premature decisions on visually ambiguous tokens before sufficient context is available. We propose DLLM-VSR, to the best of our knowledge, the first Diffusion Large Language Model (DLLM)-based VSR framework, formulating transcription as iterative masked denoising with flexible-order decoding. With confidence-based unmasking, DLLM-VSR commits high-confidence positions early and uses the committed tokens as bidirectional context to refine ambiguous ones. To adapt DLLMs to VSR, we introduce a two-stage masked-denoising training strategy that separates visual-to-text content alignment from length modeling. We further observe a performance gap with oracle-length decoding, which assumes access to the true transcript length, indicating that reducing target-length uncertainty can improve DLLM-based VSR. To reduce this gap, we develop length-guided candidate decoding, which uses video duration to construct plausible transcript-length hypotheses, decodes under multiple hypotheses, and reranks candidates using length plausibility and decoding confidence. The proposed method achieves a state-of-the-art WER of 19.5\\% on LRS3 using only its labeled training data.",
+          "title": "Feat2Go: Visual Feature-Grounded Value Estimation for Embodied Reinforcement Learning",
+          "abstract": "Reinforcement learning is a promising approach for improving the capabilities of vision-language-action (VLA) models while avoiding the heavy data requirements of imitation learning. However, its effectiveness for VLA models is often constrained by sparse supervision and the difficulty of designing informative reward signals for long-horizon manipulation. In this work, we present Feat2Go, a fine-grained value estimation framework for embodied reinforcement learning. Specifically, Feat2Go first derives a continuous progress target from a pretrained visual world model by measuring patch-level similarity to subgoal states and partitioning episodes into semantic stages with trend-based clustering. We then train an embodied value model to predict this structural progress from the current observation and task instruction, and use the predicted value to reshape terminal rewards during policy optimization. The proposed framework is compatible with existing VLA policy reinforcement learning pipelines, including PPO and GRPO, and does not rely on manual reward engineering. Extensive experiments on ManiSkill3 and RoboTwin 2.0 demonstrate that Feat2Go consistently improves the performance of existing VLA models under both single-arm and bimanual manipulation settings. More specifically, on ManiSkill3, Feat2Go improves OpenVLAOFT from 17.5% to 82.9% average out-of-distribution success while retaining 96.9% in-distribution performance. On RoboTwin 2.0, Feat2Go achieves an average success rate of 88.8% in domain-randomized task settings, outperforming prior reinforcement learning methods.",
           "authors": [
-            "Jeong Hun Yeo",
-            "Chae Won Kim",
-            "Hyeongseop Rha",
-            "Yong Man Ro"
+            "Junyang Shu",
+            "Zhiwei Lin",
+            "Bingqing Wei",
+            "Yongtao Wang"
           ],
-          "primary_category": "cs.AI",
+          "primary_category": "cs.RO",
           "categories": [
-            "cs.AI",
-            "cs.CV",
-            "eess.AS"
+            "cs.RO"
           ],
-          "published": "2026-05-27T13:22:08+00:00",
-          "link": "https://arxiv.org/pdf/2605.28456v1",
+          "published": "2026-05-29T03:36:33+00:00",
+          "link": "https://arxiv.org/pdf/2605.30795v1",
           "tags": [
             "keyword:llm-vlm",
             "query:llm-vlm"
           ],
           "llm_score": 8.0,
-          "llm_evidence_en": "diffusion large language model for visual speech recognition",
-          "llm_evidence_cn": "扩散大语言模型用于视觉语音识别",
-          "llm_evidence": "扩散大语言模型用于视觉语音识别",
-          "canonical_evidence": "扩散大语言模型用于视觉语音识别",
-          "llm_tldr_en": "Proposes DLLM-VSR, the first Diffusion Large Language Model-based visual speech recognition framework, formulating transcription as iterative masked denoising with flexible-order decoding.",
-          "llm_tldr_cn": "现有视觉语音识别系统采用从左到右的自回归解码，易受视觉歧义影响。本文提出首个基于扩散大语言模型（DLLM）的视觉语音识别框架DLLM-VSR，将转录视为迭代掩码去噪过程，支持灵活顺序解码，并通过两阶段训练策略分离视觉-文本对齐与长度建模。",
-          "llm_tldr": "现有视觉语音识别系统采用从左到右的自回归解码，易受视觉歧义影响。本文提出首个基于扩散大语言模型（DLLM）的视觉语音识别框架DLLM-VSR，将转录视为迭代掩码去噪过程，支持灵活顺序解码，并通过两阶段训练策略分离视觉-文本对齐与长度建模。",
+          "llm_evidence_en": "multimodal RL paper combining visual features with RL for VLA models",
+          "llm_evidence_cn": "结合视觉特征与强化学习的多模态强化学习论文，用于VLA模型",
+          "llm_evidence": "结合视觉特征与强化学习的多模态强化学习论文，用于VLA模型",
+          "canonical_evidence": "结合视觉特征与强化学习的多模态强化学习论文，用于VLA模型",
+          "llm_tldr_en": "Presents Feat2Go, a fine-grained value estimation framework for embodied RL that derives progress targets from visual world models and trains an embodied value model.",
+          "llm_tldr_cn": "强化学习改进VLA模型受限于稀疏奖励和奖励设计困难。Feat2Go从预训练视觉世界模型中提取连续进展目标，通过补丁级相似性和趋势聚类划分语义阶段，训练具身价值模型。实验表明在长程操作任务上显著提升样本效率和成功率，为VLA模型的强化学习提供了有效范式。",
+          "llm_tldr": "强化学习改进VLA模型受限于稀疏奖励和奖励设计困难。Feat2Go从预训练视觉世界模型中提取连续进展目标，通过补丁级相似性和趋势聚类划分语义阶段，训练具身价值模型。实验表明在长程操作任务上显著提升样本效率和成功率，为VLA模型的强化学习提供了有效范式。",
           "llm_tags": [
             "query:llm-vlm"
           ],
           "matched_query_tag": "query:llm-vlm",
-          "matched_query_text": "multimodal large language model paper",
-          "matched_requirement_id": "req-3",
+          "matched_query_text": "multimodal reinforcement learning paper",
+          "matched_requirement_id": "req-6",
           "selection_source": "carryover_cache",
-          "paper_id": "2605.28456v1",
-          "carry_days": 1
-        },
-        {
-          "id": "2605.30018v1",
-          "source": "arxiv",
-          "title": "Latent Performance Profiling of Large Language Models",
-          "abstract": "Large language models (LLMs) frequently achieve impressive scores on standardized benchmarks, yet accuracy alone offers a limited view of their capabilities. Evaluating open-source LLMs through leaderboards faces persistent issues like data contamination, narrow task scope, and weak alignment with real-world reliability. Benchmark-based evaluations such as MMLU PRO, BBH, or IFEval primarily capture \\textit{what} a model outputs on fixed test sets, not \\textit{how} it processes information, calibrates uncertainty, or structures internal knowledge. In this article, we advocate for a shift from benchmark-centric evaluation toward a complementary, \\textit{state-centered intrinsic assessment} of LLMs. To this end, we introduce \\textbf{Latent Performance Profiling (LPP)} -- a framework that derives task-agnostic diagnostics from hidden activations and output distributions. LPP defines a set of scalar metrics on a model's latent representations and dynamics, revealing scale-independent traits that enable interpretable comparisons and uncover hidden vulnerabilities. Unlike static accuracy scores, LPP provides stable, architecture-sensitive signatures across models of similar size. With extensive empirical analyses across eight LLMs, spanning a size range of 0.5B-14B, we demonstrate that models with similar benchmark scores can exhibit contrasting latent profiles, such as differences in entropy or adaptability. Guided by these insights, we design synthetic probes for uncertainty and symbolic reasoning that align with intrinsic metrics while decoupling from leaderboard bias. We recommend that reporting LPP alongside benchmarks provides a deeper, interpretable understanding of model behavior, enabling more reliable model selection, safety assessment, and evaluation beyond surface-level accuracy.",
-          "authors": [
-            "Tanmoy Chakraborty",
-            "Ayan Sengupta",
-            "Suparna Bhattacharya",
-            "Partha Pratim Chakrabarti",
-            "Amlan Chakrabarti",
-            "Supratik Chakraborty",
-            "Partha Pratim Das",
-            "Lipika Dey",
-            "Richa Singh",
-            "Mayank Vatsa"
-          ],
-          "primary_category": "cs.CL",
-          "categories": [
-            "cs.CL",
-            "cs.LG"
-          ],
-          "published": "2026-05-28T14:41:26+00:00",
-          "link": "https://arxiv.org/pdf/2605.30018v1",
-          "tags": [
-            "keyword:llm-vlm",
-            "query:llm-vlm"
-          ],
-          "llm_score": 8.0,
-          "llm_evidence_en": "LLM evaluation method from research lab",
-          "llm_evidence_cn": "来自实验室的大语言模型评估方法",
-          "llm_evidence": "来自实验室的大语言模型评估方法",
-          "canonical_evidence": "来自实验室的大语言模型评估方法",
-          "llm_tldr_en": "Proposes Latent Performance Profiling (LPP) for intrinsic assessment of LLMs beyond benchmarks.",
-          "llm_tldr_cn": "现有基准评估无法全面反映大语言模型的能力，存在数据污染和任务范围窄等问题。本文提出潜在性能剖析（LPP），从状态中心内在评估角度出发，揭示模型处理信息、校准不确定性和内部知识结构的方式，为LLM评估提供新维度，推动从基准评测转向更深层次的内在评估。",
-          "llm_tldr": "现有基准评估无法全面反映大语言模型的能力，存在数据污染和任务范围窄等问题。本文提出潜在性能剖析（LPP），从状态中心内在评估角度出发，揭示模型处理信息、校准不确定性和内部知识结构的方式，为LLM评估提供新维度，推动从基准评测转向更深层次的内在评估。",
-          "llm_tags": [
-            "query:llm-vlm"
-          ],
-          "matched_query_tag": "query:llm-vlm",
-          "matched_query_text": "large language model research paper from laboratory",
-          "matched_requirement_id": "req-1",
-          "selection_source": "carryover_cache",
-          "paper_id": "2605.30018v1",
+          "paper_id": "2605.30795v1",
           "carry_days": 1
         }
       ]

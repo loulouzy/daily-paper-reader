@@ -1,0 +1,400 @@
+Title: CiteCheck: Retrieval-Grounded Detection of LLM Citation Hallucinations in Scientific Text
+
+URL Source: https://arxiv.org/pdf/2605.27700v1
+
+Published Time: Thu, 28 May 2026 00:22:49 GMT
+
+Number of Pages: 16
+
+Markdown Content:
+# CITE CHECK : Retrieval-Grounded Detection of LLM Citation Hallucinations in Scientific Text 
+
+Khashayar Khajavi* 1 2 Shaghayegh Sadeghi* 1 Rise Adhikari 1 Alexander Tessier 1
+
+## Abstract 
+
+Large language models (LLMs) are increasingly used to generate scientific reports, but they can produce references that appear plausible while containing corrupted metadata or pointing to pa-pers that do not exist. We introduce C ITE CHECK ,a hybrid framework for citation hallucination de-tection that verifies whether a citation corresponds to a real scholarly work and whether its meta-data is faithful to that work. CITE CHECK re-trieves candidate publications from external schol-arly sources, compares the citation against the re-trieved candidate using a structured LLM verifier, and maps verifier scores into three labels: E X-
+
+> ACT
+
+, M INOR , and M AJOR . We also construct a 982-citation physics benchmark with controlled corruptions that capture both subtle metadata drift and fully fabricated references. On the held-out test set, C ITE CHECK achieves 88.7 macro-F1 and 88.9% accuracy, outperforming GPT, Claude, and Gemini baselines, including web-search and few-shot variants. These results show that reliable ci-tation verification benefits from combining schol-arly retrieval, structured LLM-based comparison, and calibrated decision rules. 
+
+## 1. Introduction 
+
+Large language models (LLMs) are rapidly becoming em-bedded in scientific workflows, from literature discovery and summarization to hypothesis generation, manuscript drafting, and report generation (Zhang et al., 2025; Luo et al., 2025). Furthermore, recent studies have documented their growing footprint in scientific writing itself, includ-ing measurable linguistic shifts in published papers and broader use across the research lifecycle (Liang et al., 2024; Kobak et al., 2025). This shift creates new opportunities for accelerating research, but it also changes the reliability re-
+
+* Equal contribution. 1FirstPrinciples 2School of Computing Science, Simon Fraser University. Correspondence to: FirstPrinci-ples <research@firstprinciples.org >.
+
+quirements of generated scientific text. In scholarly writing, factuality is not only a matter of producing fluent and plau-sible claims: each claim must be connected to a traceable literature, and each cited source must be recoverable and correctly described. Citations are a core mechanism through which science main-tains continuity, attribution, and accountability. They situate new work within prior knowledge, guide readers to support-ing evidence, acknowledge intellectual contributions, and increasingly influence research evaluation and academic rep-utation (Gasparyan et al., 2015; Bruton et al., 2025; Mehre-gan, 2022). Citation errors therefore do more than intro-duce formatting noise: they can mislead readers, obscure provenance, distort credit, and weaken the reproducibility of scientific communication. This problem becomes es-pecially acute for LLM-generated content, where models can produce references that appear stylistically legitimate while changing authors, years, titles, DOIs, or URLs, or fabricating entire papers that do not exist (Walters & Wilder, 2023; McGowan et al., 2023; Linardon et al., 2025; Misra & Udandarao, 2026; Abbonato, 2026; Press et al., 2024). In this work, we introduce C ITE CHECK , a hybrid frame-work for detecting hallucinated references in AI-generated scientific reports. Rather than relying on the surface plau-sibility of a citation, C ITE CHECK grounds each reference against external scholarly sources and uses a structured LLM verifier to judge whether the retrieved publication ac-tually matches the cited metadata. The system distinguishes between three outcomes: exact matches , where the citation correctly describes a real paper; minor hallucinations , where the intended paper exists but some bibliographic fields are corrupted; and major hallucinations , where the reference points to no matching scholarly work. To evaluate this setting, we construct a benchmark of 982 real physics citations and controlled corrupted variants. The benchmark covers a diverse set of physics subfields and includes both subtle metadata perturbations, such as incor-rect authors, years, titles, or identifiers, and fully fabricated references that remain topically plausible. On the test set, CITE CHECK achieves 88.7 macro-F1 and 88.9% accuracy, outperforming GPT, Claude, and Gemini baselines, includ-ing variants with web search and few-shot examples. No-1
+
+> arXiv:2605.27700v1 [cs.DL] 26 May 2026 CITE CHECK
+
+tably, C ITE CHECK remains zero-shot, yet surpasses the strongest few-shot LLM baseline by 5.8 macro-F1 points and 5.7 accuracy points, showing that grounded retrieval and structured comparison are more reliable than prompting LLMs to judge citation validity directly. The rest of the paper is organized as follows. Section 2 reviews work on LLM-assisted scientific writing, citation hallucination, citation integrity, and claim-level verification. Section 3 presents the C ITE CHECK pipeline, including can-didate retrieval, LLM-based verification, threshold-based labeling, and the reviewer pass. Section 4 describes the construction of our citation-hallucination benchmark. Sec-tion 5 reports the main comparison against LLM baselines, verifier-model sensitivity, and component ablations. Sec-tion 6 discusses the implications and remaining limitations of the approach, and Section 7 concludes the paper 1.
+
+## 2. Related Work 
+
+LLMs in scientific writing and workflows. LLMs are increasingly used across scientific workflows, including literature review, summarization, hypothesis generation, manuscript drafting, and research assistance (Zhang et al., 2025; Luo et al., 2025). Their use is also becoming visible in the scientific literature itself: recent work has measured linguistic signals of LLM-assisted writing in published pa-pers and documented the growing footprint of LLMs in scientific text production (Liang et al., 2024; Kobak et al., 2025). This trend motivates tools that can verify not only the fluency of generated scientific text, but also the integrity of the references on which such text depends. 
+
+Citation hallucination. A growing body of work shows that LLMs can fabricate or distort bibliographic references, producing citations that appear plausible but do not cor-respond to real publications or contain incorrect metadata (Walters & Wilder, 2023; McGowan et al., 2023; Linardon et al., 2025; Misra & Udandarao, 2026; Abbonato, 2026; Press et al., 2024). Existing studies have documented errors such as invented titles, non-existent DOIs, incorrect authors, and fabricated papers. Closest to our setting, Abbonato (2026) introduce a tool for checking reference existence against scholarly metadata sources. C ITE CHECK differs by framing citation hallucination as a three-class severity task, distinguishing exact matches, minor metadata corruptions, and major fabricated references, and by combining scholarly retrieval, structured LLM scoring, threshold-based classi-fication, and automatic correction in a single evaluation-driven pipeline. 
+
+Citation integrity and citation ethics. Beyond the LLM setting, citations are central to scholarly communication: 
+
+> 1Code and data are available upon request.
+
+they connect new work to prior evidence, attribute intellec-tual contributions, and support the traceability and repro-ducibility of research. Prior work on citation integrity and citation ethics emphasizes that inaccurate or manipulated ref-erences can mislead readers, distort credit, and weaken the reliability of the scholarly record (Gasparyan et al., 2015; Bruton et al., 2025; Mehregan, 2022). CITE CHECK ad-dresses this concern in the context of AI-generated scientific reports, where reference errors can be generated at scale and may be difficult to detect manually. 
+
+Attribution, factuality, and claim verification. A par-allel line of work studies whether generated claims are properly supported by their cited sources (Gao et al., 2023; Rashkin et al., 2023; Huang et al., 2024; Wu et al., 2025; Zhang et al., 2024; Yue et al.). Long-form factuality metrics such as FA CT SCORE (Min et al., 2023) and self-reflective retrieval methods (Bohnet et al., 2022; Asai et al., 2024) evaluate atomic claim support, but generally assume that ref-erences resolve to real documents. Scientific claim verifica-tion benchmarks make the same assumption by focusing on whether evidence supports or refutes a claim (Wadden et al., 2020; 2022; Liu et al., 2024; Alvarez et al., 2024; Fang et al., 2025; Wang et al., 2025; Ho et al., 2026). C ITE CHECK sits one level earlier: it verifies that the cited works themselves exist and are correctly specified, complementing rather than replacing claim-level verification. 
+
+Scholarly retrieval. CITE CHECK relies on scholarly metadata services that have become standard infrastruc-ture for scientific search and reference resolution (Hen-dricks et al., 2020; Kinney et al., 2023; Priem et al., 2022; arXiv, 2026). Its retrieval component is related to retrieval-augmented generation (Lewis et al., 2020; Karpukhin et al., 2020), but the goal is different: rather than retrieving pas-sages to support generation, C ITE CHECK retrieves candi-date publications to validate citation metadata and identify whether an apparent reference corresponds to a real schol-arly work. 
+
+## 3. Method 
+
+3.1. Problem Formulation 
+
+We study citation hallucination detection at the reference level. Given a citation string, the goal is to determine whether it corresponds to a real scholarly work and whether its bibliographic metadata is faithful to that work. We fo-cus on citation existence and metadata fidelity, rather than whether the cited paper supports a particular claim. We formulate the task as three-way classification. An E X- 
+
+> ACT
+
+citation correctly identifies a real publication and con-tains metadata consistent with that publication. A M INOR 
+
+hallucination refers to a real publication, but contains one or 2CITE CHECK No             
+
+> Major Minor Exact
+> 01.25 7.25 10
+> Raw Citation string
+> e.g , “Smith et al.,
+> 2023,…”
+> Metadata Extraction
+> Title, author, year,
+> URL, DOI / arXiv ID
+> 5. Web search (LLM)
+> Retrieved
+> candidate/
+> NotFound
+> 1. CrossRef
+> 2. Semantic Scholar
+> 3. OpenAlex
+> 4. arXiv
+> LLM verifier
+> Citation vs. candidate
+> Score (0 -10) + reasoning
+> Thresholding
+> Reviewer LLM Suspicious
+> identifier match?
+> Final label
+> Second -pass check Exact / Minor / Major
+> Yes
+> Candidate retrieval cascade
+
+Figure 1: The C ITE CHECK pipeline. A raw citation string is first parsed into structured metadata, then matched against candidates from a retrieval cascade. An LLM verifier scores the citation against the retrieved candidate and the score is mapped to one of three labels (Exact / Minor / Major). When the candidate’s identifier match is suspicious, a Reviewer LLM performs a second-pass check before the final label is emitted. more incorrect fields, such as an altered author name, year, title, URL, DOI, or arXiv identifier. A M AJOR hallucination is a citation for which no sufficiently similar real publication can be found, or where the closest retrieved candidate is too different to plausibly be the intended work. 
+
+3.2. Overview 
+
+Figure 1 gives an overview of C ITE CHECK . The input is a single citation string. C ITE CHECK first converts this raw citation into structured fields, including title, authors, year, URL, DOI, and arXiv identifier when available. We use a rule-based parser for common citation patterns and invoke an LLM-based parser only when the deterministic parser fails to recover the core fields. This step does not determine whether the citation is valid; it only extracts retrieval signals for the later stages. The central idea of C ITE CHECK is to separate retrieval from 
+
+verification . A citation can look plausible even when it is wrong, and a real identifier can be paired with an unrelated title or author list. Rather than asking an LLM to judge citation validity from its internal knowledge, C ITE CHECK 
+
+first attempts to ground the citation in external scholarly sources. It searches for the closest real publication using a waterfall cascade over scholarly metadata APIs and web search. The output of this stage is either the best candidate publication found for the citation or a not-found result when no reliable candidate can be recovered. Given the original citation and the retrieved candidate, CITE CHECK performs structured verification. A verifier LLM compares the citation against the candidate metadata and assigns a numeric score from 0 to 10, together with a short explanation of the main discrepancies. The score is then mapped to one of three labels using fixed thresholds: EXACT , M INOR , or M AJOR . High scores indicate that the citation faithfully describes the retrieved work, intermedi-ate scores indicate that the intended work likely exists but contains corrupted metadata, and low scores indicate that the citation is fabricated or too dissimilar from any retrieved publication. For suspicious identifier-based matches, i.e., where a URL or arXiv ID resolves to a real paper but the title similarity is low, C ITE CHECK applies an optional re-viewer pass that re-examines the case before assigning the final label. 
+
+3.3. Retrieving Candidate Publications 
+
+Given an input citation, C ITE CHECK first attempts to re-cover the real publication that the citation most likely refers to. This step is necessary because hallucinated citations are often only partially wrong: they may preserve the correct ti-tle while corrupting the year, URL, DOI, or arXiv identifier, or pair a real identifier with unrelated surrounding metadata. We therefore treat retrieval as candidate generation rather than final verification. CITE CHECK constructs a cleaned search query from the parsed title when available, falling back to the raw citation text otherwise. Common LaTeX and BibTeX artifacts are removed before querying, and the publication year, when available, is used as an auxiliary ranking signal. The system then applies a waterfall cascade over external sources. If the citation appears arXiv-related, a direct arXiv lookup can be attempted first. The cascade then searches Cross-Ref (Crossref, 2026), Semantic Scholar (Semantic Scholar, 2026), and OpenAlex (Priem et al., 2022). These sources 3CITE CHECK 
+
+provide complementary coverage: CrossRef is strong for DOI-registered publisher metadata, Semantic Scholar pro-vides broad scholarly search with enriched metadata, and OpenAlex offers a large open index of scholarly works. If no structured source returns a reliable match, C ITE CHECK 
+
+optionally falls back to LLM-assisted web search. At each stage, C ITE CHECK records the best candidate re-turned by that source, but accepts a candidate only if it passes a minimum title-similarity threshold. CrossRef addi-tionally requires a confidence threshold, while later sources can replace the CrossRef candidate only when they achieve higher title similarity. Candidate acceptance is based on normalized Levenshtein similarity between cleaned titles. Within Semantic Scholar and OpenAlex, a cheaper word-overlap score with year bonuses is used only to rank returned candidates before the final title-similarity check. Additional implementation details for query construction, scoring, con-fidence handling, and fallback behavior are provided in Appendix A. The retrieval stage outputs either a single best candidate publication or a not-found result. Importantly, this output is not treated as the final answer: high title similarity can still hide metadata drift, and identifier-based matches can be misleading when a real URL or arXiv ID is attached to the wrong title or authors. The retrieved candidate is therefore passed to the LLM verification stage for direct comparison against the original citation. Furthermore, we provide an efficiency analysis of the retrieval cascade, including per-stage latency and match-source distributions, in Appendix F. 
+
+3.4. LLM-Based Verification and Label Assignment 
+
+After retrieval, C ITE CHECK verifies whether the input cita-tion faithfully describes the retrieved candidate. The verifier receives both the original citation metadata and the matched publication metadata, and outputs a structured response con-taining a numeric score from 0 to 10, a confidence level, a short rationale, and the main differences it identifies. Impor-tantly, the LLM is not asked to decide citation validity from memory; it is used as a comparator over externally retrieved evidence. We use a numeric score rather than relying directly on the model’s categorical label. This allows the final decision boundary between E XACT , M INOR , and M AJOR to be tuned on validation data, instead of being fixed entirely by prompt wording. Similar uses of graded LLM outputs have been explored in settings where downstream thresholding, rank-ing, or calibration is useful, including Likert-style LLM screening for literature review and calibrated verbalized probabilities for discriminative tasks (Dennst ¨adt et al., 2024; Xiong et al., 2024). In our setting, the score provides a continuous measure of citation–candidate agreement: high scores correspond to faithful metadata matches, interme-diate scores indicate a recognizable paper with corrupted fields, and low scores indicate an unrelated or fabricated citation. The final label is assigned deterministically from the verifier score using two thresholds, τM and τE :
+
+ℓ =
+
+
+
+EXACT , s ≥ τE ,
+
+MINOR , τM ≤ s < τ E ,
+
+MAJOR , s < τ M .
+
+The thresholds are selected on the development split and then held fixed for test evaluation. This separation makes re-calibration inexpensive: once the verifier scores have been produced, different threshold choices can be evaluated without re-running retrieval or LLM inference. Prompt details and the structured output schema are provided in Appendix B. 
+
+3.5. Reviewer Pass for Suspicious Matches 
+
+A remaining failure mode occurs when an identifier resolves to a real paper, but the visible citation text describes a differ-ent work. For example, a fabricated citation may contain a valid arXiv URL while pairing it with unrelated authors or a different title. To handle this, C ITE CHECK uses a targeted reviewer pass for suspicious cases where the retrieved can-didate comes from an identifier-based source, such as arXiv or web search, but the title similarity is low. The reviewer is implemented as a second LLM judge that receives the raw citation, the matched source metadata, the title-similarity score, and the first-pass verifier’s label, score, and reasoning. This design follows the broader use of LLMs as structured evaluators, where a model is given explicit criteria and evidence to judge an earlier output (Zheng et al., 2023; Liu et al., 2023). The reviewer outputs only a final label and rationale; when it overrides the first-pass decision, CITE CHECK maps that label back to a representative score within the corresponding threshold interval while preserving the original verifier output for auditability. The reviewer prompt is provided in Appendix B.2. 
+
+## 4. Dataset Construction 
+
+4.1. Citation Pool 
+
+We construct our benchmark from a pool of 982 real aca-demic citations drawn from physics literature. The pool was curated to reflect realistic citation contexts in scien-tific reports: most references are research papers, including preprints and peer-reviewed articles, while a small num-ber correspond to other scholarly artifacts such as theses, technical reports, facility documentation, and canonical sci-entific databases. The citations span nine subdomains: astro-physics, biophysics, condensed matter, gravitational physics, 4CITE CHECK 
+
+Table 1: Distribution of the original citation pool across physics subdomains.                       
+
+> Subdomain Collections Citations Astrophysics 492 Biophysics 376 Condensed matter 5104 Gravitational physics 5135 Nuclear physics 592 Particle physics 5124 Plasma physics 5121 Quantum computing 5134 Soft matter physics 5104 Total 42 982
+
+nuclear physics, particle physics, plasma physics, quantum computing, and soft matter physics. To avoid a benchmark where topical mismatch becomes an easy shortcut, we or-ganize the citations into 42 topically coherent collections. Within each collection, references share a common sub-field and technical vocabulary, making the task depend on citation-level evidence rather than broad topic recognition. Each citation in the pool corresponds to a real, retrievable scholarly work and serves as a valid reference before cor-ruption. We normalize all citations into a common surface format containing the author string, publication year, paper title, and a resolvable URL, such as a DOI, arXiv link, or publisher page. This standardization allows the corruption and verification pipelines to operate over a consistent in-put representation while preserving the bibliographic fields most relevant to citation hallucination detection. The pool is intentionally representative of modern physics citation practices. Most references resolve to arXiv, re-flecting the central role of preprints in the selected subdo-mains, while the remaining citations come from publisher and indexing platforms. The publication years span both established and recent work, which is important because ver-ification systems may rely on metadata sources with uneven coverage over time. Table 1 summarizes the distribution of citations across subdomains. 
+
+4.2. Controlled Corruption Procedure 
+
+Starting from the clean citation pool, we create a labeled benchmark by applying controlled corruptions to a stratified subset of citations while leaving the rest unchanged. Within each topical collection, citations are randomly partitioned using a fixed seed into three groups: valid citations, minor hallucinations, and major hallucinations. Partitioning is performed independently within each collection so that all physics subdomains contain a similar mix of labels and the benchmark cannot be solved by topic-level artifacts. Valid citations are kept unchanged and therefore correspond Table 2: Label distribution in the final benchmark.           
+
+> Label Count Share Valid 356 36.25% Minor hallucination 300 30.55% Major hallucination 326 33.20% Total 982 100.00%
+
+exactly to real, retrievable papers. Minor hallucinations are designed to model metadata drift: the intended paper still exists, but one or more bibliographic fields are corrupted. These edits include changes to author names, publication years, URLs, DOIs, arXiv identifiers, venues, or small title perturbations. The title is deliberately kept mostly intact, making these examples difficult for systems that rely only on surface title similarity. Major hallucinations are designed to model fabricated ref-erences. In these cases, the original citation is rewritten into a plausible but non-existent paper. To avoid trivial off-topic examples, major corruptions are conditioned on the citation’s physics subdomain, so the generated reference remains stylistically and topically plausible. The corruption prompt also requires coordinated changes across the title, authors, year, and identifier fields, producing citations that resemble legitimate scholarly references while lacking a real matching publication. Both minor and major corruptions are generated with the same lightweight LLM backbone (OpenAI’s GPT -4o -mini model), under different prompting regimes. We use a lower-temperature setting for minor corruptions to produce conservative, transcription-error-like edits, and a higher-temperature setting for major corruptions to encourage more substantial fabrication. Using the same model for both cor-ruption types avoids introducing model identity as a con-found: differences between the two classes arise from the corruption regime rather than from the generator itself. Each generation call uses a structured-output schema that records the original citation, corrupted citation, assigned label, and a natural-language description of the changes. This provides a provenance trace for every corrupted example and makes the benchmark reproducible. Additional prompt templates, schema details, and examples are provided in Appendix C. 
+
+4.3. Dataset Statistics 
+
+The final benchmark contains 982 citation instances. The la-bel distribution is close to balanced across the three classes: 356 valid citations, 300 minor hallucinations, and 326 major hallucinations. The slight skew toward valid citations comes from the deterministic rounding rule used when partitioning citations within each topical collection. Table 2 summarizes the final label distribution. 5CITE CHECK 
+
+The benchmark is also diverse in source type and publication year. Since the corpus is drawn from physics, it is preprint-heavy: 835 citations, or 85.0%, resolve to arXiv, while the remaining citations resolve to publisher pages, index-ing services, or biomedical repositories. Publication years range from 2007 to 2025, with a median year of 2020. This mix is useful for evaluation because citation-verification systems must handle both recent preprints and older, well-established publications. All 982 references resolve to real scholarly artifacts. Of these, 942 are research papers, includ-ing arXiv preprints and peer-reviewed journal articles, while the remaining references consist of theses, technical reports, public-facility briefings, and canonical scientific databases. Because corruptions are applied independently within each topical collection, the three labels are distributed similarly across physics subdomains. This design reduces the chance that a model can exploit topic-level artifacts to distinguish valid and hallucinated citations. Instead, successful systems must verify whether the citation metadata corresponds to a real publication. 
+
+## 5. Results 
+
+5.1. Experimental Setup 
+
+We evaluate C ITE CHECK on the 982-citation benchmark described in Section 4. We split the benchmark into a val-idation set of 190 citations and a held-out test set of 792 citations. The validation set is used only for selecting the score thresholds that map verifier scores to the three output labels; all reported headline results are computed on the test set. As mentioned in Section 3.4, C ITE CHECK produces a con-tinuous score for each citation through its LLM verifier. To convert these scores into labels, we tune two thresholds on the validation set: a minor threshold τM and an exact threshold τE , with the constraint τE ≥ τM . We sweep both thresholds from 0 to 10 in increments of 0.25 and reclassify the validation predictions under each candidate pair. The selected threshold pair is the one that maximizes support-weighted F1 across the three classes. This procedure selects 
+
+τM = 1 .25 and τE = 7 .25 , which are then fixed and applied unchanged to the test set. Unless otherwise stated, C ITE CHECK uses Claude Sonnet 4.6 as both the primary citation verifier and the reviewer model, and uses GPT-5.4 for the web-search fallback in the retrieval cascade. All LLM-based components are accessed through hosted provider APIs. We report per-class F1 for EXACT , M INOR , and M AJOR , along with macro-F1 and overall accuracy. For LLM baselines, we evaluate GPT 5.4, Claude Sonnet 4.6, and Gemini 2.5 Flash under zero-shot and few-shot prompting, both with and without web search. The few-shot setting uses 27 examples sampled from the validation set, with nine examples from each class, and the same examples are used for all baseline models. For all direct LLM baselines, we use a shared citation-verification rubric that defines the same three labels as C ITE CHECK 
+
+and requires a structured JSON output containing a label, score, reasoning, and whether evidence was found. The full baseline prompt templates are provided in Appendix E, and model/provider details, decoding settings, experiment dates, and tuned thresholds are reported in Appendix D. 
+
+5.2. Comparison with LLM Baselines 
+
+Table 3 compares C ITE CHECK against direct LLM base-lines on the held-out test set. C ITE CHECK achieves the best performance across all reported metrics, with 86.1 E XACT 
+
+F1, 81.7 M INOR F1, 98.3 M AJOR F1, 88.7 macro-F1, and 88.9% accuracy. The strongest baseline is Claude Sonnet 4.6 with both web search and few-shot examples, which reaches 82.9 macro-F1 and 83.2% accuracy. Thus, C ITE CHECK 
+
+improves over the strongest baseline by 5.8 macro-F1 points and 5.7 accuracy points. Importantly, C ITE CHECK does not use any few-shot examples in its verifier prompt; it outper-forms all zero-shot and few-shot baselines through retrieval-grounded verification and threshold calibration rather than in-context supervision. The baseline results show that direct LLM classification benefits substantially from external search. In the zero-shot setting, enabling web search improves macro-F1 from 62.7 to 73.1 for GPT 5.4, from 68.7 to 81.2 for Claude Sonnet 4.6, and from 55.1 to 78.3 for Gemini 2.5 Flash. This suggests that citation hallucination detection is difficult to solve from the model’s parametric knowledge alone: even strong LLMs need access to external evidence to distinguish plausible-looking fabricated references from real papers. Few-shot examples also improve most baselines, but the gains are smaller and less consistent than the gains from web search. Without web search, few-shot prompting im-proves macro-F1 for all three models, most notably Claude Sonnet 4.6 from 68.7 to 73.7 and GPT 5.4 from 62.7 to 67.3. With web search enabled, few-shot prompting fur-ther improves the strongest Claude baseline from 81.2 to 82.9 macro-F1. However, these improvements do not close the gap to C ITE CHECK , indicating that examples alone are insufficient without a pipeline that explicitly retrieves candidate publications, compares citation metadata against retrieved evidence, and calibrates the decision thresholds. Across models and settings, M INOR hallucinations are con-sistently harder than M AJOR hallucinations. Major fabri-cated references often leave stronger signals, such as non-resolving or mismatched metadata, and most web-enabled baselines achieve high major F1. In contrast, minor hallu-cinations intentionally preserve the identity of a real paper while perturbing one or more fields, making them easy to 6CITE CHECK Exact F1 Minor F1 Major F1 Macro F1 Accuracy      
+
+> 0.70
+> 0.75
+> 0.80
+> 0.85
+> 0.90
+> 0.95
+> 1.00
+> Score
+> 0.82
+> 0.74
+> 0.98
+> 0.85 0.85
+> 0.86
+> 0.82
+> 0.98
+> 0.89 0.89
+> 0.82
+> 0.71
+> 0.98
+> 0.84 0.84
+> GPT-5.4 Claude-Sonnet-4.6 Gemini-2.5-Flash
+
+Figure 2: Performance of C ITE CHECK when the verifier (and web-search fallback) are instantiated with different LLMs, across exact, minor, major, macro F1, and accuracy. The shaded region marks the performance gap between the strongest and weakest configurations. confuse with acceptable citation variation. CITE CHECK 
+
+improves most clearly in this difficult regime, reaching 81.7 MINOR F1 compared with 76.6 for the strongest baseline. This supports the central design choice of treating cita-tion verification as grounded candidate retrieval followed by structured metadata comparison, rather than as direct prompting alone. 
+
+5.3. Verifier Model Sensitivity 
+
+Figure 2 examines how C ITE CHECK performs when the verifier model is changed. We compare GPT 5.4, Claude Sonnet 4.6, and Gemini 2.5 Flash as the LLM used for citation–candidate comparison. Claude Sonnet 4.6 gives the strongest overall performance, reaching 88.7 macro-F1 and 88.9% accuracy, while GPT 5.4 and Gemini 2.5 Flash remain competitive but show lower performance on the more ambiguous classes. Across all verifier models, M AJOR hallucinations are de-tected with very high F1. This suggests that once retrieval fails to find a plausible matching publication, or retrieves a clearly different candidate, fabricated references are rel-atively easy for the verifier to reject. The larger variation appears in E XACT and especially M INOR cases, where the model must distinguish acceptable citation variation from genuine metadata corruption. Claude Sonnet 4.6 performs best in this regime, achieving stronger M INOR F1 than the other verifier choices. These results indicate that C ITE CHECK benefits from stronger verifier models, but is not dependent on a single model family. The main pipeline remains effective across different LLMs because the verifier is grounded in retrieved metadata rather than relying only on parametric knowledge. 
+
+5.4. Component Ablations 
+
+Table 4 isolates the contribution of two components in CITE CHECK : the reviewer pass and the web-search fall-back. Removing either component reduces performance, showing that the gains in Table 3 are not due only to the primary LLM verifier. The reviewer pass improves robustness on cases where identifier-based retrieval is misleading. Without the re-viewer, macro-F1 drops from 88.7 to 84.7 and accuracy drops from 88.9% to 84.9%. The largest decrease is on MINOR hallucinations, where F1 falls by 6.0 points. This suggests that the reviewer is especially useful when the first-pass verifier must distinguish acceptable citation variation from meaningful metadata corruption. The web-search fallback has an even larger effect. Remov-ing it reduces macro-F1 by 7.0 points and accuracy by 6.0 points, with the largest drop again on M INOR hallucina-tions. This indicates that structured scholarly APIs alone are not always sufficient to recover the intended publication when metadata is noisy or incomplete. Web search broadens candidate retrieval, allowing C ITE CHECK to find plausible matches that would otherwise be missed by the structured cascade. 
+
+## 6. Discussion 
+
+Our results suggest that citation hallucination detection is difficult to solve with prompting alone. As reported in Ta-ble 3, Even strong LLMs improve substantially when web search is enabled, indicating that citation verification re-quires access to external evidence rather than only paramet-ric knowledge. However, web search and few-shot examples are still not sufficient to close the gap to C ITE CHECK . This supports the central design choice of separating the task into candidate retrieval and citation–candidate comparison: scholarly retrieval narrows the space of possible publica-tions, while the verifier focuses on judging whether the retrieved metadata actually matches the citation. The largest remaining challenge is distinguishing E XACT 
+
+citations from M INOR hallucinations. Major hallucinations are often easier to detect because the citation either fails to resolve or points to a clearly different work. Minor hallu-cinations are more subtle: they preserve the identity of a real paper while changing fields such as the author list, year, URL, DOI, arXiv identifier, or a small part of the title. This is also where the hybrid design helps most. Retrieval can recover the intended real publication, but the final decision still requires careful comparison of citation fields, because many differences are acceptable formatting variants while others change the bibliographic identity of the reference. Several directions remain for future work. CITE CHECK 
+
+7CITE CHECK 
+
+Table 3: Three-class citation hallucination classification on the hallucinated test set ( n = 792 ). All scores are percentages. Best overall results are bolded; the best baseline is underlined.                                                                           
+
+> Paradigm Search Model Exact Minor Major Macro Acc.
+> Zero-shot No GPT 5.4 56.1 52.1 79.8 62.7 64.8 Claude Sonnet 4.6 65.7 58.2 82.1 68.7 70.1 Gemini 2.5 Flash 55.6 45.8 63.9 55.1 55.6 Yes GPT 5.4 73.0 61.8 83.9 73.1 73.7 Claude Sonnet 4.6 77.5 74.3 91.6 81.2 81.6 Gemini 2.5 Flash 75.0 70.1 90.0 78.3 78.7 Few-shot No GPT 5.4 57.1 61.2 84.3 67.3 67.8 Claude Sonnet 4.6 71.2 62.9 86.9 73.7 74.7 Gemini 2.5 Flash 56.5 56.8 73.2 62.2 61.9 Yes GPT 5.4 74.5 69.4 88.4 77.4 78.0 Claude Sonnet 4.6 77.8 76.6 94.3 82.9 83.2 Gemini 2.5 Flash 72.8 72.6 92.6 79.3 79.8
+> CITE CHECK Yes Full system 86.1 81.7 98.3 88.7 88.9
+
+Table 4: Component ablation. Red arrows indicate the absolute drop in points relative to the full system.                                             
+
+> Configuration Exact F1Minor F1Major F1Macro F1Acc. CITE CHECK 86.1 81.7 98.3 88.7 88.9
+> w/o Reviewer pass 84.1 ↓2.075.7 ↓6.093.3 ↓5.084.7 ↓4.084.9 ↓4.0
+> w/o Web search fallback 80.1 ↓6.072.7 ↓9.093.3 ↓5.081.7 ↓7.082.9 ↓6.0
+
+currently depends on the coverage and metadata quality of CrossRef, Semantic Scholar, OpenAlex, arXiv, and web search, so expanding the retrieval cascade to field-specific repositories could improve coverage in domains with spe-cialized publication infrastructure. Our benchmark is also synthetic and focused on physics, which gives controlled labels and clear evaluation but may not capture the full di-versity of citation errors in naturally generated reports or in fields with different citation practices. Extending the bench-mark to naturally occurring LLM-generated bibliographies and additional disciplines would help test generalization. Fi-nally, C ITE CHECK verifies citation existence and metadata fidelity, not whether the cited source supports the surround-ing claim; combining it with downstream claim–citation alignment is a natural next step toward end-to-end verifica-tion of AI-generated scientific text. 
+
+## 7. Conclusion 
+
+We introduced C ITE CHECK , a framework for detecting hal-lucinated citations in scientific text. C ITE CHECK grounds each citation in external scholarly sources, compares the retrieved candidate against the citation using a structured LLM verifier, and maps verifier scores to E XACT , M INOR ,or M AJOR labels using thresholds tuned on validation data. We also constructed a 982-citation physics benchmark with controlled minor and major corruptions, enabling evaluation of both subtle metadata drift and fully fabricated references. On the held-out test set, C ITE CHECK outperforms strong GPT, Claude, and Gemini baselines, including web-search and few-shot variants, while remaining zero-shot at veri-fication time. These results suggest that reliable citation hallucination detection benefits from combining scholarly retrieval, structured comparison, and calibrated decision rules, and can serve as a foundation for broader verification pipelines for AI-generated scientific reports. 
+
+## References 
+
+Abbonato, D. Checkifexist: Detecting citation hallucina-tions in the era of ai-generated content. arXiv preprint arXiv:2602.15871 , 2026. Alvarez, C., Bennett, M., and Wang, L. L. Zero-shot scien-tific claim verification using LLMs and citation text. In 
+
+Proceedings of the Fourth Workshop on Scholarly Docu-ment Processing (SDP 2024) , pp. 269–276, 2024. arXiv. arXiv API User Manual. arXiv documentation, 2026. Asai, A., Wu, Z., Wang, Y., Sil, A., and Hajishirzi, H. Self-RAG: Learning to Retrieve, Generate, and Critique 8CITE CHECK 
+
+through Self-Reflection. In International Conference on Learning Representations (ICLR) , 2024. Bohnet, B., Tran, V. Q., Verga, P., Aharoni, R., An-dor, D., Baldini Soares, L., and Ciaramita, M. At-tributed Question Answering: Evaluation and Modeling for Attributed Large Language Models. arXiv preprint arXiv:2212.08037 , 2022. Bruton, S. V., Macchione, A. L., Brown, M., and Hosseini, M. Citation ethics: An exploratory survey of norms and behaviors. Journal of academic ethics , 23(2):329–346, 2025. Crossref. Crossref REST API. Crossref documentation, 2026. Dennst ¨adt, F., Zink, J., Putora, P. M., Hastings, J., and Cihoric, N. Title and abstract screening for literature reviews using large language models: an exploratory study in the biomedical domain. Systematic Reviews , 13 (1):158, 2024. Fang, L., Fu, D., and Torvik, V. I. Automatic scientific claims verification with pruned evidence graph. In To-wards Agentic AI for Science: Hypothesis Generation, Comprehension, Quantification, and Validation , 2025. Gao, T., Yen, H., Yu, J., and Chen, D. Enabling Large Language Models to Generate Text with Citations. In Bouamor, H., Pino, J., and Bali, K. (eds.), Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing , pp. 6465–6488, Singapore, De-cember 2023. Association for Computational Linguistics. Gasparyan, A. Y., Yessirkepov, M., Voronov, A. A., Gerasi-mov, A. N., Kostyukova, E. I., and Kitas, G. D. Preserving the integrity of citations and references by all stakehold-ers of science communication. Journal of Korean medical science , 30(11):1545–1552, 2015. Hendricks, G., Tkaczyk, D., Lin, J., and Feeney, P. Crossref: The Sustainable Source of Community-Owned Scholarly Metadata. Quantitative Science Studies , 1(1):414–427, 2020. doi: 10.1162/qss \ a\ 00022. Ho, X., Wu, Y.-A., Kumar, S., Xia, T. C., Boudin, F., Greiner-Petter, A., and Aizawa, A. SciClaimEval: Cross-modal Claim Verification in Scientific Papers. arXiv preprint arXiv:2602.07621 , 2026. Huang, L., Feng, X., Ma, W., Gu, Y., Zhong, W., Feng, X., Yu, W., Peng, W., Tang, D., Tu, D., et al. Learning fine-grained grounded citations for attributed large language models. In Findings of the Association for Computational Linguistics: ACL 2024 , pp. 14095–14113, 2024. Karpukhin, V., Oguz, B., Min, S., Lewis, P., Wu, L., Edunov, S., Chen, D., and Yih, W.-t. Dense Passage Retrieval for Open-Domain Question Answering. In Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP) , pp. 6769–6781. Associ-ation for Computational Linguistics, 2020. Kinney, R., Anastasiades, C., Authur, R., Beltagy, I., Bragg, J., Buraczynski, A., Cachola, I., Candra, S., Chan-drasekhar, Y., Cohan, A., et al. The Semantic Scholar Open Data Platform. arXiv preprint arXiv:2301.10140 ,2023. Kobak, D., Gonz ´alez-M ´arquez, R., Horv ´at, E.- ´A., and Lause, J. Delving into LLM-assisted writing in biomed-ical publications through excess vocabulary. Science Advances , 11(27):eadt3813, 2025. Lewis, P., Perez, E., Piktus, A., Petroni, F., Karpukhin, V., Goyal, N., K ¨uttler, H., Lewis, M., Yih, W.-t., Rockt ¨aschel, T., et al. Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks. In Advances in Neural Informa-tion Processing Systems (NeurIPS) , volume 33, pp. 9459– 9474, 2020. Liang, W., Zhang, Y., Wu, Z., Lepp, H., Ji, W., Zhao, X., Cao, H., Liu, S., He, S., Huang, Z., et al. Mapping the increasing use of LLMs in scientific papers. arXiv preprint arXiv:2404.01268 , 2024. Linardon, J., Jarman, H. K., McClure, Z., Anderson, C., Liu, C., and Messer, M. Influence of topic familiarity and prompt specificity on citation fabrication in mental health research using large language models: experimen-tal study. JMIR Mental Health , 12:e80371, 2025. Liu, H., Soroush, A., Nestor, J. G., et al. Retrieval Aug-mented Scientific Claim Verification. JAMIA Open , 7(1): ooae021, 2024. Liu, Y., Iter, D., Xu, Y., Wang, S., Xu, R., and Zhu, C. G-Eval: NLG Evaluation using GPT-4 with Better Hu-man Alignment. In Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing ,2023. Luo, Z., Yang, Z., Xu, Z., Yang, W., and Du, X. Llm4sr: A survey on large language models for scientific research. 
+
+arXiv preprint arXiv:2501.04306 , 2025. McGowan, A., Gui, Y., Dobbs, M., Shuster, S., Cotter, M., Selloni, A., Goodman, M., Srivastava, A., Cecchi, G. A., and Corcoran, C. M. ChatGPT and Bard exhibit spon-taneous citation fabrication during psychiatry literature search. Psychiatry Research , 326:115334, 2023. Mehregan, M. Scientific journals must be alert to poten-tial manipulation in citations and referencing. Research Ethics , 18(2):163–168, 2022. 9CITE CHECK 
+
+Min, S., Krishna, K., Lyu, X., and et. al. FActScore: Fine-grained Atomic Evaluation of Factual Precision in Long Form Text Generation. In Proceedings of the 2023 Con-ference on Empirical Methods in Natural Language Pro-cessing , pp. 12076–12100, Singapore, December 2023. Association for Computational Linguistics. Misra, N. and Udandarao, V. Detecting Citation Hallu-cinations in Large Language Model Outputs (Student Abstract). In Proceedings of the AAAI Conference on Ar-tificial Intelligence , volume 40, pp. 41325–41327, 2026. Press, O. et al. CiteME: Can Language Models Accurately Cite Scientific Claims? arXiv preprint arXiv:2407.12861 ,2024. Priem, J., Piwowar, H., and Orr, R. OpenAlex: A fully-open index of scholarly works, authors, venues, institutions, and concepts. arXiv preprint arXiv:2205.01833, 2022. Rashkin, H., Nikolaev, V., Lamm, M., and et. al. Measur-ing Attribution in Natural Language Generation Models. 
+
+Computational Linguistics , 49(4):777–840, December 2023. Semantic Scholar. Semantic Scholar Academic Graph API. Semantic Scholar documentation, 2026. Wadden, D., Lin, S., Lo, K., Wang, L. L., van Zuylen, M., Cohan, A., and Hajishirzi, H. Fact or Fiction: Verifying Scientific Claims. In Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP) , pp. 7534–7550. Association for Computational Linguistics, 2020. Wadden, D., Lo, K., Kuehl, B., Cohan, A., Beltagy, I., Wang, L. L., and Hajishirzi, H. SciFact-Open: Towards Open-domain Scientific Claim Verification. In Findings of the Association for Computational Linguistics: EMNLP 2022 , pp. 4719–4734. Association for Computational Linguistics, 2022. Walters, W. H. and Wilder, E. I. Fabrication and errors in the bibliographic citations generated by ChatGPT. Scientific Reports , 13(1):14045, 2023. Wang, C., Shen, Y., Kuang, Z., Cohan, A., and Zhao, Y. SciVer: Evaluating Foundation Models for Multimodal Scientific Claim Verification. In Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , pp. 8562–8579, 2025. Wu, K., Wu, E., Wei, K., Zhang, A., Casasola, A., Nguyen, T., Riantawan, S., Shi, P., Ho, D., and Zou, J. An au-tomated framework for assessing how well LLMs cite relevant medical references. Nature Communications , 16 (1):3615, 2025. Xiong, M. et al. Calibrating Verbalized Probabili-ties for Large Language Models. arXiv preprint arXiv:2410.06707 , 2024. Yue, X., Du, M., Wang, T., et al. Automatic Evaluation of Attribution by Large Language Models. Zhang, W. et al. Towards Fine-Grained Citation Evalua-tion in Generated Text. In Proceedings of the 17th In-ternational Natural Language Generation Conference ,pp. 467–479. Association for Computational Linguistics, 2024. Zhang, Y., Khan, S. A., Mahmud, A., Yang, H., Lavin, A., Levin, M., Frey, J., Dunnmon, J., Evans, J., Bundy, A., et al. Exploring the role of large language models in the scientific method: from hypothesis to discovery. npj Artificial Intelligence , 1(1):14, 2025. Zheng, L., Chiang, W.-L., Sheng, Y., Zhuang, S., Wu, Z., Zhuang, Y., Lin, Z., Li, Z., Li, D., Xing, E. P., Zhang, H., Gonzalez, J. E., and Stoica, I. Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena. In Advances in Neural Information Processing Systems , 2023. 10 CITE CHECK 
+
+## A. Candidate Retrieval Details 
+
+Cascade order. The retrieval cascade queries up to five sources. First, when enabled and an arXiv identifier is avail-able, C ITE CHECK performs a direct arXiv lookup. It then queries CrossRef, Semantic Scholar, and OpenAlex using title-based search. If structured retrieval fails to produce an accepted candidate, the system can perform an LLM-assisted web-search fallback and parse the returned results into structured candidate records. 
+
+Query construction. For each citation, CITE CHECK 
+
+builds a search query from the parsed title when available, and otherwise falls back to the raw citation text. Queries are cleaned by removing common LaTeX and BibTeX artifacts such as braces, formatting commands, escaped ampersands, and spacing commands. If a year is available, it is used as an auxiliary ranking signal. 
+
+Title similarity. The main accept/reject signal is normal-ized Levenshtein similarity between the cleaned citation title and candidate title: 
+
+sim( a, b ) = max 
+
+
+
+0,
+
+
+
+1 − lev( a, b )max( |a|, |b|)
+
+
+
+× 100 
+
+
+
+.
+
+Both strings are lowercased and stripped of punctuation before comparison. A candidate must exceed the global minimum title-similarity threshold to be accepted. 
+
+Candidate ranking. CrossRef candidates are ranked us-ing title similarity with an additional year bonus. Semantic Scholar and OpenAlex candidates are first ranked using a lightweight word-overlap score, 
+
+overlap( a, b ) = |Wa ∩ Wb|
+
+max( |Wa|, |Wb|) × 100 ,
+
+again with a small year bonus. After the best candidate from each source is selected, the system recomputes the Levenshtein-based title similarity and uses that value for cascade acceptance. 
+
+Confidence and fallback. Each backend produces a source-specific confidence value. CrossRef confidence is equal to title similarity; Semantic Scholar and OpenAlex add small capped confidence bonuses; direct arXiv lookup receives high confidence when the identifier resolves; and web-search confidence is based on title similarity. CrossRef is the only source whose confidence is used as an addi-tional acceptance gate. If no stage accepts a candidate, CITE CHECK may still return a CrossRef candidate that clears the title threshold but fails the confidence gate, or the best web-search candidate when that option is enabled. 
+
+Robustness. Each API call is wrapped in exception han-dling, so a transient failure in one source does not terminate the cascade. The system records per-source results and timing information for later inspection. 
+
+## B. LLM Verification Details 
+
+Structured verifier output. The verifier is constrained to return a structured object containing a score, classification, confidence, reasoning, and key differences. Although the model emits a categorical classification, C ITE CHECK uses the numeric score as the primary output and assigns the final label through deterministic thresholds. This ensures that the label is always consistent with the selected operating point. 
+
+B.1. Verifier Prompt Template                                                                                                                                                                                 
+
+> You are acitation verification expert. Compare acitation from areport with its best matching source and assign ascore from 0to 10.\par\ vspace{3pt} Scoring scale:\par 10: Perfect match --citation exactly represents the source.\par 8--9: Near-perfect match with acceptable variations, including ‘‘et al.’’, display truncation, minor punctuation or formatting differences, or identical identifiers.\par 6--7: Minor metadata errors, but still identifiable as the same paper, such as author-name variations, ayear off by 1--2 years, minor title-word changes, or small identifier errors .\par 4--5: Moderate issues, where the paper is related but has notable errors, such as multiple wrong author names, ayear off by 3--5 years, or apartially changed title.\par 2--3: Major issues, where the citation describes a different paper or is heavily corrupted.\par 0--1: Complete fabrication or unrelated paper.\par\ vspace{3pt} Important rules:\par 1. Ignore display truncation: ‘‘...’’ at the end of titles is display formatting, not adifference .\par 2. ‘‘et al.’’ is acceptable and should not be treated as an author mismatch.\par 3. Minor punctuation, capitalization, and spacing differences are not hallucinations.\par 4. Compare only the citation and retrieved source metadata; do not infer missing fields.\par\ vspace{3pt} Citation from report:\par -Authors: \{citation\_authors\}\par -Year: \{citation\_year\}\par -Title: \{citation\_title\}\par -ArXiv ID: \{citation\_arxiv\_id\}\par -URL: \{citation\_url\}\par\vspace{3pt} Best matching source, matched by \{match\_method\} with similarity score \{similarity\_score\}:\ par \{matched\_info\}\par\vspace{3pt} Context: \{context\}\par\vspace{3pt}
+
+11 CITE CHECK 
+
+Task: Compare the citation with the source and assign a score from 0 to 10. Provide a score, brief reasoning, and any key differences found. 
+
+B.2. Reviewer Prompt Template 
+
+You are a citation verification reviewer. Your job is to review the work of a first-pass verifier that compared a citation against its closest matching source paper.\par\vspace{3pt} The first-pass verifier sometimes makes mistakes: it over-relies on matching ArXiv identifiers or URLs and ignores the fact that the citation’s title and authors are completely different from the source paper. A citation can have the correct URL/link but fabricated title, authors, or year --- that is a hallucination.\par\ vspace{3pt} Classification definitions:\par - exact\_match: The citation correctly identifies the paper. Title, authors, and year are accurate or have only trivial formatting differences, such as ‘‘et al.’’ or title truncation with ‘‘...’’.\par - minor\_hallucination: The citation refers to a recognizable paper but has noticeable metadata errors, such as a few wrong author names, ayear off by 1--2 years, or minor title-word changes. The core identity of the paper is still clear.\par - major\_hallucination: The citation’s title describes a completely different topic from the source, the authors are entirely different, or the citation appears to be fabricated. Even if the URL or identifier happens to point to areal paper, the citation text does not accurately describe that paper.\par\vspace{3pt} Key principle: A matching URL or ArXiv ID does not make a citation correct. If the citation’s title is about a fundamentally different subject than the actual paper, it is a major\ _hallucination regardless of any identifier match.\par\vspace{6pt} A first-pass verifier compared this citation with its closest matching source and produced the verdict below. Please review whether the verdict is correct.\par\vspace{3pt} Citation from the report, raw text:\par \{citation\_raw\_text\}\par\vspace{3pt} Parsed citation fields, which may be incomplete if parsing failed:\par - Authors: \{citation\_authors\}\par - Year: \{citation\_year\}\par - Title: \{citation\_title\}\par\vspace{3pt} Closest matching source, found via \{match\_source \}:\par - Authors: \{source\_authors\}\par - Year: \{source\_year\}\par - Title: \{source\_title\}\par\vspace{3pt} Title similarity: \{title\_similarity\}\%\par\vspace {3pt} First-pass verifier verdict:\par - Label: \{verifier\_label\}\par - Score: \{verifier\_score\}/10\par - Reasoning: \{verifier\_reasoning\}\par\vspace{3pt} 
+
+Your task: Do you agree with the verifier’s classification? Focus on whether the citation’s title and authors, as visible in the raw text above, accurately describe the source paper. A matching URL or identifier is not sufficient; the citation text itself must be accurate. Note that the parsed fields may be incomplete due to formatting, so always refer to the raw citation text as the ground truth for what the citation says.\par\vspace{3pt} Provide:\par 1. Your classification: one of exact\_match, minor\ _hallucination, or major\_hallucination.\par 2. Brief reasoning for your decision. 
+
+## C. Dataset Construction Details 
+
+C.1. Physics Subdomain Coverage 
+
+The citation pool is organized into 42 topically coherent collections across nine physics subdomains. Each collection corresponds to a specific theme within a subdomain, so that citations within the same collection share technical vocabu-lary and topical context. This design makes the benchmark harder than a broad topic-classification problem: valid and corrupted citations often remain within the same scientific area. 
+
+C.2. Corruption Generation Prompts 
+
+All non-trivial corruptions are generated using GPT-4o-mini with structured output. We use the same model for both mi-nor and major hallucinations to avoid making the generator identity a confounding factor. The two corruption regimes differ in temperature and prompt instructions: minor cor-ruptions use a lower temperature and are constrained to small metadata edits, while major corruptions use a higher temperature and require a full fabricated reference. 
+
+Minor hallucination prompt. 
+
+You are a citation corruption expert. Your task is to introduce MINOR hallucinations to academic citations, focusing primarily on METADATA CHANGES. PRIMARY FOCUS - Metadata changes: - Change author names, e.g., "Smith" -> "Johnson", " Zhang" -> "Wang", swap first/last names, add/ remove middle initials. - Change journal/publisher names to similar but different ones, e.g., "Nature" -> "Science", " IEEE" -> "ACM". - Modify arXiv IDs, e.g., 2501.02387 -> 2503.15892. - Change URL domains or paths, e.g., arxiv.org -> researchgate.net, different DOI numbers. - Alter publisher locations or series information. - Change publication years. SECONDARY: - You may also include very minor title adjustments, at most 1--2 words, if needed. IMPORTANT: - Focus on 1--3 metadata changes per citation. 
+
+12 CITE CHECK 
+
+Table 5: Physics subdomains and representative themes covered in the citation pool. 
+
+Subdomain Representative themes Astrophysics Dark-energy equation of state; gravitational-wave astronomy; large-scale cosmic structure; supermassive black holes. Biophysics Protein folding and misfolding; single-molecule biophysics techniques; biophysics of cellular organiza-tion. Condensed matter Room-temperature superconductivity; topological insulators; electron correlations in high-Tc supercon-ductors; quantum materials under extreme conditions; non-equilibrium quantum many-body dynamics. Gravitational physics Gravitational-wave memory effects; gravitational-wave cosmology; numerical relativity; tests of alterna-tive theories of gravity; compact-binary merger dynamics. Nuclear physics Nuclear structure models; nucleon–nucleon interactions; radioactive ion beam facilities; nuclear reactions in astrophysics; nuclear data evaluation. Particle physics Beyond-the-Standard-Model searches at the LHC; neutrino masses and mixing; dark-matter candidates and detection; Higgs precision measurements; proton structure and PDFs. Plasma physics Magnetic confinement fusion; plasma turbulence and transport; inertial confinement fusion; plasma– material interactions; astrophysical plasmas. Quantum computing Quantum error correction; quantum chemistry algorithms; quantum supremacy or computational advan-tage; scalability of quantum processors; quantum optimization algorithms. Soft matter physics Self-assembly; colloidal physics; rheology of complex fluids; polymer physics; biopolymers.                                   
+
+> -Keep changes realistic, like transcription errors or database inconsistencies. -Preserve the overall format and structure. -The title should remain mostly intact. -For each citation, clearly describe what metadata you changed. Return the results in the specified structured format.
+
+Major hallucination prompt.                                                                                                                                                                                                                           
+
+> You are acitation corruption expert. Your task is to introduce MAJOR hallucinations to academic citations. The corrupted citations must be entirely fabricated; they must NOT correspond to any real published paper. These citations come from the subfield of "{subtopic }" within "{topic}". PRIMARY FOCUS - Fabricate anew, non-existent title: -Create the new title by blending terminology from two distinct subfields within the same broad academic domain, producing aresearch intersection that does not exist in reality. -Include at least one fabricated proper noun in the title, such as amade-up method name, fictitious dataset, or non-existent benchmark. These names must be entirely invented. -The fabricated title MUST NOT correspond to any real published paper. -Do NOT recall or reproduce existing paper titles from training data. -Take the original title’s approximate length and syntactic structure, but replace every key noun phrase and technical term with adifferent, fabricated one from the same general field. SECONDARY: -Change author names using plausible but entirely fabricated names. -Shift the year by 3--8 years. -Replace arXiv IDs or DOIs with realistic-looking but fabricated identifiers. -Replace journals, publishers, and URLs with plausible but non-functional alternatives.
+> IMPORTANT: -The title change should be substantial and describe anon-existent paper. -Make multiple changes per citation, with title fabrication as the most critical change. -Keep the same broad academic field so the citation remains plausible in context. -Preserve the citation format and structure. -For each citation, clearly describe all changes made, emphasizing the title changes. Return the results in the specified structured format.
+
+C.3. Structured Output and Reproducibility 
+
+Each LLM corruption call is constrained to return a struc-tured record for every input citation. For each corrupted example, we store the citation index, the original citation, the corrupted citation, and a short natural-language descrip-tion of the edits applied. This structure preserves alignment between the input and output batches, allows us to verify that the model edited the intended citation, and provides a provenance trace for every generated corruption. For each topical collection, citations are shuffled using seed 42 and partitioned into valid, minor, and major buckets. The minor bucket is corrupted with GPT-4o-mini at temperature 0.7, while the major bucket is corrupted with GPT-4o-mini at temperature 0.9. All LLM calls are wrapped in a retry loop. If generation fails after all retries, the affected citations are kept unchanged and labeled valid rather than being dropped or assigned an unsupported hallucination label. This ensures that dataset size and labels do not depend on transient API failures. 13 CITE CHECK 
+
+C.4. Representative Corruption Examples 
+
+Table 6 shows representative examples of the two corrup-tion types. Minor corruptions preserve the identity of the underlying paper while altering metadata fields. Major cor-ruptions rewrite the citation into a plausible but non-existent reference. 
+
+## D. LLM API and Reproducibility Details 
+
+Because C ITE CHECK and the direct baselines use hosted LLM APIs, we report the model names, providers, decoding settings, experiment period, caching behavior, and final tuned thresholds in Table 7. This information is important because hosted model behavior may change over time. 
+
+## E. Baseline Prompt Templates 
+
+All direct LLM baselines use the same base rubric. The web-search variants append an additional instruction to use the search tool, and the few-shot variants prepend labelled examples to the user prompt. 
+
+E.1. Baseline System Prompt 
+
+You are a citation verification expert. You will be shown a single citation that appears in aresearch report written by an LLM. Your job is to decide whether the citation is real and accurate, has minor errors, or is a fabrication. Three classes: - exact\_match: The citation correctly identifies areal paper. Authors, year, title, and any identifiers, including URL, arXiv ID, or DOI, all match the actual paper, possibly with trivial formatting differences such as ‘‘et al .’’, title truncation, or punctuation. - minor\_hallucination: The citation refers to a recognizable real paper but has small metadata errors. Examples include author-name variations, a year off by 1--2 years, minor title-word changes, an arXiv ID off by 1--2 digits, or aURL pointing to a different mirror but the same paper. The core identity of the paper is still clear. - major\_hallucination: The citation describes a different paper from what its identifiers point to, or the paper does not exist at all. Examples include a completely fabricated paper that cannot be found anywhere, entirely different authors from the real paper, a title describing a fundamentally different topic, ayear off by 5 or more years, or no evidence that the paper exists. Score scale, used to support the label: - 9--10: perfect or near-perfect match, exact\_match. - 5--8: noticeable errors, but the paper is still recognizable, minor\_hallucination. 
+
+- 0--4: different paper, fabricated, or unverifiable , major\_hallucination. Output format, required: Respond with a single JSON object, no markdown fences, no commentary before or after, with exactly these four keys: \{ "label": "exact\_match" | "minor\_hallucination" | "major\_hallucination", "score": <number between 0 and 10>, "reasoning": "<one to three short sentences justifying the decision>", "found\_evidence": <true | false> \} 
+
+E.2. Web-Search Instruction 
+
+For web-enabled baselines, the following instruction is ap-pended to the system prompt. 
+
+You have access to a web search tool. Use it. For every citation you must actively search the web to verify the authors, year, title, and identifiers against the real paper. Do not rely solely on memory. If, after searching, you cannot find or verify the paper: output "label": "major\_hallucination", " score": 0, and "found\_evidence": false. Treat unverifiable citations as fabrications. 
+
+E.3. Zero-Shot User Prompt 
+
+Classify the following citation according to the rubric. Citation: \{citation\_text\} Respond with the JSON object only. 
+
+E.4. Few-Shot User Prompt 
+
+Below are labelled examples that demonstrate how to apply the rubric. Study them, then classify the final citation in the same format. === EXAMPLES === \{exemplar\_block\_1\} \{exemplar\_block\_2\} ... \{exemplar\_block\_27\} === TARGET === Citation: \{citation\_text\} Respond with the JSON object only. 
+
+Each few-shot exemplar is rendered as follows: 14 CITE CHECK 
+
+Table 6: Representative examples of controlled citation corruptions. 
+
+Type Original citation Corrupted citation Minor [Virey, 2009, . . . ](https://arxiv.org/pdf/0804.0389.pdf) [Virey, J. 2008, . . . ](https://researchgate.net/pdf/0804.0389.pdf) Minor [Ribeiro, 2019, Observational Constraints on the Dark Energy Equation of State](https://arxiv.org/pdf/1904.11068.pdf) [Ribeiro, M. 2020, Observational Constraints on the Dark Energy Equation of State](https://arxiv.org/pdf/1904.11069.pdf) Major [Bean & Melchiorri, 2009, Current constraints on the dark energy equation of state](https://arxiv.org/pdf/astro-ph/0110472.pdf) [Farnsworth & Qanzar, 2016, Temporal Dynamics of Quantum Gravitational Waves Using the HelioTrace Method](https://arxiv.org/pdf/astro-ph/1602.8745.pdf) Major [Lee & Park, 2011, Constraining the Dark Energy Equation of State with Cosmic Voids](https://arxiv.org/pdf/0704.0881.pdf) [Tavern & Reddington, 2017, Assessing Gravitational Anomalies in Cosmic Webs via Multi-Dimensional Tensor Analysis](https://arxiv.org/pdf/astro-ph/1708.2219.pdf) 
+
+Table 7: LLM API and reproducibility details for the main experiments. 
+
+Item Value Models used claude-sonnet-4-6 for the C ITE CHECK verifier, reviewer, parser, and Claude baseline classifier; gemini-2.5-flash for the Gemini baseline classifier; and gpt-5.4 for web-search retrieval in the C ITE CHECK pipeline. API providers Anthropic for Claude, Google for Gemini, and OpenAI for gpt-5.4 web-search retrieval. The OpenAI web-search retrieval component is used by the C ITE CHECK pipeline regardless of which provider is used for the verifier model. Temperature / reasoning Temperature was set to 0.0 for all calls. No reasoning-effort flag was set; all models were run in their default mode. Experiment period 2026-04-21 to 2026-04-25. Cached predictions reused? No. Every run executed detection fresh against the live LLM APIs. Final tuned thresholds τM = 1 .25 and τE = 7 .25 , selected by support-weighted-F1 grid search on the 190-citation development split, then frozen and applied to the held-out test split.       
+
+> Example \{idx\}: Citation: \{citation\_text\} Decision: \{ "label": "\{label\}", "score": \{score\}, "reasoning": "\{reasoning\}", "found\_evidence": \{found\_evidence\} \}
+
+## F. Retrieval Cascade Latency 
+
+We measure the latency of the retrieval cascade by running CITE CHECK ’s candidate-retrieval stage on all 982 citations in the benchmark after corruption injection. Each citation is evaluated once. The measurement includes the full re-trieval cascade, including the web-search fallback when it is invoked, but excludes the downstream verifier and reviewer LLM calls. Records with API-side errors are excluded from aggregation. Table 8 reports overall latency. The full cascade takes 8.72 seconds per citation on average, with a median of 8.28 sec-onds. When excluding the web-search fallback, structured API retrieval alone takes 5.70 seconds on average and 4.02 seconds at the median. This indicates that web search im-proves coverage but contributes noticeably to latency. Table 9 shows the per-stage latency and reach rate. Web search has the largest expected contribution to latency, adding 3.02 seconds per citation on average when counted over all citations. arXiv contributes 2.18 seconds and Cross-Ref contributes 1.76 seconds on average. Semantic Scholar is comparatively inexpensive, while OpenAlex has low me-dian latency but a heavier tail. Latency varies substantially by ground-truth class, as shown in Table 10. Major hallucinations are the slowest, with a mean of 13.03 seconds, compared with 6.31 seconds for exact matches and 6.91 seconds for minor hallucinations. This is expected: exact and minor citations often resolve earlier in the cascade, while fabricated references are more likely to require later fallback stages or end in a not-found 15 CITE CHECK 
+
+Table 8: Overall latency of the retrieval cascade over 982 citations. 
+
+Setting Mean Median P95 P99 Max Std. Full cascade 8.72s 8.28s 23.75s 27.88s 43.35s 7.44s Structured APIs only 5.70s 4.02s 19.64s 21.80s 24.01s 5.83s 
+
+Table 9: Per-stage latency and reach rate of the retrieval cascade. 
+
+Stage Reach Cond. mean Cond. median Exp. contribution CrossRef 80.5% 2.18s 2.01s 1.76s Semantic Scholar 56.4% 0.26s 0.26s 0.15s OpenAlex 55.7% 1.01s 0.24s 0.56s arXiv 68.9% 3.16s 0.24s 2.18s Web search 50.3% 6.00s 5.40s 3.02s 
+
+result. Table 10: Retrieval cascade latency by ground-truth class. 
+
+Class Mean Median P95 P99 EXACT 6.31s 2.75s 20.28s 26.86s MINOR 6.91s 3.82s 18.73s 26.38s MAJOR 13.03s 10.60s 25.51s 29.99s 
+
+Finally, Table 11 reports which stage produced the selected match. CrossRef produces the largest share of chosen matches, but web search and arXiv together account for a substantial fraction of the final candidates. This supports the use of a multi-source cascade rather than relying on a single scholarly index. Table 11: Distribution of the retrieval stage that produced the chosen candidate. 
+
+Chosen source Count Share CrossRef 278 28.3% Web search 258 26.3% Not found 195 19.9% arXiv 191 19.5% OpenAlex 53 5.4% Semantic Scholar 7 0.7% 
+
+16

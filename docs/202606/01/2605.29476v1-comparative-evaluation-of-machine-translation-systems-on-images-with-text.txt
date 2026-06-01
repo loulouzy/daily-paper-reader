@@ -1,0 +1,272 @@
+Title: Comparative Evaluation of Machine Translation Systems on Images with Text
+
+URL Source: https://arxiv.org/pdf/2605.29476v1
+
+Published Time: Fri, 29 May 2026 01:07:35 GMT
+
+Number of Pages: 13
+
+Markdown Content:
+# Comparative Evaluation of Machine Translation Systems on Images with Text 
+
+## Blai Puchol 1, Sergio G´ omez Gonz´ alez 1, Miguel Domingo 1,2 , and Francisco Casacuberta 1,2 1PRHLT Research Center - Universitat Polit` ecnica de Val` encia , Camino de Vera, s/n - Valencia 
+
+2ValgrAI - Valencian Graduate School and Research Network for Artificial Intelligence, Camino de Vera s/n 
+
+bpucsal@inf.upv.es 
+
+{sgomgon,midobal,fcn }@prhlt.upv.es 
+
+## Abstract 
+
+This work presents a comparative evaluation of machine translation systems applied to images con-taining textual information, a task that lies at the intersection of computer vision and natural lan-guage processing. The study compares three main paradigms: modular pipelines that separate text detection, recognition, and translation; multi-modal large language models (MLLMs) capable of processing both image and text jointly; and an end-to-end model, Translatotron-V, which directly generates translated images. The modular systems employ state-of-the-art OCR (docTR) combined with multilingual LLMs such as Llama and EuroLLM, while the evaluated MLLMs include dif-ferent configurations of Gemini 2.5. Experiments were conducted on parallel multilingual datasets covering multiple language pairs, with evaluation based on BLEU, chrF, and TER metrics. The results show that modular pipelines outperform the end-to-end approach, while MLLMs achieve the best overall performance, demonstrating superior flexibility and contextual understanding. These findings underscore the effectiveness of multi-modal reasoning for image-to-text translation and provide a solid foundation for future research on integrating visual understanding and language generation in multilingual settings. 
+
+## 1 Introduction 
+
+Machine translation (MT) was born as an automated way to translate text from one language to another, allowing more readers to understand the information contained in the original text. However, most of the information that humans produce and receive is visual; yet it contains text in some language. As a result, people who do not speak the language cannot understand most of the content in these images. In order to ensure the accessibility of the visually codified text, text-image machine translation (TIMT) (Lan et al., 2023) has emerged. This research field includes solutions dedicated to obtaining textual translations of images containing embedded text. Since TIMT models receive an image and produce text, the task is at the intersection be-tween computer vision (CV) and natural language processing (NLP). Specifically, TIMT can be expressed as a combination of optical character recognition (OCR) and MT. From an OCR point of view, TIMT solutions should locate and extract the text embedded in the images. However, from an MT perspective, they must adequately translate the recognized text into the 1
+
+> arXiv:2605.29476v1 [cs.CL] 28 May 2026
+
+target language. Sometimes, this division is more evident when different models are used in a cascade-model (Qian et al., 2024) or end-to-end (Ma et al., 2022) fashion. In this work, we propose a modular pipeline that allows the use of different models to perform sequentially OCR and MT. Furthermore, we have selected a dataset (Lan et al., 2024) that was previously used in other TIMT works. Thus, we tested our pipeline with different models to find the best combination. Moreover, we compared it with an end-to-end model (Lan et al., 2024) and some multimodal large language model (MLLM) to assure its potential. We found that our pipeline is competitive with selected MLLMs, and surpasses the performance of the end-to-end model. The rest of this paper is structured as follows: first, we present an overview of the state of the art with current tendencies in the TIMT field, and the best performing models. After that, we describe the methodology that we have followed in our experiments in Section 3. There, we introduce our modular pipeline (Section 3.2), an end-to-end system, and some MLLMs (Section 3.3). Then, in Section 4, we present the evaluation framework that we have followed. Afterward, in Section 5, we review and study the results of our experimental session. Finally, the article ends with our conclusions and future steps in Section 7. 
+
+## 2 Related Work 
+
+Image-based machine translation (IMT) is considered a sub-field of multimodal machine trans-lation (MMT) dedicated to the translation of textual content embedded in the media (Elliott and K´ ad´ ar, 2017; Gao et al., 2025). Additionally, IMT can be divided into two sub-tasks: TIMT and in-image machine translation (IIMT). The objective of the first is to translate the textual content of an image, obtaining a pure textual output (Lan et al., 2025; Ma et al., 2023). Mean-while, IIMT aims to substitute the text in the image for its translation into another language (Tian et al., 2025b,a). Thus, the result is a new image with the same visual components but a rendered translation of the text instead of the original. To address the task of TIMT, multiple proposals have been made, ranging from cascade-based modular pipelines (Qian et al., 2024) to end-to-end models (Tian et al., 2023; Lan et al., 2023; Liang et al., 2024; Lan et al., 2024). The former often divides the task into OCR, followed by MT on the recognized text. They tend to suffer from error propagation (Tian et al., 2023), but can exploit highly optimized models trained on vast amounts of data. In contrast, end-to-end models face the task as a whole solid challenge to avoid error propagation. They are highly specialized models that are trained only for TIMT with the available data. The common approach to cascade pipelines starts with detecting and recognizing text in images. While vanilla OCR models focus primarily on scanned documents, (Li et al., 2023; Cheng et al., 2017) TIMT images usually do not follow this pattern. Real world applications of TIMT require detecting text in natural scenes. This is a more challenging task, since images usually contain complex backgrounds, variable lighting, distortions, arbitrary orientations, and diverse fonts. To face this type of challenge, the availability of data is vital; therefore, datasets were created incorporating these special conditions (Gupta et al., 2016; Veit et al., 2016; Wang et al., 2011). Furthermore, challenges such as the one organized at ICDAR 2015 (Karatzas et al., 2015) promote performance improvement in natural-scene OCR models. After recognizing text in images, cascade approaches tend to use an MT model to obtain the final output (Qian et al., 2024). MT has a long history with a large availability of models, both direction-specific and multilingual (Hameed and Al-Khateeb, 2025). In addition, conferences such as WMT (Chatterjee et al., 2019; Farajian et al., 2020; Wang et al., 2024) promote research on several open challenges of MT, such as quality estimation (Specia et al., 2021). Many datasets have been created to address various specific MT tasks (Koehn, 2005; Tiedemann and 2Thottingal, 2020), with increasing difficulty. Lately, the use of large language model (LLM) has also been introduced in MT, even with the support of institutions such as the European Union (Martins et al., 2025). The other common approach to TIMT is to train an end-to-end model. This branch is closely related to IIMT since TIMT is usually used as an auxiliary task to obtain an IIMT model (Lan et al., 2024). Attempting to directly attack the problem at the pixel level (Tian et al., 2023) has proven to be a poor approach (Lan et al., 2023). Therefore, other approaches have tried to involve a codebook in their models architecture (Lan et al., 2023, 2024). Other models produce a formatted output to render the image in case of need (Liang et al., 2024). Usually, given the scarcity of large-scale high-quality parallel datasets (Li et al., 2025), end-to-end models are trained with synthetic data (Lan et al., 2024). To our knowledge, the only manually curated datasets that exist to date are OCRMT30k (Lan et al., 2023), DoTA (Liang et al., 2024) and ECOIT (Zhu et al., 2023). These datasets are valuable; however, they are small in scale and restricted in language coverage. The revolution of LLMs has also affected TIMT tasks, since they are often used as part of pipelines. Tools such as Anytrans (Qian et al., 2024) include these models as translators. They can help mitigate OCR errors through contextual understanding (Wang et al., 2025). 
+
+## 3 Methodology 
+
+This section describes the experimental framework used to evaluate IMT systems. We compare modular pipelines that separate OCR from text translation with end-to-end systems. All models are evaluated on a multilingual dataset of synthetic images that contain rendered text, ensuring consistent conditions across architectures. The methodology covers the dataset, the modular pipeline, the evaluated models, and the prompting strategies used for each LLM and MLLM. 
+
+3.1 Corpora 
+
+All experiments use the multilingual dataset introduced by Lan et al. (2024), designed specif-ically for IIMT. The dataset consists of synthetic images generated by rendering parallel text from IWSLT14 (German–English) and IWSLT17 (French–English, Romanian–English); here-after, De–En, Fr–En and Ro–En, respectively. Each pair of sentences is placed on 512 × 512 
+
+images using the Python Pillow library, with black Arial font and random variations in posi-tion, rotation, and background color. An example can be seen in Figure 1. This setup introduces moderate visual noise while maintaining readability. 
+
+> Figure 1: Example of an image pair.
+
+Table 1 summarizes the number of samples per language pair and partition. All images contain aligned text in two languages—enabling direct comparison between modular and end-to-end approaches under identical conditions. 3Language pair Train Validation Test De–En 81 741 3 765 3 527 
+
+Fr–En 131 707 448 4 927 
+
+Ro–En 123 671 445 1 008 
+
+> Table 1: Number of pairs of images per language pair and split in the dataset.
+
+3.2 Modular pipeline 
+
+The modular pipeline processes input images by first extracting text through OCR and then translating it into the target language. 
+
+3.2.1 OCR Stage 
+
+Two open-source OCR systems were considered for the text extraction stage: EasyOCR 1 and 
+
+docTR 2 (Mindee, 2021). 
+
+EasyOCR employs a deep learning pipeline combining a Character Region Awareness for Text Detection (CRAFT) (Baek et al., 2019) model for detection with a convolutional recurrent neural network (CRNN) (Shi et al., 2017) for recognition. Although it supports more than 80 languages and offers high inference speed, its robustness can be degraded under significant text distortion. 
+
+docTR provides a highly flexible framework built on TensorFlow and PyTorch, offering a choice of different detection and recognition models. It is particularly known for its high accuracy and strong performance in handling rotated or multi-line text. After a preliminary accuracy comparison (Section 5.1), docTR was selected for all the main experiments due to its superior performance. Leveraging its modularity, we set up a specific two-stage pipeline: for the text detection stage, we employed the Faster Arbitrarily-Shaped Text Detector (FAST) (Chen et al., 2021), and for the text recognition stage, we chose a convolu-tional neural network (CNN). This recognition model uses a VGG16-BN backbone, consisting of a VGG16 (Simonyan and Zisserman, 2014) that adds batch normalization layers, which act as a powerful visual feature extractor for cropped text images. These features are then sequen-tially fed into the recurrent neural network (RNN) (Hochreiter and Schmidhuber, 1997), which decodes them into the final character sequence. 
+
+3.2.2 Translation Stage 
+
+At this stage, the text extracted in the previous phase is fed into the selected MT models. Our methodology distinguishes between two fundamentally different approaches to this task, based on the model’s architecture. For standard multilingual neural machine translation (NMT) systems, such as M2M100-1.2B (Fan et al., 2021), the process is direct. These models are specialized exclusively for translation, and the task is conditioned by providing predefined source and target language tags to the input (Fan et al., 2021). In contrast, LLMs are general-purpose instruction-following models. They are not spe-cialized for a single task and must be guided to perform the translation. This is achieved by formatting the input via natural-language instructions, i.e., a prompt . These prompts, further detailed in Section 3.4, explicitly request only the translated text to ensure a clean, comparable output. 
+
+> 1https://github.com/JaidedAI/EasyOCR
+> 2https://github.com/mindee/doctr
+
+4This modular setup allows separate evaluation of OCR and translation quality using dedi-cated metrics. 
+
+3.3 Models 
+
+We considered four main categories of models, selected to provide a clear contrast in architec-ture, specialization and capability. As a traditional NMT (Mohammadshahi et al., 2022; Boyd and Mitkov, 2025), we se-lected M2M100-1.2B (Fan et al., 2021). This model employs a standard Transformer encoder-decoder architecture and is known for its strong cross-lingual translation performance. For the LLM-based modular pipeline , we employed general-purpose, decoder-only mod-els. This included instruction-tuned models from Meta’s Llama family 3, version 3 (Dubey et al., 2024): Llama-3.2-1B-Instruct , Llama-3.2-3B-Instruct , and Llama-3.1-8B-Instruct .We also included EuroLLM-1.7B and EuroLLM-9B (Martins et al., 2025), trained with a focus on European languages. This selection allows us to compare the general pre-training centered on English with the linguistic specialization of EuroLLM. Moreover, we can assess the model’s scaling impact. For the multi-modal category, we tested three configurations of Gemini-2.5 (Comanici et al., 2025): flash-lite , flash , and pro . These models are native multi-modal and utilize a sparse Mixture-of-Experts (MoE) architecture for efficient scaling. Thus, this architecture functions as an end-to-end system, processing the raw image and text prompt in a single step, thus avoiding the separate OCR stage entirely. Finally, we compared our results with an end-to-end image-to-image model ,
+
+Translatotron-V (Lan et al., 2024), using accuracy values obtained through private communi-cation with the authors. This provides a second, more specialized comparison for end-to-end IIMT performance, although the results were limited to two language pairs due to the inacces-sibility of a public checkpoint. 
+
+3.4 Prompting Strategies 
+
+Prompt design was a critical step in obtaining consistent and clean translations of LLMs and MLLMs. As demonstrated in previous work (Liu et al., 2023), well-structured prompts sig-nificantly improve model behavior in translation tasks by reducing irrelevant or reformulated outputs. Our primary goal was to engineer prompts that enforced a minimal response, thereby minimizing the need for post-processing and ensuring a fair, metric-based comparison across model families. The required prompt structure varied depending on each model’s architecture. For Eu-roLLM, a simple format that specifies the source language and target language tags was suffi-cient to obtain clean translations. In contrast, LLaMA models required more explicit instruc-tions to suppress unnecessary commentary. We experimented with both direct text commands (e.g., “Respond only with the translation”) and structured JSON outputs to facilitate automated parsing. For multi-modal Gemini models, prompts were designed to integrate both OCR and translation into a single query, instructing the model to extract the source text from the image and then to return only the final translation. Table 2 provides concrete examples of the prompts used for each model. This careful control was essential for standardizing the outputs for evaluation. 
+
+> 3https://www.llama.com/
+
+5Model Prompt template EuroLLM English: Some text German: 
+
+Llama (to text) 
+
+Translate the following into German. Respond only with the translation, no comments: English: Some text German: 
+
+Llama (to JSON) 
+
+Translate into French. Respond only in this JSON format: "translation": "<text>" English: "Some text" French (JSON): 
+
+Gemini 
+
+Extract the English text from this image and translate it to French. Provide only the final French translation. 
+
+> Table 2: Examples of prompts used for different models in our experiments.
+
+## 4 Experimental Session 
+
+This section describes the technical framework used to perform our evaluation. We first detail the implementation, including the software libraries and hardware used to run the different model families. We then define the specific evaluation metrics used to assess the performance of both OCR and translation stages. 
+
+4.1 Implementation Details 
+
+Our experiments were conducted using two primary methods, depending on model accessi-bility. All open-weight models (M2M100, Llama, and EuroLLM) were run locally using the Hugging Face transformers library (Wolf et al., 2020). These tests were performed on servers equipped with NVIDIA RTX 4090 and NVIDIA Quadro RTX 8000 GPUs. For the closed-source Gemini family, the models were evaluated using the official Google GenAI API, powered by Google Cloud. 
+
+4.2 Evaluation Metrics 
+
+We assessed both the OCR and translation stages using complementary metrics. For OCR, we report Character Error Rate (CER) and Word Error Rate (WER) (Morris et al., 2004), which quantify transcription errors at the character and word levels, respectively. Lower values indi-cate better recognition accuracy. For translation quality, we used three standard metrics widely adopted in MT research: • Bilingual evaluation understudy (BLEU) (Papineni et al., 2002): Measures n-gram over-lap between model output and reference translations. • Character n-gram F-score (chrF) (Popovi´ c, 2015): Computes an F-score based on char-acter n-gram precision and recall, capturing fine-grained similarity. • Translation error rate (TER) (Snover et al., 2006): Calculates the normalized number of edits required to match the reference translation. 6For consistency, MT metrics were computed using sacreBLEU (Post, 2018). Addition-ally, we applied approximate randomization testing (ART) (Riezler and Maxwell, 2005)—with 
+
+10 , 000 repetitions and using a p-value of 0.05 —to determine whether two systems presented statistically significance. 
+
+## 5 Results 
+
+This section presents the empirical results of the experiments detailed in Section 4. We start by reporting the outcome of our preliminary OCR evaluation, which informed the configuration of our modular pipeline. Then, we present and analyze the main translation quality results, comparing the performance between architectures. 
+
+5.1 OCR Evaluation 
+
+To identify the best OCR module for our pipeline, we compared EasyOCR and docTR on the test partition using WER and CER metrics (Table 3). The results show that docTR consistently outperformed EasyOCR in all languages, reducing the error rates by up to 13 .9 percentage points in WER and 12 .5 in CER. These improvements confirmed docTR as the preferred OCR component for subsequent translation experiments. 
+
+WER ↓ CER ↓
+
+EasyOCR docTR EasyOCR docTR 
+
+De 17 .3 11 .0 12 .5 3.0
+
+En 21 .8 7.9 15 .6 3.1
+
+Fr 30 .6 19 .0 16 .4 4.7
+
+En 32 .7 20 .2 18 .3 6.3   
+
+> Table 3: Comparison of OCR results between EasyOCR and docTR .
+
+5.2 Translation results 
+
+In this section, we analyze the translation performance of all tested models across the four lan-guage pairs: English–German, German–English, English–French, and French–English. Recall that all models were evaluated on the same test partition. Across all language pairs, the results reveal several consistent patterns. Traditional NMT models provide solid baselines, but are generally outperformed by larger LLMs and MLLMs. Specifically, as seen in Table 4, the Llama models show a clear improvement with scale: smaller models perform notably below the NMT system, but the 8B version approaches or improves its performance. The EuroLLM family further improves translation quality, with EuroLLM-9B exceeding the NMT scores in all metrics evaluated for English–German. Multi-modal Gemini models outperform all other systems, and the most advanced configuration, Gemini-2.5-pro, achieves the best BLEU, chrF, and TER values overall. The end-to-end model Translatotron-V, available only for this language pair, performs significantly worse, with BLEU values of around 17%, suggesting that direct image-to-image translation remains a challenging task. For the opposite direction (German–English), shown in Table 5, a similar trend can be ob-served. Although the NMT baseline yields relatively low results, LLM-based systems demon-strate substantial improvements, particularly at larger scales. EuroLLM-9B achieves a BLEU score of approximately 39 points and a TER close to 48 points, marking a strong gain in both NMT and smaller LLMs. Once again, Gemini models dominate this task, with the Gemini-2.5-pro configuration yielding the highest performance across all metrics. No reference results 7Model BLEU ↑ chrF ↑ TER ↓
+
+M2M100-1.2B 27 .7† 53 .3† 62 .3†
+
+Llama-3.2-1B 18 .2 44 .3 75 .2
+
+Llama-3.2-3B 23 .7 50 .5 67 .3
+
+Llama-3.1-8B 26 .8† 53 .2† 63 .0†
+
+EuroLLM-1.7B 26 .9† 53 .1† 63 .5†
+
+EuroLLM-9B 31 .2 56 .4 58 .4
+
+Gemini-2.5-lite 32 .1 57 .3 58 .0
+
+Gemini-2.5-pro 35 .6 59 .9 52 .5
+
+Translatotron-V* 17 .9 – –  
+
+> Table 4: English–German translation results. All results are statistically different except those denoted by †.*Translatotron-V values were obtained via private communication with the authors.
+
+were available for Translatotron-V in this direction, limiting the comparison to text-based and multi-modal approaches. 
+
+Model BLEU ↑ chrF ↑ TER ↓
+
+M2M100-1.2B 19 .1 40 .5 70 .9
+
+Llama-3.2-1B 25 .6 47 .8 62 .5
+
+Llama-3.2-3B 30 .1 52 .5 57 .8
+
+Llama-3.1-8B 34 .2† 55 .9† 53 .4†
+
+EuroLLM-1.7B 33 .9† 54 .9† 53 .7†
+
+EuroLLM-9B 39 .1 59 .5 48 .1
+
+Gemini-2.5-lite 35 .5 56 .7 51 .5
+
+Gemini-2.5-flash 38 .3 58 .0 52 .6
+
+Gemini-2.5-pro 41 .4 61 .2 47 .2 
+
+> Table 5: German–English translation results. All results are statistically different except those denoted by †.
+
+In the English-French direction (Table 6), the NMT baseline achieves competitive results, but smaller LLMs lag behind it. As before, scaling up model size leads to marked gains: both EuroLLM-9B and the larger Llama variant surpass the baseline, indicating the benefits of capacity and multilingual specialization. Among MLLMs, all Gemini configurations outper-form text-only systems, with the Gemini-2.5-pro model achieving, again, the highest scores in BLEU, chrF, and TER. Translatotron-V was not evaluated for this pair, so the results focus on modular and multi-modal systems. Finally, for the French–English translation task (Table 7), the NMT model shows its weak-est performance among the studied language pairs. Consequently, all LLMs outperform it, even at smaller scales. EuroLLM-9B leads among text-based systems, while the Gemini series once again dominates, with Gemini-2.5-pro reaching the best overall results across all metrics. Interestingly, in this direction, the Translatotron-V model performs better than the NMT base-line, achieving a BLEU score of around 34, although it still falls short compared to LLMs and MLLMs. In summary, comparative analysis across all four translation directions reveals a consis-tent performance hierarchy: traditional NMT systems establish reliable baselines; large-scale LLMs, especially EuroLLM, provide significant improvements; and multi-modal models, par-ticularly Gemini-2.5-pro, deliver the highest translation quality overall. These findings under-line the growing advantage of multi-modal architectures that jointly process visual and lin-8Model BLEU ↑ chrF ↑ TER ↓
+
+M2M100-1.2B 34 .7 57 .7 55 .0
+
+Llama-3.2-1B 22 .4 46 .5 67 .8
+
+Llama-3.2-3B 27 .5 52 .5 60 .1
+
+Llama-3.1-8B 29 .3 55 .5 55 .8
+
+EuroLLM-1.7B 33 .6 56 .0 55 .7
+
+EuroLLM-9B 36 .8 59 .9 50 .1
+
+Gemini-2.5-lite 40 .5 62 .2 47 .3
+
+Gemini-2.5-flash 37 .3 57 .2 55 .1
+
+Gemini-2.5-pro 44 .6 65 .2 44 .1
+
+> Table 6: English–French translation results. All results are statistically different.
+
+Model BLEU ↑ chrF ↑ TER ↓
+
+M2M100-1.2B 25 .2 46 .1 65 .3
+
+Llama-3.2-1B 32 .3‡ 53 .7‡ 54 .8‡
+
+Llama-3.2-3B 32 .9‡ 55 .0‡ 52 .9‡
+
+Llama-3.1-8B 35 .3† 57 .1† 48 .0†
+
+EuroLLM-1.7B 35 .7† 57 .2† 49 .1†
+
+EuroLLM-9B 37 .6 59 .0 45 .3
+
+Gemini-2.5-lite 39 .5 59 .2 46 .6
+
+Gemini-2.5-flash 42 .2 61 .1 45 .4
+
+Gemini-2.5-pro 43 .5 62 .6 43 .1
+
+Translatotron-V* 34 .2 – –   
+
+> Table 7: French–English translation results. All results are statistically different except those denoted by †and ‡
+> respectively. *Values obtained via private communication.
+
+guistic information. Nevertheless, the lack of complete results for Translatotron-V highlights ongoing challenges and the need for more accessible end-to-end image-to-image translation benchmarks. 
+
+## 6 Limitations 
+
+This study has several limitations that should be considered when interpreting the results. First, the evaluation is based on a synthetic dataset where text is rendered under controlled conditions. Although this setup enables clean comparisons across systems, it can introduce biases and may overestimate performance relative to real-world scenarios. In practice, text in natural images is often affected by motion blur, occlusion, perspective distortion, complex backgrounds, and uncontrolled lighting. Therefore, evaluating with in-the-wild images would provide a more realistic estimate of system robustness. Second, language coverage remains limited to a small set of relatively high-resource Eu-ropean language pairs. The conclusions may not transfer directly to typologically distant lan-guages, non-Latin scripts, or genuinely low-resource settings where OCR and MT errors can compound differently. Third, the analysis relies primarily on automatic metrics (BLEU, chrF, and TER). Although standard in MT evaluation, these metrics do not fully capture adequacy, faithfulness to visual context, or user-perceived quality. We could also use other automated human-based metrics to complement the current results and provide a more complete assessment. 9Finally, some comparisons are constrained by model availability and reproducibility factors. For example, Translatotron-V results were only partially available, and closed-source API-based models may change over time due to backend updates. As a result, exact replication of all reported scores may be difficult. 
+
+## 7 Conclusion and Future Work 
+
+Experimental results demonstrate that LLMs and MLLMs are highly effective in translating images containing text. Among the approaches assessed, modular pipelines that combine OCR and LLM-based translation achieved superior performance compared to the end-to-end sys-tem, Translatotron-V. This suggests that decomposing the process into specialized stages for detection, recognition, and translation leads to more accurate and reliable outputs. Meanwhile, MLLMs showed strong potential by jointly processing visual and textual infor-mation, achieving performance that rivals or exceeds traditional OCR-based pipelines. Their ability to integrate semantic understanding and contextual reasoning enables more flexible and coherent translations, particularly in visually complex scenarios. Future work will focus on expanding the evaluation to a broader range of models and languages, including low-resource pairs, and exploring hybrid architectures that integrate the strengths of modular and end-to-end approaches. Additionally, the development of larger and more diverse multilingual image datasets would allow for more comprehensive analysis of multi-modal translation performance across domains. 
+
+## Acknowledgments 
+
+We would like to express our sincere gratitude to the authors of Translatotron-V (Lan et al., 2024) for generously sharing their models with us. 
+
+## References 
+
+Baek, Y., Lee, B., Han, D., Yun, S., and Lee, H. (2019). Character region awareness for text detection. In 
+
+Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pages 9357– 9366. Boyd, W. J. and Mitkov, R. (2025). Machine translation in the AI era: Comparing previous methods of machine translation with large language models. In Proceedings of the 8th Workshop on Challenges and Applications of Automated Extraction of Socio-political Events from Texts , pages 38–51. Chatterjee, R., Federmann, C., Negri, M., and Turchi, M. (2019). Findings of the wmt 2019 shared task on automatic post-editing. In Proceedings of the Fourth Conference on Machine Translation , pages 11–28. Chen, Z., Wang, J., Wang, W., Chen, G., Xie, E., Luo, P., and Lu, T. (2021). Fast: Faster arbitrarily-shaped text detector with minimalist kernel representation. arXiv preprint arXiv:2111.02394 .Cheng, Z., Bai, F., Xu, Y., Zheng, G., Pu, S., and Zhou, S. (2017). Focusing attention: Towards accurate text recognition in natural images. In Proceedings of the IEEE international conference on computer vision ,pages 5076–5084. Comanici, G., Bieber, E., Schaekermann, M., Pasupat, I., Sachdeva, N., Dhillon, I., Blistein, M., Ram, O., Zhang, D., Rosen, E., et al. (2025). Gemini 2.5: Pushing the frontier with advanced reasoning, multimodality, long context, and next generation agentic capabilities. arXiv preprint arXiv:2507.06261 .Dubey, A., Jauhri, A., Pandey, A., Kadian, A., Al-Dahle, A., Letman, A., Mathur, A., Schelten, A., Yang, A., Fan, A., et al. (2024). The llama 3 herd of models. arXiv e-prints .
+
+10 Elliott, D. and K´ ad´ ar, ´ A. (2017). Imagination improves multimodal translation. In Proceedings of the Eighth International Joint Conference on Natural Language Processing , pages 130–141. Fan, A., Bhosale, S., Schwenk, H., Ma, Z., El-Kishky, A., Goyal, S., Baines, M., Celebi, O., Wenzek, G., Chaud-hary, V., et al. (2021). Beyond english-centric multilingual machine translation. Journal of Machine Learning Research , 22(107):1–48. Farajian, M. A., Lopes, A. V., Martins, A. F., Maruf, S., and Haffari, G. (2020). Findings of the wmt 2020 shared task on chat translation. In Proceedings of the Fifth Conference on Machine Translation , pages 65–75. Gao, Y., Zhao, J., Sun, S., Qiao, X., Song, T., and Yang, H. (2025). Multimodal machine translation with text-image in-depth questioning. In Findings of the Association for Computational Linguistics: ACL 2025 , pages 9274–9287. Gupta, A., Vedaldi, A., and Zisserman, A. (2016). Synthetic data for text localisation in natural images. In 
+
+Proceedings of the IEEE conference on computer vision and pattern recognition , pages 2315–2324. Hameed, D. A. and Al-Khateeb, B. (2025). Deep learning techniques for machine translation: A survey. Procedia Computer Science , 258:1022–1037. Hochreiter, S. and Schmidhuber, J. (1997). Long short-term memory. Neural computation , 9(8):1735–1780. Karatzas, D., Gomez-Bigorda, L., Nicolaou, A., Ghosh, S., Bagdanov, A., Iwamura, M., Matas, J., Neumann, L., Chandrasekhar, V. R., Lu, S., et al. (2015). Icdar 2015 competition on robust reading. In Proceedings of the international conference on document analysis and recognition , pages 1156–1160. Koehn, P. (2005). Europarl: A parallel corpus for statistical machine translation. In Proceedings of Machine Translation Summit X , pages 79–86. Lan, Z., Niu, L., Meng, F., Zhou, J., Zhang, M., and Su, J. (2024). Translatotron-V(ison): An end-to-end model for in-image machine translation. In Findings of the Association for Computational Linguistics: ACL 2024 ,pages 5472–5485. Lan, Z., Yu, J., Li, X., Zhang, W., Luan, J., Wang, B., Huang, D., and Su, J. (2023). Exploring better text image translation with multimodal codebook. arXiv preprint arXiv:2305.17415 .Lan, Z., Yu, J., Liu, S., Yao, J., Huang, D., and Su, J. (2025). Towards better text image machine translation with multimodal codebook and multi-stage training. Neural Networks , page 107599. Li, B., Zhu, S., and Wen, L. (2025). MIT-10M: A large scale parallel corpus of multilingual image translation. In 
+
+Proceedings of the 31st International Conference on Computational Linguistics , pages 5154–5167. Li, M., Lv, T., Chen, J., Cui, L., Lu, Y., Florencio, D., Zhang, C., Li, Z., and Wei, F. (2023). Trocr: Transformer-based optical character recognition with pre-trained models. In Proceedings of the AAAI conference on arti-ficial intelligence , volume 37, pages 13094–13102. Liang, Y., Zhang, Y., Ma, C., Zhang, Z., Zhao, Y., Xiang, L., Zong, C., and Zhou, Y. (2024). Document image machine translation with dynamic multi-pre-trained models assembling. In Proceedings of the 2024 Con-ference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies (Volume 1: Long Papers) , pages 7084–7095. Liu, P., Yuan, W., Fu, J., Jiang, Z., Hayashi, H., and Neubig, G. (2023). Pre-train, prompt, and predict: A systematic survey of prompting methods in natural language processing. ACM computing surveys , 55(9):1– 35. Ma, C., Han, X., Wu, L., Zhang, Y., Zhao, Y., Zhou, Y., and Zong, C. (2023). Modal contrastive learning based end-to-end text image machine translation. IEEE/ACM Transactions on Audio, Speech, and Language Processing , 32:2153–2165. Ma, C., Zhang, Y., Tu, M., Han, X., Wu, L., Zhao, Y., and Zhou, Y. (2022). Improving end-to-end text image translation from the auxiliary text translation task. In Proceedings of the International Conference on Pattern Recognition , pages 1664–1670. 
+
+11 Martins, P. H., Alves, J., Fernandes, P., Guerreiro, N. M., Rei, R., Farajian, A., Klimaszewski, M., Alves, D. M., Pombal, J., Boizard, N., et al. (2025). Eurollm-9b: Technical report. arXiv preprint arXiv:2506.04079 .Mindee (2021). doctr: Document text recognition. https://github.com/mindee/doctr .Mohammadshahi, A., Nikoulina, V., Berard, A., Brun, C., Henderson, J., and Besacier, L. (2022). SMaLL-100: Introducing shallow multilingual machine translation model for low-resource languages. In Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing , pages 8348–8359. Morris, A. C., Maier, V., and Green, P. D. (2004). From wer and ril to mer and wil: improved evaluation measures for connected speech recognition. In Proceedings of Interspeech , pages 2765–2768. Papineni, K., Roukos, S., Ward, T., and Wei-Jing”, Z. (2002). Bleu: a method for automatic evaluation of machine translation. In Proceedings of the 40th Annual Meeting of the Association for Computational Linguistics ,pages 311–318. Popovi´ c, M. (2015). chrF: character n-gram F-score for automatic MT evaluation. In Proceedings of the Tenth Workshop on Statistical Machine Translation , pages 392–395. Post, M. (2018). A call for clarity in reporting BLEU scores. In Proceedings of the Third Conference on Machine Translation: Research Papers , pages 186–191. Qian, Z., Zhang, P., Yang, B., Fan, K., Ma, Y., Wong, D. F., Sun, X., and Ji, R. (2024). AnyTrans: Translate AnyText in the image with large scale models. In Findings of the Association for Computational Linguistics: EMNLP 2024 , pages 2432–2444. Riezler, S. and Maxwell, J. T. (2005). On some pitfalls in automatic evaluation and significance testing for mt. In 
+
+Proceedings of the Workshop on Intrinsic and Extrinsic Evaluation Measures for Machine Translation and/or Summarization , pages 57–64. Shi, B., Bai, X., and Yao, C. (2017). An end-to-end trainable neural network for image-based sequence recog-nition and its application to scene text recognition. IEEE Transactions on Pattern Analysis and Machine Intelligence , 39(11):2298–2304. Simonyan, K. and Zisserman, A. (2014). Very deep convolutional networks for large-scale image recognition. 
+
+arXiv preprint arXiv:1409.1556 .Snover, M., Dorr, B., Schwartz, R., Micciulla, L., and Makhoul, J. (2006). A study of translation edit rate with targeted human annotation. In Proceedings of the 7th Conference of the Association for Machine Translation in the Americas: Technical Papers , pages 223–231. Specia, L., Blain, F., Fomicheva, M., Zerva, C., Li, Z., Chaudhary, V., and Martins, A. F. (2021). Findings of the wmt 2021 shared task on quality estimation. In Proceedings of the Sixth Conference on Machine Translation ,pages 684–725. Tian, Y., Li, X., Liu, Z., Guo, Y., and Wang, B. (2023). In-image neural machine translation with segmented pixel sequence-to-sequence model. In Findings of the Association for Computational Linguistics: EMNLP 2023 ,pages 15046–15057. Tian, Y., Liu, Z., Liu, Z., Feng, C., Li, X., Huang, H., and Guo, Y. (2025a). Prim: Towards practical in-image multilingual machine translation. arXiv preprint arXiv:2509.05146 .Tian, Y., Liu, Z., Liu, Z., and Guo, Y. (2025b). Exploring in-image machine translation with real-world back-ground. arXiv preprint arXiv:2505.15282 .Tiedemann, J. and Thottingal, S. (2020). Opus-mt–building open translation services for the world. In Proceed-ings of the Annual Conference of the European Association for Machine Translation , pages 479–480. Veit, A., Matera, T., Neumann, L., Matas, J., and Belongie, S. (2016). Coco-text: Dataset and benchmark for text detection and recognition in natural images. arXiv preprint arXiv:1601.07140 .
+
+12 Wang, K., Babenko, B., and Belongie, S. (2011). End-to-end scene text recognition. In 2011 International conference on computer vision , pages 1457–1464. Wang, L., Liu, S., Lyu, C., Jiao, W., Wang, X., Xu, J., Tu, Z., Gu, Y., Chen, W., Wu, M., Zhou, L., Koehn, P., Way, A., and Yuan, Y. (2024). Findings of the WMT 2024 shared task on discourse-level literary translation. In Proceedings of the Ninth Conference on Machine Translation , pages 699–700. Wang, X., Pan, J., Liu, Y., Zhao, X., Lyu, C., Wu, M., Biemann, C., Wang, L., Xu, L., Luo, W., et al. (2025). Rethinking multilingual vision-language translation: Dataset, evaluation, and adaptation. arXiv preprint arXiv:2506.11820 .Wolf, T., Debut, L., Sanh, V., Chaumond, J., Delangue, C., Moi, A., Cistac, P., Rault, T., Louf, R., Funtowicz, M., et al. (2020). Transformers: State-of-the-art natural language processing. In Proceedings of the 2020 conference on empirical methods in natural language processing: system demonstrations , pages 38–45. Zhu, S., Li, S., Lei, Y., and Xiong, D. (2023). PEIT: Bridging the modality gap with pre-trained models for end-to-end image translation. In Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics , pages 13433–13447. 
+
+13
