@@ -1,0 +1,96 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-06-02T23:18:35.531342+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 1,
+    "deep_divecandidates": 2,
+    "deep_cap": 6,
+    "deep_selected": 2,
+    "quick_candidates": 0,
+    "quick_skim_target": 11,
+    "quick_selected": 0
+  },
+  "deep_dive": [
+    {
+      "id": "2605.30795v1",
+      "source": "arxiv",
+      "title": "Feat2Go: Visual Feature-Grounded Value Estimation for Embodied Reinforcement Learning",
+      "abstract": "Reinforcement learning is a promising approach for improving the capabilities of vision-language-action (VLA) models while avoiding the heavy data requirements of imitation learning. However, its effectiveness for VLA models is often constrained by sparse supervision and the difficulty of designing informative reward signals for long-horizon manipulation. In this work, we present Feat2Go, a fine-grained value estimation framework for embodied reinforcement learning. Specifically, Feat2Go first derives a continuous progress target from a pretrained visual world model by measuring patch-level similarity to subgoal states and partitioning episodes into semantic stages with trend-based clustering. We then train an embodied value model to predict this structural progress from the current observation and task instruction, and use the predicted value to reshape terminal rewards during policy optimization. The proposed framework is compatible with existing VLA policy reinforcement learning pipelines, including PPO and GRPO, and does not rely on manual reward engineering. Extensive experiments on ManiSkill3 and RoboTwin 2.0 demonstrate that Feat2Go consistently improves the performance of existing VLA models under both single-arm and bimanual manipulation settings. More specifically, on ManiSkill3, Feat2Go improves OpenVLAOFT from 17.5% to 82.9% average out-of-distribution success while retaining 96.9% in-distribution performance. On RoboTwin 2.0, Feat2Go achieves an average success rate of 88.8% in domain-randomized task settings, outperforming prior reinforcement learning methods.",
+      "authors": [
+        "Junyang Shu",
+        "Zhiwei Lin",
+        "Bingqing Wei",
+        "Yongtao Wang"
+      ],
+      "primary_category": "cs.RO",
+      "categories": [
+        "cs.RO"
+      ],
+      "published": "2026-05-29T03:36:33+00:00",
+      "link": "https://arxiv.org/pdf/2605.30795v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "multimodal RL paper combining visual features with RL for VLA models",
+      "llm_evidence_cn": "结合视觉特征与强化学习的多模态强化学习论文，用于VLA模型",
+      "llm_evidence": "结合视觉特征与强化学习的多模态强化学习论文，用于VLA模型",
+      "canonical_evidence": "结合视觉特征与强化学习的多模态强化学习论文，用于VLA模型",
+      "llm_tldr_en": "Presents Feat2Go, a fine-grained value estimation framework for embodied RL that derives progress targets from visual world models and trains an embodied value model.",
+      "llm_tldr_cn": "强化学习改进VLA模型受限于稀疏奖励和奖励设计困难。Feat2Go从预训练视觉世界模型中提取连续进展目标，通过补丁级相似性和趋势聚类划分语义阶段，训练具身价值模型。实验表明在长程操作任务上显著提升样本效率和成功率，为VLA模型的强化学习提供了有效范式。",
+      "llm_tldr": "强化学习改进VLA模型受限于稀疏奖励和奖励设计困难。Feat2Go从预训练视觉世界模型中提取连续进展目标，通过补丁级相似性和趋势聚类划分语义阶段，训练具身价值模型。实验表明在长程操作任务上显著提升样本效率和成功率，为VLA模型的强化学习提供了有效范式。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "multimodal reinforcement learning paper",
+      "matched_requirement_id": "req-6",
+      "selection_source": "carryover_cache",
+      "paper_id": "2605.30795v1"
+    },
+    {
+      "id": "2605.31509v1",
+      "source": "arxiv",
+      "title": "Skill Reuse as Compression in Agentic RL",
+      "abstract": "Large language model agents trained with reinforcement learning (RL) often learn brittle, task-specific shortcuts. We hypothesize that agents generalize better when their successful trajectories are structurally compressible, decomposed into a small set of reusable abstract patterns. To formalize this, we introduce ReuseRL, which grounds agentic RL in the Minimum Description Length (MDL) principle. ReuseRL extracts a shared skill dictionary from successful trajectories and augments the RL objective with a segmentation cost, explicitly penalizing idiosyncratic behaviors that encode poorly. We prove a PAC-Bayes generalization bound for this compression penalty. Across ALFWorld, TextWorld-Cooking, and Countdown-Stepwise, ReuseRL improves in- and out-of-distribution success over vanilla GRPO and strong round-length baselines.",
+      "authors": [
+        "Zhikun Xu",
+        "Yu Feng",
+        "Jacob Dineen",
+        "Taiwei Shi",
+        "Jieyu Zhao",
+        "Ben Zhou"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG",
+        "cs.AI"
+      ],
+      "published": "2026-05-29T16:28:34+00:00",
+      "link": "https://arxiv.org/pdf/2605.31509v1",
+      "tags": [
+        "keyword:llm-vlm",
+        "query:llm-vlm"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "RL skill reuse for LLM agents",
+      "llm_evidence_cn": "面向大语言模型智能体的强化学习技能复用",
+      "llm_evidence": "面向大语言模型智能体的强化学习技能复用",
+      "canonical_evidence": "面向大语言模型智能体的强化学习技能复用",
+      "llm_tldr_en": "Introduces ReuseRL which grounds agentic RL in MDL principle, extracting reusable skills from successful trajectories to improve generalization.",
+      "llm_tldr_cn": "本文针对大语言模型（LLM）智能体强化学习中学到的策略通常脆弱且任务特定的问题，提出了ReuseRL方法。该方法基于最小描述长度（MDL）原则，从成功轨迹中提取可复用的技能字典，并在RL目标中加入分割成本以惩罚编码低效的行为。在ALFWorld等三个基准上实验表明，ReuseRL在分布内和分布外场景下的成功率均超过基线方法，并且有PAC-Bayes泛化界保证。",
+      "llm_tldr": "本文针对大语言模型（LLM）智能体强化学习中学到的策略通常脆弱且任务特定的问题，提出了ReuseRL方法。该方法基于最小描述长度（MDL）原则，从成功轨迹中提取可复用的技能字典，并在RL目标中加入分割成本以惩罚编码低效的行为。在ALFWorld等三个基准上实验表明，ReuseRL在分布内和分布外场景下的成功率均超过基线方法，并且有PAC-Bayes泛化界保证。",
+      "llm_tags": [
+        "query:llm-vlm"
+      ],
+      "matched_query_tag": "query:llm-vlm",
+      "matched_query_text": "reinforcement learning for large language model",
+      "matched_requirement_id": "req-4",
+      "selection_source": "carryover_cache",
+      "paper_id": "2605.31509v1"
+    }
+  ],
+  "quick_skim": []
+}
